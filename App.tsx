@@ -33,13 +33,6 @@ const App: React.FC = () => {
     return found || PRICING_PLANS[0];
   });
   const [showQuotaError, setShowQuotaError] = useState(false);
-  const [showKeyModal, setShowKeyModal] = useState(false);
-  const [userApiKeyInput, setUserApiKeyInput] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('AFRIVOICE_API_KEY') || localStorage.getItem('GEMINI_API_KEY') || '';
-    }
-    return '';
-  });
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   // Safety Rails: Quota & Rate Limit state
@@ -206,16 +199,10 @@ const App: React.FC = () => {
         setShowQuotaError(false);
         setStatus((prev) => ({ ...prev, error: null }));
         addToast('info', 'Clé API sélectionnée', 'Votre quota et vos requêtes sont désormais liés à votre clé.');
-        return;
       }
     } catch (err) {
       console.error('Failed to open key picker', err);
     }
-    // Fallback to our custom in-app API Key modal
-    if (typeof window !== 'undefined') {
-      setUserApiKeyInput(localStorage.getItem('AFRIVOICE_API_KEY') || localStorage.getItem('GEMINI_API_KEY') || '');
-    }
-    setShowKeyModal(true);
   };
 
   // Recharge (+50 minutes added to max quota)
@@ -469,109 +456,6 @@ const App: React.FC = () => {
                 language={language}
               />
             </>
-          )}
-
-          {/* Custom API Key Connection Modal */}
-          {showKeyModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-              <div
-                className={`w-full max-w-md rounded-[32px] p-6 sm:p-8 border shadow-2xl transition-all ${
-                  isDark ? 'bg-[#14151C] border-white/10 text-white' : 'bg-white border-[#FDE8CD] text-zinc-900'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-zinc-200 dark:border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#EA580C] to-[#F59E0B] text-white flex items-center justify-center text-lg font-black shrink-0 shadow-md">
-                      🔑
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-black tracking-tight">{isEn ? 'Connect Gemini API Key' : 'Connexion Clé API Gemini'}</h3>
-                      <p className="text-[11px] font-bold text-zinc-500">{isEn ? 'Secure local storage (localStorage)' : 'Stockage local sécurisé (localStorage)'}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowKeyModal(false)}
-                    className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                    {isEn
-                      ? 'Enter your Google Gemini API Key to enable HD African voice generation directly from your browser. Your key stays 100% local on your device.'
-                      : 'Entrez votre Clé API Google Gemini pour activer la génération de voix africaines HD directement depuis votre navigateur. Votre clé reste 100% locale sur votre appareil.'}
-                  </p>
-
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-widest text-zinc-500 mb-2">
-                      {isEn ? 'Your Gemini API Key (AIzaSy...)' : 'Votre Clé API Gemini (AIzaSy...)'}
-                    </label>
-                    <input
-                      type="password"
-                      value={userApiKeyInput}
-                      onChange={(e) => setUserApiKeyInput(e.target.value)}
-                      placeholder="AIzaSy.............................."
-                      className={`w-full p-4 rounded-2xl border font-mono text-sm outline-none transition-all ${
-                        isDark
-                          ? 'bg-[#09090B] border-white/10 text-[#D4FF00] focus:border-[#D4FF00] focus:ring-2 focus:ring-[#D4FF00]/20'
-                          : 'bg-zinc-50 border-zinc-300 text-zinc-900 focus:border-[#EA580C] focus:ring-2 focus:ring-[#EA580C]/20'
-                      }`}
-                    />
-                  </div>
-
-                  <div className={`p-3.5 rounded-2xl border text-[11px] font-medium flex items-start gap-2.5 ${
-                    isDark ? 'bg-white/5 border-white/10 text-zinc-300' : 'bg-amber-50 border-amber-200 text-amber-900'
-                  }`}>
-                    <span className="text-sm shrink-0">💡</span>
-                    <div>
-                      <span>{isEn ? 'Don’t have a key yet?' : 'Vous n\'avez pas encore de clé ?'} </span>
-                      <a
-                        href="https://aistudio.google.com/app/apikey"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-bold underline text-[#EA580C] dark:text-[#D4FF00] hover:opacity-80"
-                      >
-                        {isEn ? 'Get one free on Google AI Studio ↗' : 'Obtenir une clé gratuite sur Google AI Studio ↗'}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6 pt-4 border-t border-zinc-200 dark:border-white/10">
-                  <button
-                    onClick={() => {
-                      localStorage.removeItem('AFRIVOICE_API_KEY');
-                      localStorage.removeItem('GEMINI_API_KEY');
-                      setUserApiKeyInput('');
-                      addToast('info', isEn ? 'API Key Removed' : 'Clé API supprimée', isEn ? 'The custom key has been cleared.' : 'La clé personnalisée a été effacée.');
-                      setShowKeyModal(false);
-                    }}
-                    className="py-3.5 px-4 rounded-xl font-black text-xs uppercase tracking-wider transition-all border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-red-500 hover:border-red-500/30"
-                  >
-                    {isEn ? 'Clear' : 'Effacer'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!userApiKeyInput.trim()) {
-                        addToast('error', isEn ? 'Missing Key' : 'Clé vide', isEn ? 'Please paste your API key.' : 'Veuillez coller votre clé API.');
-                        return;
-                      }
-                      localStorage.setItem('AFRIVOICE_API_KEY', userApiKeyInput.trim());
-                      localStorage.setItem('GEMINI_API_KEY', userApiKeyInput.trim());
-                      setShowQuotaError(false);
-                      setStatus((prev) => ({ ...prev, error: null }));
-                      addToast('success', isEn ? 'API Key Connected ✅' : 'Clé API Connectée ✅', isEn ? 'Your Google Gemini API Key is now saved and active.' : 'Votre Clé API Google Gemini est maintenant active pour la synthèse.');
-                      setShowKeyModal(false);
-                    }}
-                    className="flex-1 py-3.5 px-6 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-lg bg-gradient-to-r from-[#EA580C] to-[#F59E0B] dark:from-[#D4FF00] dark:to-[#84CC16] text-white dark:text-black hover:scale-[1.02]"
-                  >
-                    {isEn ? 'Save & Connect' : 'Sauvegarder & Connecter'}
-                  </button>
-                </div>
-              </div>
-            </div>
           )}
 
           {/* Quota Exhaustion Alert Box */}

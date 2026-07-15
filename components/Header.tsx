@@ -101,20 +101,6 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {/* API Key Picker Button */}
-          <button
-            onClick={onOpenKeyPicker}
-            className={`px-2 py-1 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all duration-300 border flex items-center justify-center gap-1 shrink-0 ${
-              isDark
-                ? 'bg-[#18181B] border-white/10 text-[#D4FF00] hover:bg-[#27272A] hover:border-[#D4FF00]/40'
-                : 'bg-white border-[#FDE8CD] text-[#EA580C] hover:bg-[#FFF7ED] hover:border-[#EA580C]/40 shadow-xs'
-            }`}
-            title={language === 'en' ? 'Connect / Configure Gemini API Key' : 'Connecter / Configurer la clé API Gemini'}
-          >
-            <span className="text-xs sm:text-sm">🔑</span>
-            <span className="hidden sm:inline">{language === 'en' ? 'API Key' : 'Clé API'}</span>
-          </button>
-
           {/* Language Switcher Button (FR | EN) */}
           {onToggleLanguage && (
             <button
