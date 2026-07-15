@@ -1,0 +1,8 @@
+{
+  "name": "AfriVoice AI - Studio de Voix-Off Africaine",
+  "description": "Générez des voix-off professionnelles avec les accents authentiques de 20 pays africains grâce à l'IA.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": []
+}
