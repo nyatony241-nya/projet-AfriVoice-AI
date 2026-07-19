@@ -67,9 +67,9 @@ const ToastItem: React.FC<{ toast: Toast; onDismiss: (id: string) => void; isDar
       ),
     },
     info: {
-      bg: isDark ? 'bg-[#18181B] border-[#EA580C]/40 text-white' : 'bg-white border-[#EA580C]/40 text-zinc-900',
-      iconBg: 'bg-[#EA580C]/10 text-[#EA580C]',
-      accent: '#EA580C',
+      bg: isDark ? 'bg-[#18181B] border-[#D4FF00]/40 text-white' : 'bg-white border-[#D4FF00]/40 text-zinc-900',
+      iconBg: 'bg-[#D4FF00]/10 text-[#D4FF00]',
+      accent: '#D4FF00',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

@@ -113,28 +113,32 @@ const Sidebar: React.FC<SidebarProps> = ({
   const navItems = language === 'en' ? navItemsEn : navItemsFr;
 
   const content = (
-    <div className={`flex flex-col h-full justify-between p-6 ${isDark ? 'bg-[#0E0F15] text-zinc-300' : 'bg-[#FFFBF5] text-zinc-800'}`}>
+    <div className={`flex flex-col h-full justify-between p-6 ${isDark ? 'bg-[#0E0F15] text-zinc-300' : 'bg-[#FAFAFA] text-zinc-800'}`}>
       {/* Top Section: Logo & Nav */}
       <div>
           {/* Unified Logo */}
           <div className="flex items-center gap-2.5 sm:gap-3 mb-8 pl-1 group cursor-pointer" onClick={() => onTabChange('studio')}>
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md shrink-0 border ${
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shrink-0 border relative overflow-hidden group ${
               isDark
-                ? 'bg-gradient-to-tr from-[#D4FF00] via-[#84CC16] to-[#10B981] text-black shadow-[#D4FF00]/20 border-[#D4FF00]/40'
-                : 'bg-gradient-to-tr from-[#EA580C] via-[#F59E0B] to-[#DC2626] text-white shadow-[#EA580C]/25 border-[#EA580C]/30'
+                ? 'bg-gradient-to-br from-[#D4FF00] to-[#84CC16] text-black shadow-[#D4FF00]/20 border-[#D4FF00]/50'
+                : 'bg-gradient-to-br from-[#D4FF00] to-[#A3E635] text-black shadow-[#D4FF00]/30 border-[#D4FF00]/60'
             }`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 font-black" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.6} d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M19 10v2a7 7 0 01-14 0v-2m14 0h-2m-10 0H3m9 11v3m-3 0h6" />
+              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 font-black drop-shadow-sm group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="22" strokeWidth={2.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M22 9v4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2 9v4" />
               </svg>
             </div>
             <div className="flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
                 <span className={`text-base sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-                  AfriVoice<span className={isDark ? 'text-[#D4FF00]' : 'text-[#EA580C]'}>AI</span>
+                  AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
                 </span>
                 <span className={`text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shadow-xs ${
-                  isDark ? 'bg-[#D4FF00] text-black' : 'bg-[#EA580C] text-white'
+                  'bg-[#D4FF00] text-black'
                 }`}>
                   {currentPlan.id.toUpperCase()}
                 </span>
@@ -162,15 +166,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }}
                 className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 group relative ${
                   isActive
-                    ? isDark
-                      ? 'bg-[#D4FF00]/10 text-[#D4FF00] shadow-sm'
-                      : 'bg-[#EA580C]/10 text-[#EA580C] shadow-sm'
+                    ? isDark ? isDark ? 'bg-[#D4FF00]/10 text-[#D4FF00] shadow-sm' : 'bg-[#D4FF00] text-black shadow-md' : 'bg-[#D4FF00] text-black shadow-md'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'
                 }`}
               >
                 {/* Active Indicator Bar */}
                 {isActive && (
-                  <span className={`absolute left-0 top-2 bottom-2 w-1.5 rounded-r-full transition-all ${isDark ? 'bg-[#D4FF00]' : 'bg-[#EA580C]'}`} />
+                  <span className={`absolute left-0 top-2 bottom-2 w-1.5 rounded-r-full transition-all ${'bg-[#D4FF00]'}`} />
                 )}
 
                 <div className="flex items-center gap-3">
@@ -186,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       isActive
                         ? isDark
                           ? 'bg-[#D4FF00] text-black'
-                          : 'bg-[#EA580C] text-white'
+                          : 'bg-[#D4FF00] text-black'
                         : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                     }`}
                   >
@@ -200,10 +202,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom Section: User & Status */}
       <div className="pt-6 border-t border-zinc-200 dark:border-white/10">
-        <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#181D29] border-white/5' : 'bg-white border-[#FDE8CD] shadow-sm'}`}>
+        <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#181D29] border-white/5' : 'bg-white border-[#E4E4E7] shadow-sm'}`}>
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-md ${
-              isDark ? 'bg-[#D4FF00] text-black' : 'bg-[#EA580C] text-white'
+              'bg-[#D4FF00] text-black'
             }`}>
               AV
             </div>
@@ -223,7 +225,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={`hidden lg:block w-[270px] shrink-0 h-screen sticky top-0 border-r z-30 ${isDark ? 'border-white/10' : 'border-[#FDE8CD]'}`}>
+      <aside className={`hidden lg:block w-[270px] shrink-0 h-screen sticky top-0 border-r z-30 ${isDark ? 'border-white/10' : 'border-[#E4E4E7]'}`}>
         {content}
       </aside>
 

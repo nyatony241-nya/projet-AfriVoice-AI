@@ -65,7 +65,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     features: [
       '60 minutes / mois sécurisées',
       '20 pays & tous les accents',
-      'Expressions Nouchi & Naija',
+      'Expressions Locales & Accent Typique',
       'Sans filigrane • Export MP3 + WAV',
       'Utilisation commerciale monétisée',
       'Mastering audio de base'
@@ -114,7 +114,7 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     features: [
       '60 minutes / month secured',
       '20 countries & all accents',
-      'Nouchi & Naija expressions',
+      'Local Expressions & Authentic Accent',
       'No watermark • MP3 + WAV export',
       'Monetized commercial use',
       'Basic audio mastering'

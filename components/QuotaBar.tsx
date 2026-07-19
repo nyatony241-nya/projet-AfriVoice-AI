@@ -35,11 +35,11 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
             : 'bg-red-50 border-red-300 shadow-xs'
           : isHighUsage
           ? isDark
-            ? 'bg-[#F59E0B]/10 border-[#F59E0B]/30'
+            ? 'bg-[#E2FF3B]/10 border-[#E2FF3B]/30'
             : 'bg-amber-50 border-amber-300'
           : isDark
           ? 'bg-[#14151C] border-white/10 shadow-sm'
-          : 'bg-white border-[#FDE8CD] shadow-xs'
+          : 'bg-white border-[#E4E4E7] shadow-xs'
       }`}
     >
       <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
@@ -49,10 +49,8 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
               isExhausted
                 ? 'bg-red-500 text-white'
                 : isHighUsage
-                ? 'bg-[#F59E0B] text-black'
-                : isDark
-                ? 'bg-[#D4FF00]/15 text-[#D4FF00]'
-                : 'bg-[#EA580C]/15 text-[#EA580C]'
+                ? 'bg-[#E2FF3B] text-black'
+                : 'bg-[#D4FF00]/15 text-[#D4FF00]'
             }`}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -69,7 +67,7 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
                   isExhausted
                     ? 'bg-red-500 text-white'
                     : isHighUsage
-                    ? 'bg-[#F59E0B] text-black'
+                    ? 'bg-[#E2FF3B] text-black'
                     : 'bg-[#16A34A] text-white'
                 }`}
               >
@@ -89,7 +87,7 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
         {(isHighUsage || isExhausted || currentPlan.id !== 'free') && (
           <button
             onClick={onTopUp}
-            className="px-2 py-1 rounded-lg bg-gradient-to-r from-[#EA580C] to-[#F59E0B] text-white font-black text-[9px] sm:text-[10px] uppercase tracking-wider hover:scale-105 transition-transform shadow-xs shrink-0"
+            className="px-2 py-1 rounded-lg bg-gradient-to-r from-[#D4FF00] to-[#E2FF3B] text-black font-black text-[9px] sm:text-[10px] uppercase tracking-wider hover:scale-105 transition-transform shadow-xs shrink-0"
           >
             {isEn ? '+ Top Up' : '+ Recharge'}
           </button>
@@ -103,10 +101,8 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
             isExhausted
               ? 'bg-red-500'
               : isHighUsage
-              ? 'bg-[#F59E0B]'
-              : isDark
-              ? 'bg-[#D4FF00]'
-              : 'bg-[#EA580C]'
+              ? 'bg-[#E2FF3B]'
+              : 'bg-[#D4FF00]'
           }`}
           style={{ width: `${percentage}%` }}
         />

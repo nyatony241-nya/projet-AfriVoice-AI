@@ -49,30 +49,34 @@ const Header: React.FC<HeaderProps> = ({
       className={`sticky top-0 z-40 border-b backdrop-blur-xl transition-all duration-300 ${
         isDark
           ? 'bg-[#09090B]/85 border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.4)]'
-          : 'bg-[#FFFBF5]/90 border-[#FDE8CD] shadow-[0_4px_25px_rgba(234,88,12,0.04)]'
+          : 'bg-[#FAFAFA]/90 border-[#E4E4E7] shadow-[0_4px_25px_rgba(0,0,0,0.04)]'
       }`}
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-1.5 sm:gap-4">
         {/* Left: Unified Logo & Title (Responsive across Web & Mobile) */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer" onClick={() => onTabChange('studio')}>
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl flex items-center justify-center shadow-md shrink-0 border ${
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shrink-0 border relative overflow-hidden group ${
               isDark
-                ? 'bg-gradient-to-tr from-[#D4FF00] via-[#84CC16] to-[#10B981] text-black shadow-[#D4FF00]/20 border-[#D4FF00]/40'
-                : 'bg-gradient-to-tr from-[#EA580C] via-[#F59E0B] to-[#DC2626] text-white shadow-[#EA580C]/25 border-[#EA580C]/30'
+                ? 'bg-gradient-to-br from-[#D4FF00] to-[#84CC16] text-black shadow-[#D4FF00]/20 border-[#D4FF00]/50'
+                : 'bg-gradient-to-br from-[#D4FF00] to-[#A3E635] text-black shadow-[#D4FF00]/30 border-[#D4FF00]/60'
             }`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 font-black" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.6} d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M19 10v2a7 7 0 01-14 0v-2m14 0h-2m-10 0H3m9 11v3m-3 0h6" />
+              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 font-black drop-shadow-sm group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="22" strokeWidth={2.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M22 9v4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2 9v4" />
               </svg>
             </div>
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className={`text-sm sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-                  AfriVoice<span className={isDark ? 'text-[#D4FF00]' : 'text-[#EA580C]'}>AI</span>
+                  AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
                 </span>
                 <span className={`text-[7px] sm:text-[9px] font-black uppercase px-1 py-0.5 sm:px-1.5 rounded tracking-wider shadow-xs ${
-                  isDark ? 'bg-[#D4FF00] text-black' : 'bg-[#EA580C] text-white'
+                  'bg-[#D4FF00] text-black'
                 }`}>
                   {currentPlan.id.toUpperCase()}
                 </span>
@@ -88,9 +92,9 @@ const Header: React.FC<HeaderProps> = ({
               onClick={() => onTabChange('pricing')}
               className={`cursor-pointer px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
                 currentPlan.id === 'pro'
-                  ? 'bg-gradient-to-r from-[#EA580C] via-[#F59E0B] to-[#D4FF00] text-black shadow-md font-black'
+                  ? 'bg-gradient-to-r from-[#D4FF00] via-[#E2FF3B] to-[#D4FF00] text-black shadow-md font-black'
                   : currentPlan.id === 'creator'
-                  ? 'bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30 font-black'
+                  ? 'bg-[#E2FF3B]/20 text-[#E2FF3B] border border-[#E2FF3B]/30 font-black'
                   : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-zinc-200 dark:border-white/10 font-bold'
               }`}
             >
@@ -108,13 +112,13 @@ const Header: React.FC<HeaderProps> = ({
               className={`px-2 py-1 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all duration-300 border flex items-center justify-center gap-0.5 sm:gap-1 shrink-0 ${
                 isDark
                   ? 'bg-[#18181B] border-white/10 text-white hover:bg-[#27272A] hover:border-white/20'
-                  : 'bg-white border-[#FDE8CD] text-zinc-800 hover:bg-[#FFF7ED] shadow-xs'
+                  : 'bg-white border-[#E4E4E7] text-zinc-800 hover:bg-[#FFF7ED] shadow-xs'
               }`}
               title="Changer de langue / Switch language"
             >
-              <span className={language === 'fr' ? 'text-[#EA580C] dark:text-[#D4FF00]' : 'opacity-40'}>FR</span>
+              <span className={language === 'fr' ? (isDark ? 'text-[#D4FF00]' : 'text-zinc-900 font-black') : 'opacity-40'}>FR</span>
               <span className="opacity-30">|</span>
-              <span className={language === 'en' ? 'text-[#EA580C] dark:text-[#D4FF00]' : 'opacity-40'}>EN</span>
+              <span className={language === 'en' ? (isDark ? 'text-[#D4FF00]' : 'text-zinc-900 font-black') : 'opacity-40'}>EN</span>
             </button>
           )}
 
@@ -124,7 +128,7 @@ const Header: React.FC<HeaderProps> = ({
             className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl transition-all duration-300 border flex items-center justify-center shrink-0 ${
               isDark
                 ? 'bg-[#18181B] border-white/10 text-[#D4FF00] hover:bg-[#27272A] hover:border-white/20'
-                : 'bg-white border-[#FDE8CD] text-[#EA580C] hover:bg-[#FFF7ED] shadow-xs'
+                : 'bg-white border-[#E4E4E7] text-zinc-900 hover:bg-zinc-50 shadow-xs'
             }`}
             title={isDark ? 'Passer en Mode Afrique Premium (Clair)' : 'Passer en Mode Nuit Professionnelle (Sombre)'}
           >
@@ -143,7 +147,7 @@ const Header: React.FC<HeaderProps> = ({
 
       {/* Mobile Top Navigation Tabs Bar (Visible only on mobile below lg - always directly accessible at top) */}
       <div className={`lg:hidden border-t px-2 py-1.5 flex items-center justify-between gap-1 overflow-x-auto no-scrollbar shadow-sm ${
-        isDark ? 'border-white/10 bg-[#09090B]/95' : 'border-[#FDE8CD] bg-[#FFFBF5]/95'
+        isDark ? 'border-white/10 bg-[#09090B]/95' : 'border-[#E4E4E7] bg-[#FAFAFA]/95'
       }`}>
         {[
           {
@@ -195,7 +199,7 @@ const Header: React.FC<HeaderProps> = ({
                 isActive
                   ? isDark
                     ? 'bg-[#D4FF00] text-black shadow-md shadow-[#D4FF00]/20 scale-[1.02]'
-                    : 'bg-[#EA580C] text-white shadow-md shadow-[#EA580C]/25 scale-[1.02]'
+                    : 'bg-[#D4FF00] text-black shadow-md shadow-[#D4FF00]/25 scale-[1.02]'
                   : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'
               }`}
             >

@@ -187,7 +187,7 @@ const App: React.FC = () => {
       document.body.style.backgroundColor = '#09090B';
     } else {
       root.classList.remove('dark');
-      document.body.style.backgroundColor = '#FFFBF5';
+      document.body.style.backgroundColor = '#FAFAFA';
     }
   }, [theme]);
 
@@ -312,7 +312,7 @@ const App: React.FC = () => {
       setStatus({ isGenerating: false, error: null, audioUrl: url });
       addToast('success', 'Voix africaine générée !', `Production de ${estimatedSeconds}s réussie (${selectedCountry.name} - ${selectedVoiceId}).`);
     } catch (err: any) {
-      console.error(err);
+      console.error('Erreur lors de la génération vocale:', err?.message || 'Erreur inconnue');
       const isQuotaError = err?.message?.includes('429') || err?.message?.includes('quota') || err?.status === 429;
       const isKeyNotFoundError = err?.message?.includes('Requested entity was not found.');
 
@@ -469,8 +469,8 @@ const App: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isDark ? 'bg-[#D4FF00]/10' : 'bg-[#D4FF00] shadow-sm'}`}>
+                          <svg className={`h-5 w-5 ${isDark ? 'text-[#D4FF00]' : 'text-zinc-900'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -491,7 +491,7 @@ const App: React.FC = () => {
                     setActiveTab('pricing');
                     setShowQuotaError(false);
                   }}
-                  className="w-full md:w-auto px-8 py-4 bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg shrink-0"
+                  className="w-full md:w-auto px-8 py-4 bg-[#D4FF00] text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg shrink-0"
                 >
                   ⚡ Changer de Forfait
                 </button>
@@ -509,7 +509,7 @@ const App: React.FC = () => {
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h2 className="text-xl font-black tracking-tight flex items-center gap-2.5">
-                        <span className="w-1.5 h-6 bg-[#EA580C] dark:bg-[#D4FF00] rounded-full" />
+                        <span className="w-1.5 h-6 bg-[#D4FF00] rounded-full" />
                         <span>{isEn ? 'African Accent Selection' : 'Sélection de l\'Accent Africain'}</span>
                       </h2>
                       <p className="text-xs text-zinc-500 font-bold mt-1">
@@ -532,6 +532,7 @@ const App: React.FC = () => {
                           country={country}
                           isSelected={selectedCountry.id === country.id}
                           onSelect={setSelectedCountry}
+                          language={language}
                           isLocked={isCountryLocked}
                           onLockedClick={() => {
                             addToast(
@@ -554,14 +555,14 @@ const App: React.FC = () => {
                   className={`order-3 lg:order-none rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
                     isDark
                       ? 'bg-[#14151C] border-white/10 shadow-2xl'
-                      : 'bg-white border-[#FDE8CD] shadow-lg shadow-[#EA580C]/5'
+                      : 'bg-white border-[#E4E4E7] shadow-lg shadow-[#D4FF00]/5'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-200 dark:border-white/5">
                     <h2 className="text-lg font-black tracking-tight flex items-center gap-2.5">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-[#EA580C] dark:text-[#D4FF00]"
+                        className="h-5 w-5 text-[#D4FF00]"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
@@ -574,7 +575,7 @@ const App: React.FC = () => {
                       <span>{isEn ? 'Voice Parameters & Nuances' : 'Paramètres Vocaux & Nuances'}</span>
                     </h2>
                     <span className="text-[10px] font-mono text-zinc-500 font-bold">
-                      {settings.isClonedVoice ? (isEn ? '🎤 Cloned Voice HD (Nouchi/Naija imprint)' : '🎤 Voix Clonée HD (Empreinte Nouchi/Naija)') : settings.gender === 'female' ? (isEn ? 'Zephyr (Female)' : 'Zephyr (Femme)') : (isEn ? 'Kore (Male)' : 'Kore (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
+                      {settings.isClonedVoice ? (isEn ? '🎤 Cloned Voice HD (Authentic Imprint)' : '🎤 Voix Clonée HD (Empreinte Locale)') : settings.gender === 'female' ? (isEn ? 'Zephyr (Female)' : 'Zephyr (Femme)') : (isEn ? 'Kore (Male)' : 'Kore (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
                     </span>
                   </div>
 
@@ -587,7 +588,7 @@ const App: React.FC = () => {
                           onClick={() => setSettings({ ...settings, gender: g as any, isClonedVoice: false })}
                           className={`flex-1 py-4 px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 ${
                             settings.gender === g && !settings.isClonedVoice
-                              ? 'bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black shadow-lg shadow-[#EA580C]/25 dark:shadow-[#D4FF00]/25'
+                              ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/25'
                               : isDark
                               ? 'bg-[#09090B] text-zinc-400 border border-white/5 hover:border-white/20'
                               : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
@@ -601,7 +602,7 @@ const App: React.FC = () => {
                     {/* 🧬 Module Clonage de Voix IA (PRO & AGENCY) */}
                     <div className={`p-5 rounded-3xl border transition-all ${
                       settings.isClonedVoice
-                        ? isDark ? 'bg-[#D4FF00]/10 border-[#D4FF00]/40' : 'bg-[#EA580C]/10 border-[#EA580C]/40'
+                        ? 'bg-[#D4FF00]/10 border-[#D4FF00]/40'
                         : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
                     }`}>
                       <div className="flex items-center justify-between mb-3">
@@ -612,7 +613,7 @@ const App: React.FC = () => {
                           </span>
                         </div>
                         {!isCloningFeature ? (
-                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gradient-to-r from-[#EA580C] to-[#F59E0B] text-white shadow-sm flex items-center gap-1">
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-gradient-to-r from-[#D4FF00] to-[#E2FF3B] text-black shadow-sm flex items-center gap-1">
                             🔒 PRO / CREATOR
                           </span>
                         ) : (
@@ -646,7 +647,7 @@ const App: React.FC = () => {
                           }}
                           className={`flex-1 py-3 px-4 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 border ${
                             settings.isClonedVoice
-                              ? 'bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black border-transparent shadow-md'
+                              ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
                               : isDark
                               ? 'bg-zinc-900 text-zinc-400 border-white/10 hover:border-white/20'
                               : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-100'
@@ -665,7 +666,7 @@ const App: React.FC = () => {
                               setActiveTab('pricing');
                               return;
                             }
-                            addToast('info', isEn ? 'Sample Analysis Complete' : 'Analyse Échantillon terminée', isEn ? 'Audio file (12s WAV) successfully analyzed: HD Nouchi acoustic fingerprint extracted.' : 'Fichier audio (12s WAV) analysé avec succès : Empreinte acoustique Nouchi HD extraite.');
+                            addToast('info', isEn ? 'Sample Analysis Complete' : 'Analyse Échantillon terminée', isEn ? 'Audio file (12s WAV) successfully analyzed: HD authentic acoustic fingerprint extracted.' : 'Fichier audio (12s WAV) analysé avec succès : Empreinte acoustique locale HD extraite.');
                             setSettings({
                               ...settings,
                               isClonedVoice: true,
@@ -678,7 +679,7 @@ const App: React.FC = () => {
                               : 'bg-zinc-200/70 border-zinc-300 text-zinc-800 hover:bg-zinc-300'
                           } ${!isCloningFeature ? 'opacity-70 border-dashed border-amber-500/50' : ''}`}
                         >
-                          <svg className="w-3.5 h-3.5 text-[#EA580C] dark:text-[#D4FF00]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-3.5 h-3.5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                           </svg>
                           <span>
@@ -696,7 +697,7 @@ const App: React.FC = () => {
                             value={settings.clonedVoiceName || ''}
                             onChange={(e) => setSettings({ ...settings, clonedVoiceName: e.target.value })}
                             className={`text-xs font-black rounded-lg px-2.5 py-1 outline-none ${
-                              isDark ? 'bg-zinc-900 text-[#D4FF00]' : 'bg-white text-[#EA580C] border border-zinc-300'
+                              isDark ? 'bg-zinc-900 text-[#D4FF00]' : 'bg-white text-zinc-900 border border-zinc-300 font-bold'
                             }`}
                           >
                             <option value={isEn ? 'My Cloned Voice (Abidjan/Dakar Studio)' : 'Ma Voix Clonée (Studio Abidjan/Dakar)'}>{isEn ? '🎤 My Cloned Voice (Abidjan/Dakar Studio)' : '🎤 Ma Voix Clonée (Studio Abidjan/Dakar)'}</option>
@@ -714,7 +715,7 @@ const App: React.FC = () => {
                             {isEn ? 'Emotion & Intonation' : 'Émotion & Intonation'}
                           </label>
                           {!isPremiumFeature && (
-                            <span className="text-[9px] bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black px-1.5 py-0.5 rounded font-black">
+                            <span className="text-[9px] bg-[#D4FF00] text-black px-1.5 py-0.5 rounded font-black">
                               PRO
                             </span>
                           )}
@@ -743,7 +744,7 @@ const App: React.FC = () => {
                             {isEn ? 'Slang & Local Expressions' : 'Slang & Expressions Locales'}
                           </label>
                           {!isPremiumFeature && (
-                            <span className="text-[9px] bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black px-1.5 py-0.5 rounded font-black">
+                            <span className="text-[9px] bg-[#D4FF00] text-black px-1.5 py-0.5 rounded font-black">
                               PRO
                             </span>
                           )}
@@ -753,18 +754,18 @@ const App: React.FC = () => {
                           onClick={() => setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions })}
                           className={`w-full py-3.5 px-5 rounded-2xl text-xs font-bold transition-all flex items-center justify-between border ${
                             settings.useLocalExpressions
-                              ? 'bg-[#EA580C]/10 dark:bg-[#D4FF00]/10 text-[#EA580C] dark:text-[#D4FF00] border-[#EA580C]/30 dark:border-[#D4FF00]/30'
+                              ? (isDark ? 'bg-[#D4FF00]/10 text-[#D4FF00] border-[#D4FF00]/30' : 'bg-[#D4FF00] text-zinc-900 border-[#D4FF00] shadow-sm')
                               : isDark
                               ? 'bg-[#09090B] text-zinc-500 border-white/10'
                               : 'bg-zinc-50 text-zinc-500 border-zinc-200'
                           } ${!isPremiumFeature ? 'opacity-40 cursor-not-allowed' : ''}`}
                         >
                           <span className="uppercase tracking-widest text-[10px] font-extrabold">
-                            {settings.useLocalExpressions ? (isEn ? 'Nouchi / Naija Enabled' : 'Nouchi / Naija Activé') : (isEn ? 'Disabled (Standard Fr/En)' : 'Désactivé (Fr/En Standard)')}
+                            {settings.useLocalExpressions ? (isEn ? 'Authentic Accent & Slang Enabled' : 'Accent & Expressions Locales Activés') : (isEn ? 'Disabled (Standard Fr/En)' : 'Désactivé (Fr/En Standard)')}
                           </span>
                           <div
                             className={`w-10 h-5 rounded-full relative transition-all ${
-                              settings.useLocalExpressions ? 'bg-[#EA580C] dark:bg-[#D4FF00]' : 'bg-zinc-300 dark:bg-zinc-700'
+                              settings.useLocalExpressions ? 'bg-[#D4FF00]' : 'bg-zinc-300 dark:bg-zinc-700'
                             }`}
                           >
                             <div
@@ -790,7 +791,7 @@ const App: React.FC = () => {
                               onClick={() => setSettings({ ...settings, speed })}
                               className={`flex-1 py-3 rounded-xl text-xs font-black transition-all border ${
                                 settings.speed === speed
-                                  ? 'bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black border-transparent shadow-md'
+                                  ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
                                   : isDark
                                   ? 'bg-[#09090B] text-zinc-400 border-white/5 hover:border-white/20'
                                   : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'
@@ -807,7 +808,7 @@ const App: React.FC = () => {
                           <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">
                             {isEn ? 'Apparent Voice Age' : 'Âge apparent de la voix'}
                           </label>
-                          <span className="text-xs font-mono font-black text-[#EA580C] dark:text-[#D4FF00]">
+                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
                             {settings.age} {isEn ? 'Y.O.' : 'ANS'}
                           </span>
                         </div>
@@ -835,12 +836,12 @@ const App: React.FC = () => {
                               {isEn ? 'Pitch (Tone)' : 'Pitch (Tonalité)'}
                             </label>
                             {!isPremiumFeature && (
-                              <span className="text-[8px] bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black px-1.5 py-0.5 rounded font-black">
+                              <span className="text-[8px] bg-[#D4FF00] text-black px-1.5 py-0.5 rounded font-black">
                                 PRO
                               </span>
                             )}
                           </div>
-                          <span className="text-xs font-mono font-black text-[#EA580C] dark:text-[#D4FF00]">
+                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
                             {settings.pitch.toFixed(1)}x
                           </span>
                         </div>
@@ -869,12 +870,12 @@ const App: React.FC = () => {
                               {isEn ? 'Timbre (Vocal Texture)' : 'Timbre (Texture Vocale)'}
                             </label>
                             {!isPremiumFeature && (
-                              <span className="text-[8px] bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black px-1.5 py-0.5 rounded font-black">
+                              <span className="text-[8px] bg-[#D4FF00] text-black px-1.5 py-0.5 rounded font-black">
                                 PRO
                               </span>
                             )}
                           </div>
-                          <span className="text-xs font-mono font-black text-[#EA580C] dark:text-[#D4FF00]">
+                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
                             {settings.timbre}%
                           </span>
                         </div>
@@ -907,7 +908,7 @@ const App: React.FC = () => {
                   className={`order-2 lg:order-none rounded-[36px] p-6 sm:p-8 border sticky top-24 transition-all duration-300 ${
                     isDark
                       ? 'bg-[#14151C] border-white/10 shadow-2xl'
-                      : 'bg-white border-[#FDE8CD] shadow-xl shadow-[#EA580C]/5'
+                      : 'bg-white border-[#E4E4E7] shadow-xl shadow-[#D4FF00]/5'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-6">
@@ -934,7 +935,7 @@ const App: React.FC = () => {
                           ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
                           : isDark
                           ? 'bg-[#09090B] border-white/10 text-white placeholder-zinc-600 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#EA580C] focus:ring-4 focus:ring-[#EA580C]/10'
+                          : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
                       }`}
                     />
                     {(status.error || script.length > quota.maxCharsPerScript) && (
@@ -959,7 +960,7 @@ const App: React.FC = () => {
                         ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 cursor-not-allowed border-none shadow-none'
                         : isDark
                         ? 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/20 hover:scale-[1.01]'
-                        : 'bg-[#EA580C] text-white hover:bg-[#D94E06] shadow-[#EA580C]/25 hover:scale-[1.01]'
+                        : 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/25 hover:scale-[1.01]'
                     }`}
                   >
                     {status.isGenerating ? (
@@ -985,7 +986,7 @@ const App: React.FC = () => {
                         {[40, 70, 25, 90, 60, 30, 85, 50, 95, 45, 75, 35, 65, 80, 55].map((h, idx) => (
                           <div
                             key={idx}
-                            className="flex-1 bg-[#EA580C]/30 dark:bg-[#D4FF00]/30 rounded-full animate-bounce"
+                            className="flex-1 bg-[#D4FF00]/30 dark:bg-[#D4FF00]/30 rounded-full animate-bounce"
                             style={{ height: `${h}%`, animationDelay: `${idx * 60}ms` }}
                           />
                         ))}
@@ -1016,7 +1017,7 @@ const App: React.FC = () => {
                       {/* Quick Mastering Switch to Console tab */}
                       <div className={`p-5 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'}`}>
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-[#EA580C]/10 dark:bg-[#D4FF00]/10 text-[#EA580C] dark:text-[#D4FF00] flex items-center justify-center shrink-0">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isDark ? 'bg-[#D4FF00]/10 text-[#D4FF00]' : 'bg-[#D4FF00] text-zinc-900 shadow-sm'}`}>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                             </svg>
@@ -1028,7 +1029,7 @@ const App: React.FC = () => {
                         </div>
                         <button
                           onClick={() => setActiveTab('mastering')}
-                          className="px-4 py-2 rounded-xl text-[11px] font-extrabold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-[#EA580C] hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black transition-colors shrink-0"
+                          className="px-4 py-2 rounded-xl text-[11px] font-extrabold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-[#D4FF00] hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black transition-colors shrink-0"
                         >
                           {isEn ? 'Open Mastering →' : 'Ouvrir Mastering →'}
                         </button>
@@ -1047,12 +1048,12 @@ const App: React.FC = () => {
                 className={`p-8 sm:p-10 rounded-[40px] border ${
                   isDark
                     ? 'bg-[#14151C] border-white/10 shadow-2xl'
-                    : 'bg-white border-[#FDE8CD] shadow-xl shadow-[#EA580C]/5'
+                    : 'bg-white border-[#E4E4E7] shadow-xl shadow-[#D4FF00]/5'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-zinc-200 dark:border-white/10">
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#EA580C] dark:text-[#D4FF00]">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-[#D4FF00]">
                       HD Mixing Engine
                     </span>
                     <h2 className="text-2xl font-black tracking-tight mt-1">{isEn ? 'Studio Mastering Console' : 'Console de Mastering Studio'}</h2>
@@ -1068,7 +1069,7 @@ const App: React.FC = () => {
                         a.download = `afrivoice_mastered_${selectedCountry.id}.wav`;
                         a.click();
                       }}
-                      className="px-6 py-3 rounded-2xl bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black font-black text-xs uppercase tracking-wider hover:scale-105 transition-transform shrink-0 shadow-lg"
+                      className="px-6 py-3 rounded-2xl bg-[#D4FF00] text-black font-black text-xs uppercase tracking-wider hover:scale-105 transition-transform shrink-0 shadow-lg"
                     >
                       {isEn ? 'Export Mastered Mix' : 'Exporter le Mix Masterisé'}
                     </button>
@@ -1119,7 +1120,7 @@ const App: React.FC = () => {
                           <label className="text-xs font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
                             {isEn ? 'AI Voice Volume' : 'Volume de la Voix IA'}
                           </label>
-                          <span className="text-xs font-mono font-black text-[#EA580C] dark:text-[#D4FF00]">
+                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
                             {mixer.voiceVolume}%
                           </span>
                         </div>
@@ -1141,7 +1142,7 @@ const App: React.FC = () => {
                             {isEn ? 'Background Music (Afrobeat)' : 'Piste d\'Ambiance (Afrobeat)'}
                           </label>
                           {!isPremiumFeature && (
-                            <span className="text-[9px] bg-gradient-to-r from-[#EA580C] to-[#F59E0B] text-white px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm">
+                            <span className="text-[9px] bg-gradient-to-r from-[#D4FF00] to-[#E2FF3B] text-black px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm">
                               🔒 PRO / CREATOR
                             </span>
                           )}
@@ -1178,7 +1179,7 @@ const App: React.FC = () => {
                           <label className="text-xs font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
                             {isEn ? 'Background Music Volume' : 'Volume de la Musique de Fond'}
                           </label>
-                          <span className="text-xs font-mono font-black text-[#EA580C] dark:text-[#D4FF00]">
+                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
                             {mixer.bgMusicVolume}%
                           </span>
                         </div>
@@ -1215,7 +1216,7 @@ const App: React.FC = () => {
                           ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-2 border-dashed border-amber-500/50 shadow-none'
                           : isDark
                           ? 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/20'
-                          : 'bg-[#EA580C] text-white hover:bg-[#D94E06] shadow-[#EA580C]/25'
+                          : 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/25'
                       }`}
                     >
                       {!isPremiumFeature && <span>🔒</span>}
@@ -1246,7 +1247,7 @@ const App: React.FC = () => {
                 className={`p-8 sm:p-10 rounded-[40px] border ${
                   isDark
                     ? 'bg-[#14151C] border-white/10 shadow-2xl'
-                    : 'bg-white border-[#FDE8CD] shadow-xl shadow-[#EA580C]/5'
+                    : 'bg-white border-[#E4E4E7] shadow-xl shadow-[#D4FF00]/5'
                 }`}
               >
                 <div className="flex items-center justify-between mb-8 pb-6 border-b border-zinc-200 dark:border-white/10">
@@ -1282,7 +1283,7 @@ const App: React.FC = () => {
                     </p>
                     <button
                       onClick={() => setActiveTab('studio')}
-                      className="mt-4 px-6 py-3 rounded-2xl bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black font-black text-xs uppercase tracking-wider"
+                      className="mt-4 px-6 py-3 rounded-2xl bg-[#D4FF00] text-black font-black text-xs uppercase tracking-wider"
                     >
                       {isEn ? 'Create my first voice →' : 'Créer ma première voix →'}
                     </button>
@@ -1295,7 +1296,7 @@ const App: React.FC = () => {
                         className={`p-6 sm:p-7 rounded-[32px] border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-6 group ${
                           isDark
                             ? 'bg-[#09090B] border-white/5 hover:border-[#D4FF00]/40 hover:shadow-xl hover:shadow-[#D4FF00]/5'
-                            : 'bg-zinc-50 border-zinc-200 hover:border-[#EA580C]/40 hover:shadow-lg'
+                            : 'bg-zinc-50 border-zinc-200 hover:border-[#D4FF00]/40 hover:shadow-lg'
                         }`}
                       >
                         <div className="flex items-start sm:items-center gap-5 min-w-0 flex-1">
@@ -1311,7 +1312,7 @@ const App: React.FC = () => {
                                 {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} •{' '}
                                 {new Date(item.timestamp).toLocaleDateString()}
                               </span>
-                              <span className="text-[10px] font-bold uppercase text-[#EA580C] dark:text-[#D4FF00]">
+                              <span className="text-[10px] font-bold uppercase text-zinc-900 dark:text-[#D4FF00]">
                                 {item.settings.gender === 'female' ? 'Zephyr' : 'Kore'} ({item.settings.age}a)
                               </span>
                             </div>
@@ -1327,7 +1328,7 @@ const App: React.FC = () => {
                             className={`px-4 py-3 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all ${
                               isDark
                                 ? 'bg-zinc-800 text-white hover:bg-[#D4FF00] hover:text-black'
-                                : 'bg-white text-zinc-800 hover:bg-[#EA580C] hover:text-white shadow-sm'
+                                : 'bg-white text-zinc-800 hover:bg-[#D4FF00] hover:text-white shadow-sm'
                             }`}
                             title={isEn ? 'Load into Studio / Listen' : 'Charger dans le Studio / Réécouter'}
                           >
@@ -1360,7 +1361,7 @@ const App: React.FC = () => {
           {activeTab === 'pricing' && (
             <div className="animate-in fade-in duration-300 space-y-12 py-6">
               <div className="text-center max-w-3xl mx-auto space-y-4">
-                <span className="text-xs font-black uppercase tracking-[0.25em] text-[#EA580C] dark:text-[#D4FF00] px-4 py-1.5 rounded-full bg-[#EA580C]/10 dark:bg-[#D4FF00]/10">
+                <span className={`text-xs font-black uppercase tracking-[0.25em] px-4 py-1.5 rounded-full ${isDark ? 'text-[#D4FF00] bg-[#D4FF00]/10' : 'text-zinc-900 bg-[#D4FF00] shadow-sm'}`}>
                   {isEn ? 'Pricing Grid & HD Voice Plans' : 'Grille Tarifaire & Forfaits Vocaux HD'}
                 </span>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight">
@@ -1381,22 +1382,22 @@ const App: React.FC = () => {
                         isActivePlan
                           ? isDark
                             ? 'border-[#D4FF00] scale-[1.04] bg-[#14151C] shadow-2xl shadow-[#D4FF00]/15'
-                            : 'border-[#EA580C] scale-[1.04] bg-white shadow-2xl shadow-[#EA580C]/15'
+                            : 'border-[#D4FF00] scale-[1.04] bg-white shadow-2xl shadow-[#D4FF00]/15'
                           : isDark
                           ? 'border-white/10 bg-[#14151C] hover:border-white/20 hover:-translate-y-1.5'
-                          : 'border-zinc-200 bg-white hover:border-[#EA580C]/40 hover:-translate-y-1.5 shadow-md'
+                          : 'border-zinc-200 bg-white hover:border-[#D4FF00]/40 hover:-translate-y-1.5 shadow-md'
                       }`}
                     >
                       {/* Popular / Active badges */}
                       {plan.isPopular && !isActivePlan && (
-                        <div className="absolute top-6 right-6 bg-gradient-to-r from-[#EA580C] to-[#F59E0B] text-white text-[10px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full shadow-md">
+                        <div className="absolute top-6 right-6 bg-gradient-to-r from-[#D4FF00] to-[#E2FF3B] text-black text-[10px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full shadow-md">
                           {isEn ? 'POPULAR' : 'POPULAIRE'}
                         </div>
                       )}
                       {isActivePlan && (
                         <div
                           className={`absolute top-6 right-6 text-[10px] font-black uppercase tracking-widest px-3.5 py-1.5 rounded-full shadow-md ${
-                            isDark ? 'bg-[#D4FF00] text-black' : 'bg-[#EA580C] text-white'
+                            'bg-[#D4FF00] text-black'
                           }`}
                         >
                           {isEn ? 'ACTIVE PLAN' : 'PLAN ACTIF'}
@@ -1405,7 +1406,7 @@ const App: React.FC = () => {
 
                       <h3
                         className={`text-xs font-black uppercase tracking-[0.2em] mb-6 ${
-                          isDark ? 'text-[#D4FF00]' : 'text-[#EA580C]'
+                          isDark ? 'text-[#D4FF00]' : 'text-zinc-900'
                         }`}
                       >
                         {plan.name}
@@ -1416,7 +1417,7 @@ const App: React.FC = () => {
                           {plan.price.replace(' FCFA', '')}
                         </span>
                         {!isEn && (
-                          <span className="text-xs sm:text-sm font-extrabold text-[#EA580C] dark:text-[#D4FF00] whitespace-nowrap">
+                          <span className={`text-xs sm:text-sm font-extrabold whitespace-nowrap ${isDark ? 'text-[#D4FF00]' : 'text-zinc-900'}`}>
                             FCFA
                           </span>
                         )}
@@ -1429,7 +1430,7 @@ const App: React.FC = () => {
                           <li key={i} className="flex items-start gap-3.5 text-xs sm:text-sm font-bold">
                             <div
                               className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                                isDark ? 'bg-[#D4FF00]/20 text-[#D4FF00]' : 'bg-[#EA580C]/15 text-[#EA580C]'
+                                isDark ? 'bg-[#D4FF00]/20 text-[#D4FF00]' : 'bg-[#D4FF00] text-zinc-900 shadow-sm'
                               }`}
                             >
                               <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -1450,7 +1451,7 @@ const App: React.FC = () => {
                           isActivePlan
                             ? isDark
                               ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/20'
-                              : 'bg-[#EA580C] text-white shadow-lg shadow-[#EA580C]/20'
+                              : 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/20'
                             : isDark
                             ? 'bg-zinc-800 text-zinc-300 hover:bg-white hover:text-black'
                             : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-900 hover:text-white'
@@ -1472,7 +1473,7 @@ const App: React.FC = () => {
               <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
               <span>{isEn ? 'AfriVoice AI Production Studio v2.5 • Secure HD Audio Engine' : 'AfriVoice AI Production Studio v2.5 • Moteur Audio HD Sécurisé'}</span>
             </div>
-            <p className="font-mono uppercase tracking-[0.2em] text-[10px]">Made for the African Continent © 2026</p>
+            <p className="font-mono uppercase tracking-[0.2em] text-[10px]">{isEn ? 'Made for the African Continent © 2026' : 'Créé pour le Continent Africain © 2026'}</p>
           </div>
         </footer>
       </div>

@@ -7,9 +7,10 @@ interface CountryCardProps {
   onSelect: (country: Country) => void;
   isLocked?: boolean;
   onLockedClick?: () => void;
+  language?: 'en' | 'fr';
 }
 
-const CountryCard: React.FC<CountryCardProps> = ({ country, isSelected, onSelect, isLocked, onLockedClick }) => {
+const CountryCard: React.FC<CountryCardProps> = ({ country, isSelected, onSelect, isLocked, onLockedClick, language = 'fr' }) => {
   return (
     <button
       onClick={() => {
@@ -21,25 +22,25 @@ const CountryCard: React.FC<CountryCardProps> = ({ country, isSelected, onSelect
       }}
       className={`relative p-1.5 sm:p-2.5 rounded-xl border transition-all duration-300 flex flex-col items-center justify-center gap-1 group outline-none select-none text-center min-w-0 overflow-hidden ${
         isLocked
-          ? 'border-zinc-200 dark:border-white/5 bg-zinc-100/80 dark:bg-[#121319]/80 opacity-70 hover:opacity-100 cursor-pointer'
+          ? 'border-zinc-200 dark:border-white/10 bg-white dark:bg-[#16171E] hover:-translate-y-1 hover:shadow-lg transition-all duration-300'
           : isSelected
-          ? 'border-[#EA580C] dark:border-[#D4FF00] shadow-md shadow-[#EA580C]/15 dark:shadow-[#D4FF00]/15 -translate-y-0.5 z-10 bg-gradient-to-b from-[#EA580C]/10 to-transparent dark:from-[#D4FF00]/10 ring-1.5 ring-[#EA580C]/30 dark:ring-[#D4FF00]/30 scale-[1.02]'
-          : 'border-zinc-200 dark:border-white/10 bg-white dark:bg-[#16171E] hover:border-[#EA580C]/60 dark:hover:border-[#D4FF00]/60 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-[#D4FF00]/10 hover:bg-[#FFFBF5] dark:hover:bg-[#1E202B]'
+          ? 'border-[#D4FF00] shadow-md shadow-[#D4FF00]/15 -translate-y-0.5 z-10 bg-gradient-to-b from-[#D4FF00]/10 to-transparent dark:from-[#D4FF00]/10 ring-1.5 ring-[#D4FF00]/30 scale-[1.02]'
+          : 'border-zinc-200 dark:border-white/10 bg-white dark:bg-[#16171E] hover:border-[#D4FF00]/60 dark:hover:border-[#D4FF00]/60 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-[#D4FF00]/10 hover:bg-[#FAFAFA] dark:hover:bg-[#1E202B]'
       }`}
     >
       {/* Glow effect on hover/select */}
       <div
         className={`absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 ${
           isSelected ? 'opacity-100' : 'group-hover:opacity-40'
-        } bg-gradient-to-tr from-[#EA580C]/5 dark:from-[#D4FF00]/5 to-transparent pointer-events-none`}
+        } bg-gradient-to-tr from-[#D4FF00]/5 dark:from-[#D4FF00]/5 to-transparent pointer-events-none`}
       />
 
       <div
         className={`w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center text-base sm:text-2xl transition-all duration-500 shadow-xs ${
           isLocked
-            ? 'bg-zinc-200 dark:bg-zinc-800 grayscale opacity-60'
+            ? 'bg-zinc-100 dark:bg-[#202330] group-hover:rotate-3 group-hover:scale-105'
             : isSelected
-            ? 'bg-gradient-to-tr from-[#EA580C] to-[#F59E0B] dark:from-[#D4FF00] dark:to-[#E2FF3B] text-white dark:text-black shadow-[#EA580C]/30 dark:shadow-[#D4FF00]/30 rotate-3 scale-105'
+            ? 'bg-gradient-to-tr from-[#D4FF00] to-[#E2FF3B] text-black shadow-[#D4FF00]/30 rotate-3 scale-105'
             : 'bg-zinc-100 dark:bg-[#202330] group-hover:rotate-3 group-hover:scale-105'
         }`}
       >
@@ -50,9 +51,8 @@ const CountryCard: React.FC<CountryCardProps> = ({ country, isSelected, onSelect
         <span
           className={`text-[9px] sm:text-[11px] font-black tracking-tight transition-colors duration-300 truncate w-full ${
             isLocked
-              ? 'text-zinc-400 dark:text-zinc-500'
-              : isSelected
-              ? 'text-[#EA580C] dark:text-[#D4FF00]'
+              ? 'text-zinc-800 dark:text-zinc-200 group-hover:text-black dark:group-hover:text-white'
+              : isSelected ? 'text-zinc-900 dark:text-[#D4FF00]'
               : 'text-zinc-800 dark:text-zinc-200 group-hover:text-black dark:group-hover:text-white'
           }`}
         >
@@ -65,11 +65,16 @@ const CountryCard: React.FC<CountryCardProps> = ({ country, isSelected, onSelect
         >
           <span
             className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-colors shrink-0 ${
-              isLocked ? 'bg-amber-500' : isSelected ? 'bg-[#EA580C] dark:bg-[#D4FF00]' : 'bg-zinc-400 group-hover:bg-[#EA580C] dark:group-hover:bg-[#D4FF00]'
+              isLocked ? 'bg-zinc-400 group-hover:bg-[#D4FF00]' : isSelected ? 'bg-[#D4FF00]' : 'bg-zinc-400 group-hover:bg-[#D4FF00] dark:group-hover:bg-[#D4FF00]'
             }`}
           />
           <span className="text-[7px] sm:text-[8px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate max-w-[65px]">
-            {isLocked ? '🔒 PRO' : country.primaryLanguage}
+            {isLocked ? '🔒 PRO' : (
+              country.primaryLanguage === 'French' ? (language === 'en' ? 'French' : 'Français') :
+              country.primaryLanguage === 'English' ? (language === 'en' ? 'English' : 'Anglais') :
+              country.primaryLanguage === 'Arabic' ? (language === 'en' ? 'Arabic' : 'Arabe') :
+              country.primaryLanguage
+            )}
           </span>
         </div>
       </div>
@@ -82,7 +87,7 @@ const CountryCard: React.FC<CountryCardProps> = ({ country, isSelected, onSelect
       )}
 
       {!isLocked && isSelected && (
-        <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 bg-[#EA580C] dark:bg-[#D4FF00] text-white dark:text-black p-0.5 rounded-md shadow-md animate-in zoom-in duration-300">
+        <div className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 bg-[#D4FF00] text-black p-0.5 rounded-md shadow-md animate-in zoom-in duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 sm:h-3 sm:w-3" viewBox="0 0 20 20" fill="currentColor">
             <path
               fillRule="evenodd"

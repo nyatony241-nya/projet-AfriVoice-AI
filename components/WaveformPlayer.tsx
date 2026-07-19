@@ -58,7 +58,7 @@ const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   return (
     <div
       className={`p-6 sm:p-8 rounded-3xl border transition-all duration-300 relative overflow-hidden ${
-        isDark ? 'bg-[#09090B] border-white/10 shadow-2xl' : 'bg-white border-[#FDE8CD] shadow-lg shadow-[#EA580C]/5'
+        isDark ? 'bg-[#09090B] border-white/10 shadow-2xl' : 'bg-white border-[#E4E4E7] shadow-lg shadow-[#D4FF00]/5'
       }`}
     >
       <audio
@@ -76,12 +76,12 @@ const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-zinc-200 dark:border-white/10">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#EA580C] to-[#D4FF00] flex items-center justify-center text-2xl shadow-md shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#D4FF00] to-[#D4FF00] flex items-center justify-center text-2xl shadow-md shrink-0">
             {countryFlag}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-[#EA580C] dark:text-[#D4FF00]">
+              <span className="text-xs font-black uppercase tracking-wider text-[#D4FF00]">
                 Sortie HD 24kHz
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse" />
@@ -97,7 +97,7 @@ const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
           className={`w-full sm:w-auto px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2.5 transition-all active:scale-95 shadow-md ${
             isDark
               ? 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/10'
-              : 'bg-[#EA580C] text-white hover:bg-[#D94E06] shadow-[#EA580C]/15'
+              : 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/15'
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -113,8 +113,8 @@ const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
           onClick={togglePlay}
           className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-transform active:scale-90 shadow-xl ${
             isDark
-              ? 'bg-gradient-to-tr from-[#EA580C] to-[#D4FF00] text-black hover:scale-105'
-              : 'bg-gradient-to-tr from-[#EA580C] to-[#F59E0B] text-white hover:scale-105'
+              ? 'bg-gradient-to-tr from-[#D4FF00] to-[#D4FF00] text-black hover:scale-105'
+              : 'bg-gradient-to-tr from-[#D4FF00] to-[#E2FF3B] text-black hover:scale-105'
           }`}
           title={isPlaying ? 'Mettre en pause' : 'Écouter'}
         >
@@ -143,7 +143,7 @@ const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
             {/* Progress overlay */}
             <div
               className={`absolute inset-y-0 left-0 transition-all duration-150 ${
-                isDark ? 'bg-[#D4FF00]/15 border-r-2 border-[#D4FF00]' : 'bg-[#EA580C]/15 border-r-2 border-[#EA580C]'
+                'bg-[#D4FF00]/15 border-r-2 border-[#D4FF00]'
               }`}
               style={{ width: `${progressPercentage}%` }}
             />
@@ -156,9 +156,7 @@ const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
                   key={idx}
                   className={`flex-1 rounded-full transition-all duration-300 ${
                     isPassed
-                      ? isDark
-                        ? 'bg-[#D4FF00]'
-                        : 'bg-[#EA580C]'
+                      ? 'bg-[#D4FF00]'
                       : isDark
                       ? 'bg-zinc-700/60 group-hover:bg-zinc-600'
                       : 'bg-zinc-300 group-hover:bg-zinc-400'
@@ -170,7 +168,7 @@ const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
           </div>
 
           <div className="flex items-center justify-between mt-2.5 px-1 font-mono text-xs font-bold text-zinc-500">
-            <span className={isPlaying ? 'text-[#EA580C] dark:text-[#D4FF00] font-black' : ''}>
+            <span className={isPlaying ? 'text-[#D4FF00] font-black' : ''}>
               {formatTime(currentTime)}
             </span>
             <span>{formatTime(duration)}</span>
