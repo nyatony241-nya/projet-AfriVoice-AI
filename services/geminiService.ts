@@ -18,10 +18,11 @@ export const generateAfricanVoiceOverRaw = async (
     }
   }
 
-  // L'URL du backend en développement ou en production
-  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  // L'URL du backend : En local ça pointe vers Express (3001), sur Vercel ça pointe vers la Serverless Function
+  const isDev = import.meta.env.DEV;
+  const backendUrl = isDev ? 'http://localhost:3001/api/generate' : '/api/generate';
 
-  const response = await fetch(`${backendUrl}/api/generate`, {
+  const response = await fetch(backendUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
