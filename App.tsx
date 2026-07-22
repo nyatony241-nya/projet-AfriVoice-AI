@@ -318,8 +318,8 @@ const App: React.FC = () => {
 
       if (isKeyNotFoundError || isQuotaError) {
         setShowQuotaError(true);
-        setStatus({ isGenerating: false, error: 'Plafond de génération atteint pour votre forfait.', audioUrl: null });
-        addToast('warning', 'Plafond Atteint', 'Passez au forfait supérieur ou rechargez vos minutes pour continuer à produire.');
+        setStatus({ isGenerating: false, error: 'Cadence de génération trop rapide (Limite API gratuite).', audioUrl: null });
+        addToast('warning', 'Trop de requêtes', 'L\'API Google gratuite limite à 15 générations par minute. Veuillez patienter 60 secondes avant de réessayer.');
       } else {
         setStatus({
           isGenerating: false,
@@ -480,9 +480,9 @@ const App: React.FC = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-black tracking-tight">Plafond de Synthèse Atteint</h3>
+                    <h3 className="text-lg font-black tracking-tight">Limite de cadence API atteinte</h3>
                     <p className="text-xs sm:text-sm font-medium opacity-80 mt-0.5">
-                      Votre quota inclus est épuisé. Passez à un forfait supérieur pour débloquer plus de minutes de synthèse vocale HD ou rechargez votre solde.
+                      Vous avez généré trop de voix à la suite. La clé API Google gratuite est protégée par un système anti-spam limitant à 15 requêtes par minute. Veuillez patienter 60 secondes avant de cliquer à nouveau.
                     </p>
                   </div>
                 </div>
