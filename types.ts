@@ -9,29 +9,7 @@ export interface Country {
 
 export interface VoiceSettings {
   gender: 'male' | 'female';
-  age: number;
-  style: string;
-  pitch: number;
   speed: number;
-  timbre: number;
-  emotion?: 'neutral' | 'happy' | 'serious' | 'energetic' | 'soft';
-  useLocalExpressions?: boolean;
-  isClonedVoice?: boolean;
-  clonedVoiceName?: string;
-}
-
-export interface BackgroundMusic {
-  id: string;
-  name: string;
-  url: string;
-  previewUrl?: string;
-}
-
-export interface MixerSettings {
-  voiceVolume: number;
-  bgMusicVolume: number;
-  bgMusicId: string | null;
-  isMixing: boolean;
 }
 
 export interface GenerationState {

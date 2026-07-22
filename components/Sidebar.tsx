@@ -4,31 +4,28 @@ import { PricingPlan, Language } from '../types';
 interface SidebarProps {
   activeTab: 'studio' | 'mastering' | 'history' | 'pricing';
   onTabChange: (tab: 'studio' | 'mastering' | 'history' | 'pricing') => void;
-  currentPlan: PricingPlan;
   isDark: boolean;
   historyCount: number;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
   language?: Language;
-  onOpenAuditModal?: () => void;
+  onLogout: () => void;
 }
-
 const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onTabChange,
-  currentPlan,
   isDark,
   historyCount,
   isOpenMobile,
   onCloseMobile,
   language = 'fr',
-  onOpenAuditModal,
+  onLogout,
 }) => {
   const navItemsFr = [
     {
       id: 'studio' as const,
       label: 'Studio Voix-Off',
-      badge: 'IA 2.5',
+      badge: 'IA',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -36,42 +33,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     },
     {
-      id: 'mastering' as const,
-      label: 'Console Mastering',
-      badge: currentPlan.id === 'pro' ? 'HD' : 'PRO',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-        </svg>
-      ),
-    },
-    {
       id: 'history' as const,
-      label: 'Bibliothèque & Audio',
+      label: 'Bibliothèque',
       badge: historyCount > 0 ? `${historyCount}` : undefined,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       ),
-    },
-    {
-      id: 'pricing' as const,
-      label: 'Forfaits & Tarifs',
-      badge: currentPlan.id.toUpperCase(),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
+    }
   ];
 
   const navItemsEn = [
     {
       id: 'studio' as const,
       label: 'Voice-Over Studio',
-      badge: 'AI 2.5',
+      badge: 'AI',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -79,35 +56,15 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     },
     {
-      id: 'mastering' as const,
-      label: 'Mastering Console',
-      badge: currentPlan.id === 'pro' ? 'HD' : 'PRO',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-        </svg>
-      ),
-    },
-    {
       id: 'history' as const,
-      label: 'Audio Library & History',
+      label: 'Audio Library',
       badge: historyCount > 0 ? `${historyCount}` : undefined,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       ),
-    },
-    {
-      id: 'pricing' as const,
-      label: 'Plans & Pricing',
-      badge: currentPlan.id.toUpperCase(),
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-    },
+    }
   ];
 
   const navItems = language === 'en' ? navItemsEn : navItemsFr;
@@ -136,11 +93,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center gap-1.5">
                 <span className={`text-base sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
                   AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
-                </span>
-                <span className={`text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shadow-xs ${
-                  'bg-[#D4FF00] text-black'
-                }`}>
-                  {currentPlan.id.toUpperCase()}
                 </span>
               </div>
               <span className="text-[8px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-[0.16em] leading-tight block mt-0.5">
@@ -201,23 +153,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
       {/* Bottom Section: User & Status */}
-      <div className="pt-6 border-t border-zinc-200 dark:border-white/10">
-        <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#181D29] border-white/5' : 'bg-white border-[#E4E4E7] shadow-sm'}`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-md ${
-              'bg-[#D4FF00] text-black'
-            }`}>
-              AV
-            </div>
-            <div>
-              <p className="text-xs font-extrabold truncate">Studio Creator</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{currentPlan.name}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="pt-6 border-t border-zinc-200 dark:border-white/10 space-y-3">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-colors text-sm font-bold"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Déconnexion
+        </button>
       </div>
     </div>
   );

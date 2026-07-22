@@ -81,77 +81,35 @@ function generateSeed(input) {
   return Math.abs(hash);
 }
 
-// Endpoint de génération vocale
 app.post('/api/generate', generateLimiter, async (req, res) => {
-  const { script, countryName, accentDescription, voiceName, settings, planId, customApiKey } = req.body;
-
-  // Préparation du prompt et des paramètres
-  const accentIntensity = planId === 'free' ? 'léger' : (planId === 'pro' ? 'très marqué et authentique' : 'naturel');
-  const watermarkInstruction = planId === 'free' ? "\nNOTE: Ajoute OBLIGATOIREMENT une mention vocale 'Généré par AfriVoice AI' au début." : "";
-  const localExpressionsInstruction = settings?.useLocalExpressions ? `\n- Utilise des expressions locales du ${countryName}.` : "";
-
-  const emotionMap = {
-    neutral: 'ton informatif',
-    happy: 'ton joyeux',
-    serious: 'ton sérieux',
-    energetic: 'ton dynamique',
-    soft: 'ton apaisant'
-  };
-
-  let speedInstruction = "vitesse normale";
-  if (settings?.speed <= 0.6) speedInstruction = "vitesse très lente";
-  else if (settings?.speed <= 0.8) speedInstruction = "vitesse lente";
-  else if (settings?.speed >= 1.4) speedInstruction = "vitesse très rapide";
-  else if (settings?.speed >= 1.2) speedInstruction = "vitesse rapide";
-
-  let pitchInstruction = "tonalité normale";
-  if (settings?.pitch < 0.8) pitchInstruction = "voix très grave et profonde";
-  else if (settings?.pitch < 0.95) pitchInstruction = "voix légèrement grave";
-  else if (settings?.pitch > 1.2) pitchInstruction = "voix très aiguë";
-  else if (settings?.pitch > 1.05) pitchInstruction = "voix légèrement aiguë";
-
-  let timbreInstruction = "timbre équilibré";
-  if (settings?.timbre < 30) timbreInstruction = "timbre très chaud, velouté et sombre";
-  else if (settings?.timbre < 45) timbreInstruction = "timbre légèrement chaud";
-  else if (settings?.timbre > 75) timbreInstruction = "timbre très clair, brillant et cristallin";
-  else if (settings?.timbre > 55) timbreInstruction = "timbre légèrement brillant";
+  const { script, countryName, accentDescription, voiceName, settings } = req.body;
 
   let speedDirective = "Parle à un rythme naturel et fluide.";
   if (settings?.speed <= 0.8) speedDirective = "PARLE TRÈS LENTEMENT, en articulant chaque mot et en prenant de longues pauses.";
   else if (settings?.speed >= 1.2) speedDirective = "PARLE TRÈS RAPIDEMENT, avec urgence et sans pause.";
 
-  let ageDirective = `Tu es une personne d'environ ${settings?.age || 30} ans.`;
-  if (settings?.age > 50) ageDirective = "Tu es une personne âgée (plus de 50 ans). Ta voix doit être posée, mûre, et exprimer la sagesse et l'expérience.";
-  if (settings?.age < 22) ageDirective = "Tu es très jeune (moins de 22 ans). Ta voix doit être pleine d'énergie, de jeunesse et de dynamisme.";
-
   const prompt = `INSTRUCTIONS POUR L'ACTEUR VOCAL :
 Tu es un acteur spécialisé dans les voix-off.
-${ageDirective}
-Accent demandé : ${countryName} - ${accentDescription} (${accentIntensity}).
-Émotion : ${emotionMap[settings?.emotion || 'neutral']}.
+Accent demandé : ${countryName} - ${accentDescription}.
 Rythme : ${speedDirective}
 
 LIT LE SCRIPT SUIVANT EXACTEMENT TEL QU'IL EST, SANS COMMENTAIRE :
-"${script}"${localExpressionsInstruction}${watermarkInstruction}`;
+"${script}"`;
 
-  const seedInput = `${script}-${countryName}-${voiceName}-${JSON.stringify(settings)}-${planId}`;
+  const seedInput = `${script}-${countryName}-${voiceName}-${JSON.stringify(settings)}`;
   const stableSeed = generateSeed(seedInput);
 
   // Déterminer les clés à essayer :
   let keysToTry = [];
-  if (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') {
-    keysToTry = [customApiKey.trim()];
-  } else {
-    const serverKeys = getApiKeys();
+  const serverKeys = getApiKeys();
     if (serverKeys.length === 0) {
       return res.status(401).json({ error: "Aucune clé API Gemini ou OpenRouter n'est configurée sur le serveur. Veuillez configurer .env.local." });
     }
-    const startIndex = currentKeyIndex % serverKeys.length;
-    keysToTry = [
-      ...serverKeys.slice(startIndex),
-      ...serverKeys.slice(0, startIndex)
-    ];
-  }
+  const startIndex = currentKeyIndex % serverKeys.length;
+  keysToTry = [
+    ...serverKeys.slice(startIndex),
+    ...serverKeys.slice(0, startIndex)
+  ];
 
   let lastError = null;
 
@@ -182,9 +140,7 @@ LIT LE SCRIPT SUIVANT EXACTEMENT TEL QU'IL EST, SANS COMMENTAIRE :
       const base64Audio = response.candidates[0].content.parts[0].inlineData.data;
 
       // Avancer l'index pour la prochaine requête si on utilise le pool serveur
-      if (!customApiKey) {
-        currentKeyIndex = (currentKeyIndex + 1) % keysToTry.length;
-      }
+      currentKeyIndex = (currentKeyIndex + 1) % keysToTry.length;
 
       return res.json({ base64Audio });
     } catch (err) {
