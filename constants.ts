@@ -1,5 +1,4 @@
-
-import { Country, VoiceOption, PricingPlan, BackgroundMusic } from './types';
+import { Country, VoiceSettings, VoiceOption, PricingPlan } from './types';
 
 export const COUNTRIES: Country[] = [
   { id: 'NG', name: 'Nigeria', flag: '🇳🇬', primaryLanguage: 'English', accentDescription: 'Naija English accent with energetic rhythm' },

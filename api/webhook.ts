@@ -35,7 +35,7 @@ export default async function handler(req: any, res: any) {
       const { data: users, error: userError } = await supabase.auth.admin.listUsers();
       if (userError) throw userError;
 
-      const user = users.users.find(u => u.email === email);
+      const user = users.users.find((u: any) => u.email === email);
       if (!user) {
         console.error('Webhook: User not found for email:', email);
         return res.status(404).json({ error: 'User not found' });
