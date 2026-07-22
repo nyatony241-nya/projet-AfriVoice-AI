@@ -9,224 +9,264 @@ import {
   random,
   Audio,
   staticFile,
+  Img
 } from 'remotion';
 
 const COLORS = {
-  background: '#09090B',
-  text: '#FFFFFF',
-  accentOrange: '#D4FF00',
+  background: '#050505',
+  text: '#FAFAFA',
+  accentOrange: '#D4FF00', // Neon green for consistency with the brand
   accentNeon: '#D4FF00',
-  glassBg: 'rgba(24, 24, 27, 0.6)',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glassBg: 'rgba(15, 15, 15, 0.7)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
 };
 
 export const AfriVoiceAd: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Particules Premium (Poussière d'or / néon)
-  const particles = Array.from({ length: 50 }, (_, i) => {
-    const yOffset = interpolate(frame % 450, [0, 450], [0, -400]);
-    return {
-      x: random(`px-${i}`) * 1080,
-      y: (random(`py-${i}`) * 1920) + yOffset,
-      size: random(`ps-${i}`) * 5 + 1,
-      opacity: interpolate(frame, [0, 450], [0, 0.8]),
-    };
-  });
-
-  // ================= ANIMATIONS =================
-  // Intro
-  const introBlur = interpolate(frame, [0, 20], [30, 0], { extrapolateRight: 'clamp' });
-  const introScale = spring({ fps, frame, config: { damping: 14, stiffness: 80 } });
-  const subtitleY = spring({ fps, frame: frame - 15, config: { damping: 12, stiffness: 100 } });
-
-  // UI Mockup (L'application)
-  const uiScale = spring({ fps, frame: frame - 110, config: { damping: 14, stiffness: 90 } });
-  const uiRotate = interpolate(frame - 110, [0, 60], [5, 0], { extrapolateRight: 'clamp' });
+  // ================= TIMING =================
+  const S1_INTRO = 0;
+  const S2_MOCKUP = 120;
+  const S3_WAVEFORM = 280;
+  const S4_OUTRO = 420;
   
+  // ================= ANIMATIONS =================
+  
+  // Intro (Apple style: slow fade up, subtle scale)
+  const introOpacity = interpolate(frame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+  const introScale = interpolate(frame, [0, 100], [1.1, 1], { extrapolateRight: 'clamp' });
+  const introTextY = spring({ fps, frame: frame - 20, config: { damping: 15, stiffness: 60 } });
+  
+  // Mockup (Samsung/Apple style: smooth 3D entry, perfect glassmorphism)
+  const uiFrame = frame - S2_MOCKUP;
+  const uiScale = spring({ fps, frame: uiFrame, config: { damping: 16, stiffness: 80 } });
+  const uiRotateX = interpolate(uiFrame, [0, 90], [10, 0], { extrapolateRight: 'clamp' });
+  const uiY = interpolate(uiFrame, [0, 60], [100, 0], { extrapolateRight: 'clamp' });
+  const uiOpacity = interpolate(uiFrame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
+
+  // Typing effect
+  const typeText = "Bienvenue sur AfriVoice. L'IA de voix-off ultime pour l'Afrique.";
+  const typeProgress = interpolate(uiFrame, [40, 120], [0, typeText.length], { extrapolateRight: 'clamp' });
+  const displayedText = typeText.substring(0, Math.floor(typeProgress));
+
   // Waveform
-  const waveOpacity = interpolate(frame - 260, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
+  const waveFrame = frame - S3_WAVEFORM;
+  const waveOpacity = interpolate(waveFrame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+  const waveScale = spring({ fps, frame: waveFrame, config: { damping: 14, stiffness: 70 } });
 
   // Outro
-  const outroScale = spring({ fps, frame: frame - 350, config: { damping: 12, stiffness: 100 } });
-  const pulseScale = interpolate(Math.sin((frame - 380) * 0.15), [-1, 1], [1, 1.05]);
+  const outroFrame = frame - S4_OUTRO;
+  const outroScale = spring({ fps, frame: outroFrame, config: { damping: 14, stiffness: 90 } });
+  const outroOpacity = interpolate(outroFrame, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+  const pulseScale = interpolate(Math.sin((frame - S4_OUTRO) * 0.1), [-1, 1], [1, 1.03]);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: COLORS.background, fontFamily: '"Plus Jakarta Sans", "Inter", sans-serif' }}>
+    <AbsoluteFill style={{ backgroundColor: COLORS.background, fontFamily: '"Inter", sans-serif' }}>
       
-      {/* 🎵 FOND SONORE LOCAL */}
+      {/* 🎵 FOND SONORE ÉPIQUE (BENSOUND EPIC) */}
       <Audio 
-        src={staticFile("background.mp3")} 
-        volume={0.6} 
-        startFrom={300} // Démarre au moment épique
+        src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" 
+        volume={interpolate(frame, [S3_WAVEFORM - 15, S3_WAVEFORM], [0.6, 0.05], { extrapolateRight: 'clamp', extrapolateLeft: 'clamp' })} 
+        startFrom={150}
       />
 
-      {/* 🌌 LUMIÈRES & PARTICULES */}
+      {/* 🌌 LUMIÈRES VOLUMÉTRIQUES (Apple Pro Style) */}
       <AbsoluteFill>
         <div style={{
-            position: 'absolute', top: '10%', left: '-10%', width: 1000, height: 1000,
-            background: `radial-gradient(circle, ${COLORS.accentOrange}25 0%, transparent 60%)`, filter: 'blur(100px)'
+            position: 'absolute', top: '-10%', left: '10%', width: 800, height: 800,
+            background: `radial-gradient(circle, ${COLORS.accentNeon}15 0%, transparent 70%)`, filter: 'blur(120px)'
         }} />
         <div style={{
-            position: 'absolute', bottom: '10%', right: '-20%', width: 1000, height: 1000,
-            background: `radial-gradient(circle, ${COLORS.accentNeon}20 0%, transparent 60%)`, filter: 'blur(100px)'
+            position: 'absolute', bottom: '-20%', right: '0%', width: 1000, height: 1000,
+            background: `radial-gradient(circle, ${COLORS.accentNeon}10 0%, transparent 60%)`, filter: 'blur(150px)'
         }} />
 
-        {particles.map((p, i) => (
-          <div key={i} style={{
-            position: 'absolute', left: p.x, top: p.y, width: p.size, height: p.size,
-            borderRadius: '50%', backgroundColor: i % 2 === 0 ? COLORS.accentNeon : COLORS.accentOrange,
-            opacity: p.opacity, boxShadow: `0 0 10px ${i % 2 === 0 ? COLORS.accentNeon : COLORS.accentOrange}`
-          }} />
-        ))}
+        {/* Particules Dynamiques Flottantes (Effet supplémentaire) */}
+        {Array.from({ length: 40 }).map((_, i) => {
+          const yOffset = interpolate(frame % 300, [0, 300], [0, -300]);
+          return (
+            <div key={i} style={{
+              position: 'absolute',
+              left: random(`px-${i}`) * 1080,
+              top: (random(`py-${i}`) * 1920) + yOffset,
+              width: random(`ps-${i}`) * 6 + 2,
+              height: random(`ps-${i}`) * 6 + 2,
+              borderRadius: '50%',
+              backgroundColor: COLORS.accentNeon,
+              opacity: interpolate(frame, [0, 30], [0, 0.4]),
+              boxShadow: `0 0 15px ${COLORS.accentNeon}`
+            }} />
+          );
+        })}
       </AbsoluteFill>
 
-      {/* 🎬 SÉQUENCE 1 : Le Logo et L'Accroche (0 - 110) */}
-      <Sequence from={0} durationInFrames={120}>
-        <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', padding: 60, textAlign: 'center' }}>
-          
-          {/* LE LOGO ULTRA PROÉMINENT */}
+      {/* 🎬 SÉQUENCE 1 : INTRO MINIMALISTE (0 - 120) */}
+      <Sequence from={S1_INTRO} durationInFrames={S2_MOCKUP + 20}>
+        <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ 
-            transform: `scale(${introScale})`, 
-            filter: `blur(${introBlur}px)`,
-            display: 'flex', alignItems: 'center', gap: 30, marginBottom: 60 
+            opacity: interpolate(frame, [S2_MOCKUP - 20, S2_MOCKUP], [1, 0], { extrapolateRight: 'clamp' }),
+            transform: `scale(${introScale})`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center'
           }}>
-            <div style={{ fontSize: 140, filter: `drop-shadow(0px 20px 30px ${COLORS.accentOrange}80)` }}>🎙️</div>
-            <h1 style={{ fontSize: 140, fontWeight: 900, color: COLORS.text, letterSpacing: '-5px', margin: 0 }}>
-              AfriVoice<span style={{ color: COLORS.accentOrange }}>AI</span>
+            <h1 style={{ 
+              fontSize: 130, fontWeight: 900, color: COLORS.text, letterSpacing: '-4px', margin: 0,
+              opacity: introOpacity, textShadow: '0 10px 40px rgba(0,0,0,0.5)'
+            }}>
+              AfriVoice<span style={{ color: COLORS.accentNeon }}>AI</span>
             </h1>
-          </div>
-          
-          {/* L'ACCROCHE (VOIX OFF) */}
-          <div style={{ 
-            transform: `translateY(${interpolate(subtitleY, [0, 1], [100, 0])}px)`, 
-            opacity: interpolate(subtitleY, [0, 1], [0, 1]) 
-          }}>
-            <p style={{ fontSize: 75, fontWeight: 800, color: COLORS.text, lineHeight: 1.2, margin: 0 }}>
-              Le 1er Studio de <br/>
-              <span style={{ color: COLORS.accentNeon }}>Voix-Off 100% Africaines.</span>
-            </p>
+            <div style={{ 
+              transform: `translateY(${interpolate(introTextY, [0, 1], [40, 0])}px)`, 
+              opacity: interpolate(introTextY, [0, 1], [0, 1]),
+              marginTop: 20, textAlign: 'center'
+            }}>
+              <p style={{ fontSize: 60, fontWeight: 700, color: '#FAFAFA', letterSpacing: '-1px', margin: 0 }}>
+                Le 1er Studio de <br/> <span style={{ color: COLORS.accentNeon }}>Voix-Off 100% Africaines.</span>
+              </p>
+            </div>
           </div>
         </AbsoluteFill>
       </Sequence>
 
-      {/* 💻 SÉQUENCE 2 : Le Mockup de l'Application PRO (110 - 270) */}
-      <Sequence from={110} durationInFrames={160}>
+      {/* 💻 SÉQUENCE 2 : LE STUDIO HD (120 - 280) */}
+      <Sequence from={S2_MOCKUP} durationInFrames={180}>
         <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
-          
+          {/* Son du clavier synchronisé avec la frappe */}
+          <Audio 
+            src={staticFile("keyboard.ogg")} 
+            startFrom={0}
+            endAt={80} // Joue pendant la frappe (80 frames)
+            volume={interpolate(uiFrame, [40, 120], [0.8, 0], { extrapolateRight: 'clamp' })}
+          />
+
           <h2 style={{ 
-            fontSize: 65, color: COLORS.text, fontWeight: 800, marginBottom: 60, 
-            opacity: interpolate(frame - 110, [0, 20], [0, 1]) 
+            fontSize: 70, color: COLORS.text, fontWeight: 800, marginBottom: 40, 
+            opacity: interpolate(uiFrame, [0, 20], [0, 1], { extrapolateRight: 'clamp' }),
+            transform: `translateY(${interpolate(uiFrame, [0, 20], [20, 0], { extrapolateRight: 'clamp' })}px)`
           }}>
-            L'Application de <span style={{ color: COLORS.accentOrange }}>Voix-Off</span> Ultime.
+            <span style={{ color: COLORS.accentNeon }}>L'Application de Voix-Off</span> Ultime.
           </h2>
 
-          {/* Fausse Interface de l'Application (Mockup) */}
           <div style={{
-            width: '85%', height: 700,
-            background: COLORS.glassBg, backdropFilter: 'blur(30px)',
-            border: `2px solid ${COLORS.glassBorder}`, borderRadius: 40,
-            boxShadow: `0 40px 80px rgba(0,0,0,0.8), 0 0 0 2px ${COLORS.accentOrange}30`,
-            transform: `scale(${uiScale}) perspective(1000px) rotateX(${uiRotate}deg)`,
+            width: '80%', height: 700,
+            background: COLORS.glassBg, backdropFilter: 'blur(40px)',
+            border: `1px solid ${COLORS.glassBorder}`, borderRadius: 32,
+            boxShadow: `0 50px 100px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1)`,
+            transform: `scale(${uiScale}) perspective(1200px) rotateX(${uiRotateX}deg) translateY(${uiY}px)`,
+            opacity: interpolate(uiFrame, [140, 160], [1, 0], { extrapolateRight: 'clamp' }), // Fade out avant waveform
             display: 'flex', flexDirection: 'column', overflow: 'hidden'
           }}>
-            {/* Header du Mockup */}
-            <div style={{ height: 80, borderBottom: `2px solid ${COLORS.glassBorder}`, display: 'flex', alignItems: 'center', padding: '0 40px', gap: 15 }}>
-              <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#EF4444' }}/>
-              <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#E2FF3B' }}/>
-              <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#10B981' }}/>
-              <div style={{ marginLeft: 'auto', fontSize: 24, color: '#A1A1AA', fontWeight: 'bold' }}>AfriVoice Studio</div>
+            {/* Top Bar macOS style */}
+            <div style={{ height: 60, display: 'flex', alignItems: 'center', padding: '0 30px', gap: 12, borderBottom: `1px solid ${COLORS.glassBorder}` }}>
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#4A4A4A' }}/>
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#4A4A4A' }}/>
+              <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#4A4A4A' }}/>
+              <div style={{ marginLeft: 'auto', fontSize: 18, color: '#71717A', fontWeight: 600, letterSpacing: '1px' }}>STUDIO HD</div>
             </div>
             
-            {/* Contenu du Mockup */}
-            <div style={{ padding: 50, display: 'flex', flexDirection: 'column', gap: 40 }}>
-              {/* Selecteurs simulés */}
+            <div style={{ padding: 60, display: 'flex', flexDirection: 'column', gap: 30, height: '100%' }}>
+              {/* Params UI */}
               <div style={{ display: 'flex', gap: 20 }}>
-                <div style={{ flex: 1, height: 80, background: '#000', borderRadius: 20, border: `2px solid ${COLORS.glassBorder}`, display: 'flex', alignItems: 'center', padding: '0 30px', fontSize: 30, color: COLORS.accentNeon, fontWeight: 'bold' }}>
-                  🌍 Accent : Ivoirien
+                <div style={{ flex: 1, height: 70, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: `1px solid ${COLORS.glassBorder}`, display: 'flex', alignItems: 'center', padding: '0 25px', fontSize: 24, color: COLORS.accentNeon, fontWeight: 700 }}>
+                  🇨🇮 Accent Ivoirien
                 </div>
-                <div style={{ flex: 1, height: 80, background: '#000', borderRadius: 20, border: `2px solid ${COLORS.glassBorder}`, display: 'flex', alignItems: 'center', padding: '0 30px', fontSize: 30, color: '#FFF' }}>
-                  🗣️ Voix : Aminata (Pro)
+                <div style={{ flex: 1, height: 70, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: `1px solid ${COLORS.glassBorder}`, display: 'flex', alignItems: 'center', padding: '0 25px', fontSize: 24, color: '#FFF', fontWeight: 500 }}>
+                  🎙️ Voix Studio (Pro)
                 </div>
               </div>
               
-              {/* Zone de texte simulée avec écriture animée */}
-              <div style={{ flex: 1, background: '#000', borderRadius: 20, padding: 40, fontSize: 35, color: '#A1A1AA', lineHeight: 1.5, border: `2px solid ${COLORS.glassBorder}` }}>
-                {`"Bienvenue sur AfriVoice. La meilleure IA pour vos `}
-                <span style={{ color: COLORS.text, fontWeight: 'bold' }}>projets publicitaires...</span>
-                <span style={{ opacity: interpolate(Math.sin(frame * 0.5), [-1, 1], [0, 1]) }}>|</span>
+              {/* Text Area */}
+              <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 40, fontSize: 38, color: '#E4E4E7', lineHeight: 1.6, border: `1px solid ${COLORS.glassBorder}`, fontWeight: 500 }}>
+                {displayedText}
+                <span style={{ opacity: interpolate(Math.sin(uiFrame * 0.5), [-1, 1], [0, 1]), color: COLORS.accentNeon }}>|</span>
               </div>
 
-              {/* Bouton générer simulé */}
-              <div style={{ height: 100, background: `linear-gradient(90deg, ${COLORS.accentOrange}, ${COLORS.accentNeon})`, borderRadius: 25, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 900, color: '#000' }}>
-                🎙️ GÉNÉRER LA VOIX-OFF
+              {/* Generate Button */}
+              <div style={{ 
+                height: 90, background: COLORS.accentNeon, borderRadius: 20, 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                fontSize: 30, fontWeight: 900, color: '#000', letterSpacing: '1px',
+                transform: `scale(${interpolate(uiFrame, [120, 130, 140], [1, 0.98, 1])})`, // Clic simulé
+                boxShadow: uiFrame > 125 ? `0 0 40px ${COLORS.accentNeon}50` : 'none'
+              }}>
+                GÉNÉRER LA VOIX
               </div>
             </div>
           </div>
         </AbsoluteFill>
       </Sequence>
 
-      {/* 🌊 SÉQUENCE 3 : Qualité Audio & Onde Sonore (260 - 360) */}
-      <Sequence from={260} durationInFrames={100}>
+      {/* 🌊 SÉQUENCE 3 : MAGIE AUDIO (280 - 420) */}
+      <Sequence from={S3_WAVEFORM} durationInFrames={160}>
         <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <h2 style={{ fontSize: 90, fontWeight: 900, color: COLORS.text, marginBottom: 120, opacity: waveOpacity, textAlign: 'center', lineHeight: 1.1 }}>
-            Une Qualité <br/>
-            <span style={{ color: COLORS.accentNeon }}>Studio Professionnelle.</span>
-          </h2>
+          {/* Son de la voix générée */}
+          <Audio 
+            src={staticFile("voice.mp3")} 
+            volume={1}
+            startFrom={0}
+          />
           
-          <div style={{ display: 'flex', gap: 15, alignItems: 'center', height: 350, opacity: waveOpacity }}>
-            {Array.from({ length: 45 }).map((_, i) => {
-              // Calcul mathématique pour une onde vocale très réaliste
-              const height = Math.abs(Math.sin((frame - 260) * 0.2 + i * 0.3) * Math.cos(i * 0.5)) * 0.8 + 0.2;
-              return (
-                <div key={i} style={{
-                  width: 14, height: 30 + height * 300,
-                  background: `linear-gradient(to top, ${COLORS.accentOrange}, ${COLORS.accentNeon})`,
-                  borderRadius: 20,
-                  boxShadow: `0 0 25px ${COLORS.accentOrange}50`
-                }} />
-              );
-            })}
+          <div style={{ 
+            opacity: interpolate(frame, [S4_OUTRO - 20, S4_OUTRO], [1, 0], { extrapolateRight: 'clamp' }),
+            transform: `scale(${waveScale})`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', height: 300, opacity: waveOpacity }}>
+              {Array.from({ length: 50 }).map((_, i) => {
+                const height = Math.abs(Math.sin((waveFrame) * 0.25 + i * 0.4) * Math.cos(i * 0.6)) * 0.8 + 0.15;
+                return (
+                  <div key={i} style={{
+                    width: 12, height: 20 + height * 280,
+                    background: COLORS.accentNeon,
+                    borderRadius: 20,
+                    boxShadow: `0 0 20px ${COLORS.accentNeon}60`
+                  }} />
+                );
+              })}
+            </div>
+            <h2 style={{ fontSize: 75, fontWeight: 900, color: COLORS.text, marginTop: 80, letterSpacing: '-1px', opacity: waveOpacity, textAlign: 'center', lineHeight: 1.1 }}>
+              Une Qualité <br/>
+              <span style={{ color: COLORS.accentNeon }}>Studio Professionnelle.</span>
+            </h2>
           </div>
         </AbsoluteFill>
       </Sequence>
 
-      {/* 🚀 SÉQUENCE 4 : Appel à l'action final (350 - 450) */}
-      <Sequence from={350}>
+      {/* 🚀 SÉQUENCE 4 : OUTRO ÉPIQUE (420 - 550) */}
+      <Sequence from={S4_OUTRO}>
         <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <div style={{ transform: `scale(${outroScale})` }}>
-            <h1 style={{ fontSize: 140, fontWeight: 900, color: COLORS.text, letterSpacing: '-5px', margin: 0, lineHeight: 1.1 }}>
+          <div style={{ 
+            transform: `scale(${outroScale})`, 
+            opacity: outroOpacity,
+            display: 'flex', flexDirection: 'column', alignItems: 'center'
+          }}>
+            <div style={{ width: 120, height: 120, borderRadius: '50%', background: `${COLORS.accentNeon}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 40, border: `2px solid ${COLORS.accentNeon}50` }}>
+              <svg className="w-16 h-16 text-[#D4FF00]" fill="none" viewBox="0 0 24 24" stroke={COLORS.accentNeon}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <h1 style={{ fontSize: 130, fontWeight: 900, color: COLORS.text, letterSpacing: '-4px', margin: 0, lineHeight: 1.1 }}>
               Faites parler <br/>
-              <span style={{ color: COLORS.accentOrange }}>vos idées.</span>
+              <span style={{ color: COLORS.accentNeon }}>vos idées.</span>
             </h1>
             
-            <p style={{ fontSize: 55, color: '#A1A1AA', marginTop: 30, fontWeight: 'bold', letterSpacing: '-1px' }}>
+            <p style={{ fontSize: 45, color: '#A1A1AA', marginTop: 30, fontWeight: 600, letterSpacing: '0px' }}>
               Testez la magie de l'IA dès aujourd'hui.
             </p>
             
-            {/* Bouton Pulsant Ultra Premium */}
             <div style={{
-              marginTop: 90, display: 'inline-block',
-              background: `linear-gradient(90deg, ${COLORS.accentOrange}, ${COLORS.accentNeon})`,
+              marginTop: 80, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: COLORS.text,
               color: '#000', 
-              padding: '45px 120px', borderRadius: 100,
-              fontSize: 55, fontWeight: 900, textTransform: 'uppercase',
+              padding: '35px 80px', borderRadius: 100,
+              fontSize: 40, fontWeight: 800, textTransform: 'uppercase',
               transform: `scale(${pulseScale})`,
-              boxShadow: `0 30px 80px rgba(234, 88, 12, 0.5)`,
-              letterSpacing: '2px'
+              boxShadow: `0 20px 60px rgba(255, 255, 255, 0.15)`,
+              letterSpacing: '1px'
             }}>
-              GÉNÉRER MA VOIX-OFF
+              COMMENCER MAINTENANT
             </div>
-
-            <p style={{
-              fontSize: 45, color: COLORS.text, marginTop: 80, fontWeight: 900,
-              opacity: interpolate(frame, [400, 420], [0, 1], { extrapolateRight: 'clamp' }),
-              letterSpacing: '2px',
-              textShadow: '0 5px 20px rgba(0,0,0,0.8)'
-            }}>
-              projet-afri-voice-ai.vercel.app
-            </p>
           </div>
         </AbsoluteFill>
       </Sequence>

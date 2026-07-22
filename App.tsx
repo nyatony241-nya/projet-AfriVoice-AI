@@ -245,14 +245,14 @@ const App: React.FC = () => {
       return;
     }
 
-    // Safety Rail #2: Rate Limiting / Anti-Spam (Max 5 per minute window)
+    // Safety Rail #2: Rate Limiting / Anti-Spam (Max 10 per minute window)
     const now = Date.now();
-    if (now - lastGenTimestamp < 12000 && recentGenerationsCount >= 5) {
+    if (now - lastGenTimestamp < 3000 && recentGenerationsCount >= 10) {
       setStatus((prev) => ({
         ...prev,
-        error: 'Protection Anti-Spam / Rate Limit activée. Veuillez patienter 10 secondes.',
+        error: 'Protection Anti-Spam active. Veuillez patienter 3 secondes.',
       }));
-      addToast('warning', 'Protection Anti-Spam Active', 'Trop de requêtes rapides. Veuillez patienter un instant avant la prochaine génération.');
+      addToast('warning', 'Protection Anti-Spam Active', 'Veuillez patienter 3 secondes avant la prochaine génération.');
       return;
     }
     if (now - lastGenTimestamp > 60000) {
@@ -272,7 +272,7 @@ const App: React.FC = () => {
       }
 
       // Sélection de la voix en fonction du genre
-      const selectedVoiceId = settings.gender === 'female' ? 'Zephyr' : 'Kore';
+      const selectedVoiceId = settings.gender === 'female' ? 'Aoede' : 'Puck';
 
       const rawAudio = await generateAfricanVoiceOverRaw(
         script,
@@ -575,7 +575,7 @@ const App: React.FC = () => {
                       <span>{isEn ? 'Voice Parameters & Nuances' : 'Paramètres Vocaux & Nuances'}</span>
                     </h2>
                     <span className="text-[10px] font-mono text-zinc-500 font-bold">
-                      {settings.isClonedVoice ? (isEn ? '🎤 Cloned Voice HD (Authentic Imprint)' : '🎤 Voix Clonée HD (Empreinte Locale)') : settings.gender === 'female' ? (isEn ? 'Zephyr (Female)' : 'Zephyr (Femme)') : (isEn ? 'Kore (Male)' : 'Kore (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
+                      {settings.isClonedVoice ? (isEn ? '🎤 Cloned Voice HD (Authentic Imprint)' : '🎤 Voix Clonée HD (Empreinte Locale)') : settings.gender === 'female' ? (isEn ? 'Aoede (Female)' : 'Aoede (Femme)') : (isEn ? 'Puck (Male)' : 'Puck (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
                     </span>
                   </div>
 
@@ -594,7 +594,7 @@ const App: React.FC = () => {
                               : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
                           }`}
                         >
-                          {g === 'female' ? (isEn ? '👩 Female Voice (Zephyr)' : '👩 Voix Féminine (Zephyr)') : (isEn ? '👨 Male Voice (Kore)' : '👨 Voix Masculine (Kore)')}
+                          {g === 'female' ? (isEn ? '👩 Female Voice (Aoede)' : '👩 Voix Féminine (Aoede)') : (isEn ? '👨 Male Voice (Puck)' : '👨 Voix Masculine (Puck)')}
                         </button>
                       ))}
                     </div>
@@ -1313,7 +1313,7 @@ const App: React.FC = () => {
                                 {new Date(item.timestamp).toLocaleDateString()}
                               </span>
                               <span className="text-[10px] font-bold uppercase text-zinc-900 dark:text-[#D4FF00]">
-                                {item.settings.gender === 'female' ? 'Zephyr' : 'Kore'} ({item.settings.age}a)
+                                {item.settings.gender === 'female' ? 'Aoede' : 'Puck'} ({item.settings.age}a)
                               </span>
                             </div>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate italic font-medium">

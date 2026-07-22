@@ -25,11 +25,11 @@ export const COUNTRIES: Country[] = [
 ];
 
 export const VOICE_OPTIONS: VoiceOption[] = [
-  { id: 'Kore', name: 'Kore', gender: 'male' },
   { id: 'Puck', name: 'Puck', gender: 'male' },
   { id: 'Charon', name: 'Charon', gender: 'male' },
   { id: 'Fenrir', name: 'Fenrir', gender: 'male' },
-  { id: 'Zephyr', name: 'Zephyr', gender: 'female' },
+  { id: 'Aoede', name: 'Aoede', gender: 'female' },
+  { id: 'Kore', name: 'Kore', gender: 'female' },
 ];
 
 export const BG_MUSIC_TRACKS: BackgroundMusic[] = [

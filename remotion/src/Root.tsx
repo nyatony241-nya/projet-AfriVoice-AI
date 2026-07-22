@@ -6,7 +6,7 @@ export const RemotionRoot: React.FC = () => {
     <Composition
       id="AfriVoiceAd"
       component={AfriVoiceAd}
-      durationInFrames={450} // 15 secondes
+      durationInFrames={550} // 18.3 secondes
       fps={30}
       width={1080}   // Format Carré/Vertical optimisé pour Instagram/TikTok/Facebook
       height={1920}  // (Modifiez en 1920x1080 si vous voulez le format YouTube classique)
