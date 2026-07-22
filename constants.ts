@@ -32,3 +32,46 @@ export const VOICE_OPTIONS: VoiceOption[] = [
   { id: 'Kore', name: 'Kore', gender: 'female' },
 ];
 
+export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: 'free',
+    name: 'FREE – Découverte',
+    price: '0 FCFA/mois',
+    description: 'Pour tester la voix de l’Afrique',
+    color: 'stone',
+    features: [
+      'Limité à 90 secondes au total',
+      '5 pays débloqués',
+      'Accent léger standard',
+      'Qualité Standard'
+    ]
+  },
+  {
+    id: 'creator',
+    name: 'CREATOR',
+    price: '3 500 FCFA/mois',
+    description: 'Créateurs TikTok & YouTube',
+    color: 'amber',
+    isPopular: true,
+    features: [
+      '60 minutes / mois',
+      '20 pays & tous les accents',
+      'Sans limite par génération',
+      'Utilisation commerciale'
+    ]
+  },
+  {
+    id: 'pro',
+    name: 'PRO – Business HD',
+    price: '9 900 FCFA/mois',
+    description: 'Studios, Médias & Podcasts',
+    color: 'indigo',
+    features: [
+      '160 minutes / mois',
+      'Priorité de génération',
+      'Support prioritaire',
+      'Qualité HD'
+    ]
+  }
+];
+

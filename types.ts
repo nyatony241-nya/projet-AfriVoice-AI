@@ -32,7 +32,7 @@ export interface PricingPlan {
   price: string;
   description: string;
   features: string[];
-  color: string;
+  color: 'stone' | 'amber' | 'indigo' | 'emerald';
   isPopular?: boolean;
 }
 

@@ -8,6 +8,7 @@ import WaveformPlayer from './components/WaveformPlayer';
 import ToastContainer, { Toast } from './components/ToastContainer';
 import { generateAfricanVoiceOverRaw } from './services/geminiService';
 import { decodeRawPcm, audioBufferToWav } from './services/audioUtils';
+import Pricing from './components/Pricing';
 import Auth from './components/Auth';
 import { supabase } from './services/supabase';
 import { Session } from '@supabase/supabase-js';
@@ -16,12 +17,13 @@ const STORAGE_KEY = 'afrivoice_history_v1';
 const MAX_HISTORY_ITEMS = 5;
 
 const App: React.FC = () => {
-  // Session State
+  // Session & Profile State
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<{ plan_id: string; seconds_used: number } | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<'studio' | 'history'>('studio');
+  const [activeTab, setActiveTab] = useState<'studio' | 'history' | 'pricing'>('studio');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -51,15 +53,34 @@ const App: React.FC = () => {
 
   // --- Auth Effect ---
   useEffect(() => {
+    const fetchProfile = async (userId: string) => {
+      const { data, error } = await supabase.from('profiles').select('plan_id, seconds_used').eq('id', userId).single();
+      if (data && !error) {
+        setProfile(data);
+      } else {
+        // Fallback or retry logic if trigger hasn't finished
+        setProfile({ plan_id: 'free', seconds_used: 0 });
+      }
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setIsAuthLoading(false);
+      if (session?.user) {
+        fetchProfile(session.user.id).then(() => setIsAuthLoading(false));
+      } else {
+        setIsAuthLoading(false);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -113,6 +134,11 @@ const App: React.FC = () => {
 
   // --- Generation Logic ---
   const handleGenerate = async () => {
+    if (!session) {
+      addToast('error', 'Erreur', 'Vous devez être connecté.');
+      return;
+    }
+
     if (!script.trim()) {
       setStatus((prev) => ({ ...prev, error: isEn ? 'Please enter your script.' : 'Veuillez entrer votre script de narration.' }));
       addToast('error', isEn ? 'Missing Script' : 'Script manquant', isEn ? 'The script field cannot be empty.' : 'Le champ de script vocal ne peut pas être vide.');
@@ -145,7 +171,7 @@ const App: React.FC = () => {
         selectedCountry.accentDescription,
         selectedVoiceId,
         settings,
-        'pro' 
+        session.access_token 
       );
 
       const buffer = await decodeRawPcm(rawAudio, audioContextRef.current, 24000, 1);
@@ -246,6 +272,7 @@ const App: React.FC = () => {
         onCloseMobile={() => setIsOpenMobileSidebar(false)}
         language={language}
         onLogout={handleLogout}
+        currentPlanId={profile?.plan_id || 'free'}
       />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -491,6 +518,35 @@ const App: React.FC = () => {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Pricing Tab */}
+            {activeTab === 'pricing' && (
+              <Pricing 
+                currentPlanId={profile?.plan_id || 'free'}
+                isDark={theme === 'dark'}
+                language={language}
+                onSubscribe={async (planId) => {
+                  try {
+                    const res = await fetch('/api/checkout', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                      },
+                      body: JSON.stringify({ planId, email: session.user.email })
+                    });
+                    const data = await res.json();
+                    if (data.authorizationUrl) {
+                      window.location.href = data.authorizationUrl;
+                    } else {
+                      addToast('error', 'Erreur de paiement', "Impossible d'initialiser le paiement.");
+                    }
+                  } catch (e) {
+                    addToast('error', 'Erreur', 'Erreur réseau.');
+                  }
+                }}
+              />
             )}
           </div>
         </main>

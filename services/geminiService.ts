@@ -7,17 +7,8 @@ export const generateAfricanVoiceOverRaw = async (
   accentDescription: string,
   voiceName: string,
   settings: VoiceSettings,
-  planId: string = 'free'
+  token: string
 ): Promise<Uint8Array> => {
-  let customApiKey = '';
-  
-  if (typeof window !== 'undefined') {
-    const localKey = localStorage.getItem('AFRIVOICE_API_KEY') || localStorage.getItem('GEMINI_API_KEY');
-    if (localKey && localKey.trim() !== '' && localKey !== 'PLACEHOLDER_API_KEY') {
-      customApiKey = localKey.trim();
-    }
-  }
-
   // L'URL du backend : En local ça pointe vers Express (3001), sur Vercel ça pointe vers la Serverless Function
   const isDev = import.meta.env.DEV;
   const backendUrl = isDev ? 'http://localhost:3001/api/generate' : '/api/generate';
@@ -26,15 +17,14 @@ export const generateAfricanVoiceOverRaw = async (
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
       script,
       countryName,
       accentDescription,
       voiceName,
-      settings,
-      planId,
-      customApiKey
+      settings
     })
   });
 

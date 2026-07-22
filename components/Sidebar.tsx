@@ -10,6 +10,7 @@ interface SidebarProps {
   onCloseMobile: () => void;
   language?: Language;
   onLogout: () => void;
+  currentPlanId: string;
 }
 const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
@@ -20,6 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   language = 'fr',
   onLogout,
+  currentPlanId,
 }) => {
   const navItemsFr = [
     {
@@ -35,12 +37,22 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'history' as const,
       label: 'Bibliothèque',
-      badge: historyCount > 0 ? `${historyCount}` : undefined,
+      badge: historyCount > 0 ? historyCount.toString() : undefined,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
-      ),
+      )
+    },
+    {
+      id: 'pricing' as const,
+      label: 'Forfaits',
+      badge: 'PRO',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
     }
   ];
 
@@ -57,13 +69,23 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'history' as const,
-      label: 'Audio Library',
-      badge: historyCount > 0 ? `${historyCount}` : undefined,
+      label: 'Library',
+      badge: historyCount > 0 ? historyCount.toString() : undefined,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
-      ),
+      )
+    },
+    {
+      id: 'pricing' as const,
+      label: 'Pricing',
+      badge: 'PRO',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
     }
   ];
 
@@ -93,6 +115,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center gap-1.5">
                 <span className={`text-base sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
                   AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
+                </span>
+                <span className={`text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shadow-xs ${
+                  currentPlanId === 'free' ? 'bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' :
+                  currentPlanId === 'creator' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                  'bg-[#D4FF00] text-black'
+                }`}>
+                  {currentPlanId}
                 </span>
               </div>
               <span className="text-[8px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-[0.16em] leading-tight block mt-0.5">
