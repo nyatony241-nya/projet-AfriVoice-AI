@@ -48,8 +48,8 @@ const App: React.FC = () => {
 
   // Dynamic Quota limits by plan (Safety Rail #1 & #3) + Recharge bonus
   const quota = useMemo<QuotaUsage>(() => {
-    let baseMaxSeconds = 90; // 1.5 min daily free cap
-    let maxChars = 300;
+    let baseMaxSeconds = 99999; // Capacité de test illimitée pour le MVP
+    let maxChars = 5000;
 
     if (currentPlan.id === 'creator') {
       baseMaxSeconds = 3600; // 60 min monthly cap
