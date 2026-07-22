@@ -116,13 +116,23 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   else if (settings?.timbre > 75) timbreInstruction = "timbre très clair, brillant et cristallin";
   else if (settings?.timbre > 55) timbreInstruction = "timbre légèrement brillant";
 
-  const prompt = `Génère une voix-off pour le ${countryName}. 
-  Accent: ${accentDescription} (${accentIntensity}). 
-  Genre: ${settings?.gender === 'female' ? 'Femme' : 'Homme'}. 
-  Émotion: ${emotionMap[settings?.emotion || 'neutral']}.
-  Âge souhaité: environ ${settings?.age || 30} ans.
-  Détails techniques: ${pitchInstruction}, ${timbreInstruction}, ${speedInstruction}.
-  Script: "${script}"${localExpressionsInstruction}${watermarkInstruction}`;
+  let speedDirective = "Parle à un rythme naturel et fluide.";
+  if (settings?.speed <= 0.8) speedDirective = "PARLE TRÈS LENTEMENT, en articulant chaque mot et en prenant de longues pauses.";
+  else if (settings?.speed >= 1.2) speedDirective = "PARLE TRÈS RAPIDEMENT, avec urgence et sans pause.";
+
+  let ageDirective = `Tu es une personne d'environ ${settings?.age || 30} ans.`;
+  if (settings?.age > 50) ageDirective = "Tu es une personne âgée (plus de 50 ans). Ta voix doit être posée, mûre, et exprimer la sagesse et l'expérience.";
+  if (settings?.age < 22) ageDirective = "Tu es très jeune (moins de 22 ans). Ta voix doit être pleine d'énergie, de jeunesse et de dynamisme.";
+
+  const prompt = `INSTRUCTIONS POUR L'ACTEUR VOCAL :
+Tu es un acteur spécialisé dans les voix-off.
+${ageDirective}
+Accent demandé : ${countryName} - ${accentDescription} (${accentIntensity}).
+Émotion : ${emotionMap[settings?.emotion || 'neutral']}.
+Rythme : ${speedDirective}
+
+LIT LE SCRIPT SUIVANT EXACTEMENT TEL QU'IL EST, SANS COMMENTAIRE :
+"${script}"${localExpressionsInstruction}${watermarkInstruction}`;
 
   const seedInput = `${script}-${countryName}-${voiceName}-${JSON.stringify(settings)}-${planId}`;
   const stableSeed = generateSeed(seedInput);
