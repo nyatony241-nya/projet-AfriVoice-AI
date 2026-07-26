@@ -1,8 +1,8 @@
-import { GoogleGenAI, Modality } from '@google/genai';
+import { ElevenLabsClient } from 'elevenlabs';
 
 export default async function handler(req, res) {
   // Configurer les entêtes CORS pour autoriser l'accès depuis n'importe où
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -22,90 +22,43 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { script, countryName, accentDescription, voiceName, settings, planId, customApiKey } = req.body;
+    const { script, voiceId, customApiKey } = req.body;
 
-    // La clé vient soit de l'utilisateur (via localStorage), soit des variables d'environnement Vercel
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+    if (!script || !voiceId) {
+      return res.status(400).json({ error: "Les paramètres 'script' et 'voiceId' sont requis." });
+    }
+
+    // La clé vient soit de l'utilisateur, soit des variables d'environnement Vercel
+    const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
+      ? customApiKey.trim() 
+      : process.env.ELEVENLABS_API_KEY;
 
     if (!apiKey) {
-      return res.status(401).json({ error: "Aucune clé API configurée. Veuillez l'ajouter dans les variables d'environnement Vercel (GEMINI_API_KEY)." });
+      return res.status(401).json({ error: "Aucune clé API ElevenLabs configurée. Veuillez l'ajouter dans les variables d'environnement Vercel (ELEVENLABS_API_KEY)." });
     }
 
-    const accentIntensity = planId === 'free' ? 'léger' : (planId === 'pro' ? 'très marqué et authentique' : 'naturel');
-    const watermarkInstruction = planId === 'free' ? "\nNOTE: Ajoute OBLIGATOIREMENT une mention vocale 'Généré par AfriVoice AI' au début." : "";
-    const localExpressionsInstruction = settings?.useLocalExpressions ? `\n- Utilise des expressions locales du ${countryName}.` : "";
+    const client = new ElevenLabsClient({ apiKey });
 
-    const emotionMap = {
-      neutral: 'ton informatif',
-      happy: 'ton joyeux',
-      serious: 'ton sérieux',
-      energetic: 'ton dynamique',
-      soft: 'ton apaisant'
-    };
-
-    let speedInstruction = "vitesse normale";
-    if (settings?.speed <= 0.6) speedInstruction = "vitesse très lente";
-    else if (settings?.speed <= 0.8) speedInstruction = "vitesse lente";
-    else if (settings?.speed >= 1.4) speedInstruction = "vitesse très rapide";
-    else if (settings?.speed >= 1.2) speedInstruction = "vitesse rapide";
-
-    let pitchInstruction = "tonalité normale";
-    if (settings?.pitch < 0.8) pitchInstruction = "voix très grave et profonde";
-    else if (settings?.pitch < 0.95) pitchInstruction = "voix légèrement grave";
-    else if (settings?.pitch > 1.2) pitchInstruction = "voix très aiguë";
-    else if (settings?.pitch > 1.05) pitchInstruction = "voix légèrement aiguë";
-
-    let timbreInstruction = "timbre équilibré";
-    if (settings?.timbre < 30) timbreInstruction = "timbre très chaud, velouté et sombre";
-    else if (settings?.timbre < 45) timbreInstruction = "timbre légèrement chaud";
-    else if (settings?.timbre > 75) timbreInstruction = "timbre très clair, brillant et cristallin";
-    else if (settings?.timbre > 55) timbreInstruction = "timbre légèrement brillant";
-
-    let speedDirective = "Parle à un rythme naturel et fluide.";
-    if (settings?.speed <= 0.8) speedDirective = "PARLE TRÈS LENTEMENT, en articulant chaque mot et en prenant de longues pauses.";
-    else if (settings?.speed >= 1.2) speedDirective = "PARLE TRÈS RAPIDEMENT, avec urgence et sans pause.";
-
-    let ageDirective = `Tu es une personne d'environ ${settings?.age || 30} ans.`;
-    if (settings?.age > 50) ageDirective = "Tu es une personne âgée (plus de 50 ans). Ta voix doit être posée, mûre, et exprimer la sagesse et l'expérience.";
-    if (settings?.age < 22) ageDirective = "Tu es très jeune (moins de 22 ans). Ta voix doit être pleine d'énergie, de jeunesse et de dynamisme.";
-
-    const prompt = `INSTRUCTIONS POUR L'ACTEUR VOCAL :
-Tu es un acteur spécialisé dans les voix-off.
-${ageDirective}
-Accent demandé : ${countryName} - ${accentDescription} (${accentIntensity}).
-Émotion : ${emotionMap[settings?.emotion || 'neutral']}.
-Rythme : ${speedDirective}
-
-LIT LE SCRIPT SUIVANT EXACTEMENT TEL QU'IL EST, SANS COMMENTAIRE :
-"${script}"${localExpressionsInstruction}${watermarkInstruction}`;
-
-    // Connexion à l'API Gemini
-    const ai = new GoogleGenAI({ apiKey });
-            
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
-      contents: prompt,
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: voiceName || "Puck"
-            }
-          }
-        }
-      }
+    // Appel à l'API ElevenLabs (Modèle multilingue V2 pour un français natif parfait)
+    const audioStream = await client.textToSpeech.convert(voiceId, {
+      text: script,
+      model_id: "eleven_multilingual_v2",
+      output_format: "mp3_44100_128", // Format MP3 haute qualité
     });
 
-    if (!response || !response.candidates || !response.candidates[0] || !response.candidates[0].content) {
-      throw new Error("Réponse invalide de l'API Gemini");
+    // Convertir le flux en Buffer
+    const chunks = [];
+    for await (const chunk of audioStream) {
+      chunks.push(chunk);
     }
-
-    const base64Audio = response.candidates[0].content.parts[0].inlineData.data;
+    const audioBuffer = Buffer.concat(chunks);
+    
+    // Envoyer en base64 au frontend
+    const base64Audio = audioBuffer.toString('base64');
 
     return res.status(200).json({ base64Audio });
   } catch (error) {
-    console.error("Vercel Serverless Error:", error);
+    console.error("Vercel Serverless Error (ElevenLabs):", error);
     return res.status(500).json({ 
       error: `Impossible de générer l'audio. (${error.message || 'Erreur API'}).` 
     });
