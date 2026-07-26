@@ -5,11 +5,37 @@ export interface Country {
   flag: string;
   primaryLanguage: 'French' | 'English' | 'Arabic';
   accentDescription: string;
+  azureVoiceMale?: string;
+  azureVoiceFemale?: string;
+  elevenLabsVoiceIdMale?: string;
+  elevenLabsVoiceIdFemale?: string;
 }
 
 export interface VoiceSettings {
   gender: 'male' | 'female';
+  age: number;
+  style: string;
+  pitch: number;
   speed: number;
+  timbre: number;
+  emotion?: 'neutral' | 'happy' | 'serious' | 'energetic' | 'soft';
+  useLocalExpressions?: boolean;
+  isClonedVoice?: boolean;
+  clonedVoiceName?: string;
+}
+
+export interface BackgroundMusic {
+  id: string;
+  name: string;
+  url: string;
+  previewUrl?: string;
+}
+
+export interface MixerSettings {
+  voiceVolume: number;
+  bgMusicVolume: number;
+  bgMusicId: string | null;
+  isMixing: boolean;
 }
 
 export interface GenerationState {
@@ -32,7 +58,7 @@ export interface PricingPlan {
   price: string;
   description: string;
   features: string[];
-  color: 'stone' | 'amber' | 'indigo' | 'emerald';
+  color: string;
   isPopular?: boolean;
 }
 
