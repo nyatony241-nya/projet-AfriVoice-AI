@@ -48,7 +48,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
 
     // Appel à l'API Gemini (Modèle 2.5 flash avec sortie audio)
     const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-tts',
+        model: 'gemini-3.1-flash-tts-preview',
         contents: script,
         config: {
           responseModalities: ["AUDIO"],
