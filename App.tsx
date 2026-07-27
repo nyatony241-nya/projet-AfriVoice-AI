@@ -771,7 +771,7 @@ const App: React.FC = () => {
                         ))}
                       </div>
                       <p className="text-[10px] text-center font-mono text-zinc-500 uppercase tracking-widest">
-                        {isEn ? 'IA Generation in progress • Gemini 2.5 TTS HD Model' : 'Génération IA en cours • Modèle Gemini 2.5 TTS HD'}
+                        {isEn ? 'IA Generation in progress • Gemini TTS HD Model' : 'Génération IA en cours • Modèle Gemini TTS HD'}
                       </p>
                     </div>
                   )}

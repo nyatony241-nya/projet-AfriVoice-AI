@@ -41,7 +41,7 @@ export default async function handler(req: any, res: any) {
 
     // Appel à l'API Gemini pour la génération vocale
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.1-flash-tts',
         contents: script,
         config: {
           responseModalities: ["AUDIO"],
