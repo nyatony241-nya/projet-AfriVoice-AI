@@ -7,8 +7,8 @@ export interface Country {
   accentDescription: string;
   azureVoiceMale?: string;
   azureVoiceFemale?: string;
-  elevenLabsVoiceIdMale?: string;
-  elevenLabsVoiceIdFemale?: string;
+  geminiVoiceMale?: string;
+  geminiVoiceFemale?: string;
 }
 
 export interface VoiceSettings {

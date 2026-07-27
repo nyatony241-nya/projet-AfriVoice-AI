@@ -1,6 +1,6 @@
-import { ElevenLabsClient } from 'elevenlabs';
+import { GoogleGenAI } from '@google/genai';
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   // Configurer les entêtes CORS pour autoriser l'accès depuis n'importe où
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,34 +31,39 @@ export default async function handler(req, res) {
     // La clé vient soit de l'utilisateur, soit des variables d'environnement Vercel
     const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
       ? customApiKey.trim() 
-      : process.env.ELEVENLABS_API_KEY;
+      : process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return res.status(401).json({ error: "Aucune clé API ElevenLabs configurée. Veuillez l'ajouter dans les variables d'environnement Vercel (ELEVENLABS_API_KEY)." });
+      return res.status(401).json({ error: "Aucune clé API Gemini configurée. Veuillez l'ajouter dans les variables d'environnement Vercel (GEMINI_API_KEY)." });
     }
 
-    const client = new ElevenLabsClient({ apiKey });
+    const ai = new GoogleGenAI({ apiKey });
 
-    // Appel à l'API ElevenLabs (Modèle multilingue V2 pour un français natif parfait)
-    const audioStream = await client.textToSpeech.convert(voiceId, {
-      text: script,
-      model_id: "eleven_multilingual_v2",
-      output_format: "mp3_44100_128", // Format MP3 haute qualité
+    // Appel à l'API Gemini pour la génération vocale
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: script,
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: voiceId,
+              },
+            },
+          },
+        },
     });
 
-    // Convertir le flux en Buffer
-    const chunks = [];
-    for await (const chunk of audioStream) {
-      chunks.push(chunk);
-    }
-    const audioBuffer = Buffer.concat(chunks);
-    
-    // Envoyer en base64 au frontend
-    const base64Audio = audioBuffer.toString('base64');
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
 
-    return res.status(200).json({ base64Audio });
-  } catch (error) {
-    console.error("Vercel Serverless Error (ElevenLabs):", error);
+    if (!audioData) {
+        throw new Error("No audio data returned from Gemini");
+    }
+
+    return res.status(200).json({ base64Audio: audioData });
+  } catch (error: any) {
+    console.error("Vercel Serverless Error (Gemini):", error);
     return res.status(500).json({ 
       error: `Impossible de générer l'audio. (${error.message || 'Erreur API'}).` 
     });

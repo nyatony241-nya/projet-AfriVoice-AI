@@ -5,7 +5,7 @@ export const generateVoiceOver = async (
   let customApiKey = '';
   
   if (typeof window !== 'undefined') {
-    const localKey = localStorage.getItem('AFRIVOICE_API_KEY') || localStorage.getItem('ELEVENLABS_API_KEY');
+    const localKey = localStorage.getItem('AFRIVOICE_API_KEY') || localStorage.getItem('GEMINI_API_KEY');
     if (localKey && localKey.trim() !== '' && localKey !== 'PLACEHOLDER_API_KEY') {
       customApiKey = localKey.trim();
     }
@@ -37,13 +37,7 @@ export const generateVoiceOver = async (
     throw new Error("Aucune donnée audio reçue du serveur.");
   }
 
-  // Convert Base64 to Blob
-  const binaryString = window.atob(data.base64Audio);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-
-  return new Blob([bytes], { type: 'audio/mpeg' });
+  // Utilisation de fetch pour convertir proprement et rapidement le base64 en Blob (format WAV de Gemini)
+  const base64Response = await fetch(`data:audio/wav;base64,${data.base64Audio}`);
+  return await base64Response.blob();
 };

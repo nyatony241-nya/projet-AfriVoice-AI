@@ -9,7 +9,7 @@ import WaveformPlayer from './components/WaveformPlayer';
 import QuotaBar from './components/QuotaBar';
 import ToastContainer, { Toast } from './components/ToastContainer';
 import AuditModal from './components/AuditModal';
-import { generateVoiceOver } from './services/elevenlabsService';
+import { generateVoiceOver } from './services/geminiService';
 import { decodeRawPcm, mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './services/audioUtils';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
@@ -271,10 +271,10 @@ const App: React.FC = () => {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       }
 
-      // Sélection de la voix ElevenLabs en fonction du genre
+      // Sélection de la voix Gemini en fonction du genre
       const selectedVoiceId = settings.gender === 'female' 
-        ? (selectedCountry.elevenLabsVoiceIdFemale || '21m00Tcm4TlvDq8ikWAM') 
-        : (selectedCountry.elevenLabsVoiceIdMale || 'ErXwobaYiN019PkySvjV');
+        ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
+        : (selectedCountry.geminiVoiceMale || 'Puck');
 
       const audioBlob = await generateVoiceOver(script, selectedVoiceId);
 

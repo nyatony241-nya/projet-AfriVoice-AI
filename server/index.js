@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import rateLimit from 'express-rate-limit';
-import { ElevenLabsClient } from 'elevenlabs';
+import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 if (fs.existsSync('.env.local')) {
@@ -26,7 +26,7 @@ const generateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Endpoint de génération vocale (ElevenLabs)
+// Endpoint de génération vocale (Gemini)
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const { script, voiceId, customApiKey } = req.body;
 
@@ -37,35 +37,40 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   // Utiliser la clé API fournie par le client, ou celle du serveur par défaut
   const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
     ? customApiKey.trim() 
-    : process.env.ELEVENLABS_API_KEY;
+    : process.env.GEMINI_API_KEY;
 
-  if (!apiKey || apiKey === 'ta_cle_elevenlabs_ici') {
-    return res.status(401).json({ error: "Aucune clé API ElevenLabs n'est configurée sur le serveur. Veuillez configurer .env.local ou entrer votre propre clé sur le site." });
+  if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
+    return res.status(401).json({ error: "Aucune clé API Gemini n'est configurée sur le serveur. Veuillez configurer .env.local ou entrer votre propre clé sur le site." });
   }
 
   try {
-    const client = new ElevenLabsClient({ apiKey });
+    const ai = new GoogleGenAI({ apiKey });
 
-    // Appel à l'API ElevenLabs (Modèle multilingue V2 pour un français natif parfait)
-    const audioStream = await client.textToSpeech.convert(voiceId, {
-      text: script,
-      model_id: "eleven_multilingual_v2",
-      output_format: "mp3_44100_128", // Format MP3 haute qualité
+    // Appel à l'API Gemini (Modèle 2.5 flash avec sortie audio)
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: script,
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: voiceId, // "Puck", "Aoede", etc.
+              },
+            },
+          },
+        },
     });
 
-    // Convertir le flux en Buffer
-    const chunks = [];
-    for await (const chunk of audioStream) {
-      chunks.push(chunk);
+    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+    if (!audioData) {
+        throw new Error("No audio data returned from Gemini");
     }
-    const audioBuffer = Buffer.concat(chunks);
-    
-    // Envoyer en base64 au frontend
-    const base64Audio = audioBuffer.toString('base64');
-    
-    return res.json({ base64Audio });
+
+    return res.json({ base64Audio: audioData });
   } catch (error) {
-    console.error("❌ Erreur ElevenLabs :", error.message || error);
+    console.error("❌ Erreur Gemini :", error.message || error);
     return res.status(500).json({ 
       error: `Impossible de générer l'audio. (${error.message || 'Erreur API'}). Veuillez vérifier votre clé API ou votre quota.` 
     });
@@ -73,6 +78,6 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Secure AfriVoice Backend (ElevenLabs) running on port ${PORT}`);
-  console.log(`🔑 ElevenLabs API Key configured: ${process.env.ELEVENLABS_API_KEY ? 'Yes' : 'No'}`);
+  console.log(`🚀 Secure AfriVoice Backend (Gemini) running on port ${PORT}`);
+  console.log(`🔑 Gemini API Key configured: ${process.env.GEMINI_API_KEY ? 'Yes' : 'No'}`);
 });
