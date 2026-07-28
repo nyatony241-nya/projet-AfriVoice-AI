@@ -276,15 +276,24 @@ const App: React.FC = () => {
         ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
         : (selectedCountry.geminiVoiceMale || 'Puck');
 
-      const audioBlob = await generateVoiceOver(script, selectedVoiceId);
+      const result = await generateVoiceOver(script, selectedVoiceId);
 
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const buffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-      
+      let buffer: AudioBuffer;
+
+      if (result.float32Samples.length > 0) {
+        // PCM L16 de Gemini TTS → AudioBuffer créé directement (sans decodeAudioData)
+        const ctx = audioContextRef.current;
+        buffer = ctx.createBuffer(1, result.float32Samples.length, result.sampleRate);
+        buffer.copyToChannel(result.float32Samples, 0);
+      } else {
+        // Fallback pour formats déjà encodés
+        const arrayBuffer = await result.blob.arrayBuffer();
+        buffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+      }
+
       voiceBufferRef.current = buffer;
 
-      const wavBlob = audioBufferToWav(buffer);
-      const url = URL.createObjectURL(wavBlob);
+      const url = URL.createObjectURL(result.blob);
 
       // Account for exact audio duration inside Quota safety tracker
       const estimatedSeconds = Math.max(5, Math.round(buffer.duration || script.length / 14));
@@ -292,7 +301,7 @@ const App: React.FC = () => {
 
       // Convert blob to base64 for history storage
       const reader = new FileReader();
-      reader.readAsDataURL(wavBlob);
+      reader.readAsDataURL(result.blob);
       reader.onloadend = () => {
         const base64data = reader.result as string;
         const newItem: HistoryItem = {
