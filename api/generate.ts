@@ -22,7 +22,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { script, voiceId, customApiKey } = req.body;
+    const { script, voiceId, customApiKey, options } = req.body;
 
     if (!script || !voiceId) {
       return res.status(400).json({ error: "Les paramètres 'script' et 'voiceId' sont requis." });
@@ -39,10 +39,82 @@ export default async function handler(req: any, res: any) {
 
     const ai = new GoogleGenAI({ apiKey });
 
+    // Construction du prompt structuré pour piloter la voix (accent, genre, émotion, âge, débit, pitch)
+    let contents = script;
+    if (options) {
+      const accentStr = options.accentDescription || 'French';
+      const countryStr = options.countryName || 'France';
+      const genderStr = options.gender === 'male' ? 'male' : 'female';
+      const emotionStr = options.emotion || 'neutral';
+      const styleStr = options.style || 'pro';
+      const speedVal = options.speed || 1.0;
+      const pitchVal = options.pitch || 1.0;
+      const ageVal = options.age || 30;
+
+      // 1. Définition détaillée de l'âge
+      let ageInstruction = `mature adult ${genderStr} voice, around ${ageVal} years old, balanced and confident`;
+      if (ageVal >= 55) {
+        ageInstruction = `senior elderly ${genderStr} voice, around ${ageVal} years old, with a mature, wise, warm, and slightly raspy/weathered vocal quality`;
+      } else if (ageVal <= 22) {
+        ageInstruction = `extremely young and youthful ${genderStr} voice, around ${ageVal} years old, with a fresh, light-hearted, high-pitched, and energetic tone`;
+      } else if (ageVal < 35) {
+        ageInstruction = `young adult ${genderStr} voice, around ${ageVal} years old, modern, clear, and professional`;
+      } else if (ageVal >= 35 && ageVal < 55) {
+        ageInstruction = `mature adult ${genderStr} voice, around ${ageVal} years old, highly professional, warm, corporate, authoritative, and confident`;
+      }
+
+      // 2. Définition du débit de parole (Speed)
+      let pacingInstruction = "Speak at a moderate, normal conversational speed.";
+      if (speedVal < 1.0) {
+        pacingInstruction = "Speak slowly and deliberately, with long pauses between sentences, taking your time.";
+      } else if (speedVal > 1.0) {
+        pacingInstruction = "Speak very fast and rapidly, with quick transitions and minimal pauses, filled with urgency.";
+      }
+
+      // 3. Définition du pitch (hauteur de voix)
+      let pitchInstruction = "Use a standard, balanced pitch.";
+      if (pitchVal < 1.0) {
+        pitchInstruction = "Use a very deep, low-pitched, bassy, and resonant voice tone.";
+      } else if (pitchVal > 1.0) {
+        pitchInstruction = "Use a high-pitched, bright, sharp, and clear voice tone.";
+      }
+
+      // 4. Définition du style
+      let styleInstruction = "professional narrator, clear and articulate";
+      if (styleStr === 'casual') styleInstruction = "casual and conversational, friendly vibe";
+      else if (styleStr === 'advertising') styleInstruction = "high-energy radio DJ or commercial advertisement style";
+      else if (styleStr === 'narration') styleInstruction = "storytelling tone, expressive and descriptive";
+
+      // 5. Définition de l'émotion
+      let emotionInstruction = "neutral, clear narrator tone";
+      if (emotionStr === 'happy') emotionInstruction = "happy, cheerful, warm, smiling and enthusiastic tone";
+      else if (emotionStr === 'serious') emotionInstruction = "serious, professional news reporter or radio journalist tone, formal and objective";
+      else if (emotionStr === 'energetic') emotionInstruction = "highly energetic, punchy, exciting, commercial advertisement or radio DJ promo trailer style";
+      else if (emotionStr === 'soft') emotionInstruction = "soft, gentle, quiet, soothing, calm, and intimate storytelling tone";
+
+      const localExprInstruction = options.useLocalExpressions 
+        ? "* Local rhythm: Emphasize regional slang pronunciations and native speech patterns strongly."
+        : "";
+
+      contents = `Synthesize speech for the performance defined below. The profile, scene, and director's notes are for direction only. Do NOT speak them.
+
+Profile: ${voiceId}
+Director's Notes:
+* Accent: ${accentStr} (from ${countryStr})
+* Vocal Actor: ${ageInstruction}
+* Tone/Style: ${styleInstruction}
+* Emotion: ${emotionInstruction}
+* Pitch: ${pitchInstruction}
+* Pacing: ${pacingInstruction}
+${localExprInstruction ? `${localExprInstruction}\n` : ''}
+#### TRANSCRIPT
+${script}`;
+    }
+
     // Appel à l'API Gemini pour la génération vocale
     const response = await ai.models.generateContent({
         model: 'gemini-3.1-flash-tts-preview',
-        contents: script,
+        contents: contents,
         config: {
           responseModalities: ["AUDIO"],
           speechConfig: {

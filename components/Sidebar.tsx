@@ -1,5 +1,6 @@
 import React from 'react';
 import { PricingPlan, Language } from '../types';
+import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
   activeTab: 'studio' | 'mastering' | 'history' | 'pricing';
@@ -201,7 +202,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
       {/* Bottom Section: User & Status */}
-      <div className="pt-6 border-t border-zinc-200 dark:border-white/10">
+      <div className="pt-6 border-t border-zinc-200 dark:border-white/10 space-y-3">
         <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#181D29] border-white/5' : 'bg-white border-[#E4E4E7] shadow-sm'}`}>
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-md ${
@@ -218,6 +219,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         </div>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+          }}
+          className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-colors ${
+            isDark
+              ? 'text-red-400 hover:bg-red-500/10'
+              : 'text-red-600 hover:bg-red-50'
+          }`}
+        >
+          {language === 'en' ? 'Sign Out' : 'Se déconnecter'}
+        </button>
       </div>
     </div>
   );

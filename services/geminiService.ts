@@ -7,6 +7,8 @@ export interface GeminiAudioResult {
   sampleRate: number;
 }
 
+import { supabase } from './supabaseClient';
+
 /**
  * Décode le base64 PCM L16 (Int16) en Float32 pour AudioContext.
  * Gemini TTS retourne du PCM 16-bit signé, mono, 24kHz.
@@ -70,7 +72,18 @@ function float32ToWavBlob(float32: Float32Array, sampleRate: number): Blob {
 
 export const generateVoiceOver = async (
   script: string,
-  voiceId: string
+  voiceId: string,
+  options?: {
+    countryName: string;
+    accentDescription: string;
+    gender: string;
+    age: number;
+    emotion: string;
+    style: string;
+    useLocalExpressions: boolean;
+    speed?: number;
+    pitch?: number;
+  }
 ): Promise<GeminiAudioResult> => {
   let customApiKey = '';
 
@@ -82,12 +95,23 @@ export const generateVoiceOver = async (
   }
 
   const isDev = import.meta.env.DEV;
-  const backendUrl = isDev ? 'http://localhost:3001/api/generate' : '/api/generate';
+  let backendUrl = '/api/generate';
+  if (isDev && typeof window !== 'undefined') {
+    const hostname = window.location.hostname || 'localhost';
+    backendUrl = `http://${hostname}:3001/api/generate`;
+  }
+
+  // Get Supabase Session Token
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
 
   const response = await fetch(backendUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ script, voiceId, customApiKey }),
+    headers: { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ script, voiceId, customApiKey, options }),
   });
 
   const data = await response.json();

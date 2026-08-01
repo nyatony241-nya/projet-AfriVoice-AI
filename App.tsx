@@ -11,6 +11,8 @@ import ToastContainer, { Toast } from './components/ToastContainer';
 import AuditModal from './components/AuditModal';
 import { generateVoiceOver } from './services/geminiService';
 import { decodeRawPcm, mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './services/audioUtils';
+import { supabase } from './services/supabaseClient';
+import AuthPage from './components/AuthPage';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
 const QUOTA_STORAGE_KEY = 'afrivoice_quota_v1';
@@ -40,6 +42,10 @@ const App: React.FC = () => {
   const [bonusSeconds, setBonusSeconds] = useState<number>(0);
   const [lastGenTimestamp, setLastGenTimestamp] = useState<number>(0);
   const [recentGenerationsCount, setRecentGenerationsCount] = useState<number>(0);
+
+  // Auth State
+  const [session, setSession] = useState<any>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   const availableCountries = useMemo(() => {
     if (currentPlan.id === 'free') return COUNTRIES.slice(0, 5);
@@ -148,6 +154,20 @@ const App: React.FC = () => {
         console.error('Failed to load bonus seconds', e);
       }
     }
+
+    // Check active session and subscribe to auth changes
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoadingAuth(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Save history, quota, and bonus to localStorage
@@ -276,7 +296,17 @@ const App: React.FC = () => {
         ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
         : (selectedCountry.geminiVoiceMale || 'Puck');
 
-      const result = await generateVoiceOver(script, selectedVoiceId);
+      const result = await generateVoiceOver(script, selectedVoiceId, {
+        countryName: selectedCountry.name,
+        accentDescription: selectedCountry.accentDescription,
+        gender: settings.gender,
+        age: settings.age,
+        emotion: settings.emotion,
+        style: settings.style,
+        useLocalExpressions: settings.useLocalExpressions,
+        speed: settings.speed,
+        pitch: settings.pitch,
+      });
 
       let buffer: AudioBuffer;
 
@@ -405,8 +435,20 @@ const App: React.FC = () => {
     addToast('success', `Forfait ${plan.name} Actif`, `Vous bénéficiez désormais des minutes et fonctionnalités du plan ${plan.name}.`);
   };
 
+  if (loadingAuth) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-[#09090B]' : 'bg-zinc-50'}`}>
+        <div className="w-12 h-12 border-4 border-[#D4FF00] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthPage onAuthSuccess={() => {}} addToast={addToast} isDark={isDark} language={language} />;
+  }
+
   return (
-    <div className={`min-h-screen flex flex-col lg:flex-row ${isDark ? 'text-white' : 'text-zinc-900'}`}>
+    <div className={`min-h-screen transition-colors duration-500 font-sans flex flex-col lg:flex-row ${isDark ? 'bg-[#09090B] text-zinc-100' : 'bg-zinc-50 text-zinc-900'}`}>
       <audio ref={previewAudioRef} preload="auto" hidden />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} isDark={isDark} />
       <AuditModal isOpen={isAuditModalOpen} onClose={() => setIsAuditModalOpen(false)} isDark={isDark} />
@@ -558,7 +600,7 @@ const App: React.FC = () => {
 
                 {/* Synthesis Parameters Section */}
                 <section
-                  className={`order-3 lg:order-none rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
+                  className={`order-2 lg:order-none rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
                     isDark
                       ? 'bg-[#14151C] border-white/10 shadow-2xl'
                       : 'bg-white border-[#E4E4E7] shadow-lg shadow-[#D4FF00]/5'
@@ -587,12 +629,12 @@ const App: React.FC = () => {
 
                   <div className="space-y-8">
                     {/* Gender Selection */}
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                       {['female', 'male'].map((g) => (
                         <button
                           key={g}
                           onClick={() => setSettings({ ...settings, gender: g as any, isClonedVoice: false })}
-                          className={`flex-1 py-4 px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 ${
+                          className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 ${
                             settings.gender === g && !settings.isClonedVoice
                               ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/25'
                               : isDark
@@ -646,7 +688,7 @@ const App: React.FC = () => {
                             <button
                               key={speed}
                               onClick={() => setSettings({ ...settings, speed })}
-                              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all border ${
+                              className={`flex-1 py-3 px-1 sm:px-2 rounded-xl text-[10px] sm:text-[11px] font-black uppercase transition-all truncate border ${
                                 settings.speed === speed
                                   ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
                                   : isDark
@@ -693,7 +735,7 @@ const App: React.FC = () => {
               <div className="contents lg:block lg:col-span-5 space-y-8">
                 {/* Script Studio Box */}
                 <div
-                  className={`order-2 lg:order-none rounded-[36px] p-6 sm:p-8 border sticky top-24 transition-all duration-300 ${
+                  className={`order-3 lg:order-none rounded-[36px] p-6 sm:p-8 border sticky top-24 transition-all duration-300 ${
                     isDark
                       ? 'bg-[#14151C] border-white/10 shadow-2xl'
                       : 'bg-white border-[#E4E4E7] shadow-xl shadow-[#D4FF00]/5'
@@ -802,26 +844,7 @@ const App: React.FC = () => {
                         countryName={selectedCountry.name}
                       />
 
-                      {/* Quick Mastering Switch to Console tab */}
-                      <div className={`p-5 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isDark ? 'bg-[#D4FF00]/10 text-[#D4FF00]' : 'bg-[#D4FF00] text-zinc-900 shadow-sm'}`}>
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                            </svg>
-                          </div>
-                          <div>
-                            <h5 className="text-xs font-black">{isEn ? 'Add Background Music (Afrobeat, Sahel...)' : 'Ajouter une Musique de Fond (Afrobeat, Sahel...)'}</h5>
-                            <p className="text-[11px] text-zinc-500 font-medium">{isEn ? 'Mix and adjust volumes on HD console.' : 'Mixer et ajuster les volumes sur la console HD.'}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setActiveTab('mastering')}
-                          className="px-4 py-2 rounded-xl text-[11px] font-extrabold bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-[#D4FF00] hover:text-white dark:hover:bg-[#D4FF00] dark:hover:text-black transition-colors shrink-0"
-                        >
-                          {isEn ? 'Open Mastering →' : 'Ouvrir Mastering →'}
-                        </button>
-                      </div>
+
                     </div>
                   )}
                 </div>
@@ -846,7 +869,7 @@ const App: React.FC = () => {
                     </span>
                     <h2 className="text-2xl font-black tracking-tight mt-1">{isEn ? 'Studio Mastering Console' : 'Console de Mastering Studio'}</h2>
                     <p className="text-xs text-zinc-500 font-medium mt-1">
-                      {isEn ? 'Harmonize vocal volume with authentic African background tracks.' : 'Harmonisez le volume vocal avec les pistes d\'ambiance authentiques d\'Afrique.'}
+                      {isEn ? 'Adjust and amplify the final vocal track volume.' : 'Ajustez et amplifiez le volume final de la piste vocale.'}
                     </p>
                   </div>
                   {status.audioUrl && (
@@ -901,7 +924,7 @@ const App: React.FC = () => {
                     />
 
                     {/* Mixing Sliders & Controls */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 sm:p-8 rounded-3xl bg-zinc-50 dark:bg-[#09090B] border border-zinc-200 dark:border-white/5">
+                    <div className="grid grid-cols-1 gap-8 p-6 sm:p-8 rounded-3xl bg-zinc-50 dark:bg-[#09090B] border border-zinc-200 dark:border-white/5">
                       {/* Voice Volume */}
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
@@ -921,70 +944,6 @@ const App: React.FC = () => {
                           className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
                         />
                         <p className="text-[10px] text-zinc-400 font-medium">{isEn ? 'Amplification or attenuation of the primary vocal track.' : 'Amplification ou atténuation de la piste vocale principale.'}</p>
-                      </div>
-
-                      {/* Music Track Selector */}
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
-                            {isEn ? 'Background Music (Afrobeat)' : 'Piste d\'Ambiance (Afrobeat)'}
-                          </label>
-                          {!isPremiumFeature && (
-                            <span className="text-[9px] bg-gradient-to-r from-[#D4FF00] to-[#E2FF3B] text-black px-2 py-0.5 rounded font-black flex items-center gap-1 shadow-sm">
-                              🔒 PRO / CREATOR
-                            </span>
-                          )}
-                        </div>
-                        <div onClick={() => {
-                          if (!isPremiumFeature) {
-                            addToast('warning', isEn ? '🔒 Plan Upgrade Required' : '🔒 Option Indisponible', isEn ? 'Upgrade to PRO or CREATOR plan to unlock background music mixing.' : 'Passez au forfait PRO ou CREATOR pour débloquer le mixage d’ambiance.');
-                            setActiveTab('pricing');
-                          }
-                        }}>
-                          <select
-                            disabled={!isPremiumFeature}
-                            value={mixer.bgMusicId || ''}
-                            onChange={(e) => setMixer({ ...mixer, bgMusicId: e.target.value || null })}
-                            className={`w-full border rounded-2xl px-4 py-3.5 text-xs font-black outline-none transition-colors cursor-pointer ${
-                              isDark
-                                ? 'bg-[#18181B] text-white border-white/10 hover:border-white/20'
-                                : 'bg-white text-zinc-800 border-zinc-200 shadow-sm'
-                            } ${!isPremiumFeature ? 'opacity-70 pointer-events-none' : ''}`}
-                          >
-                            <option value="">{isEn ? 'No Music (Voice only)' : 'Aucune Musique (Voix seule)'}</option>
-                            {BG_MUSIC_TRACKS.map((track) => (
-                              <option key={track.id} value={track.id}>
-                                🎵 {track.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Music Volume (Premium Only) */}
-                      <div className={`md:col-span-2 space-y-4 pt-4 border-t border-zinc-200 dark:border-white/5 ${!mixer.bgMusicId ? 'opacity-40 pointer-events-none' : ''}`}>
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
-                            {isEn ? 'Background Music Volume' : 'Volume de la Musique de Fond'}
-                          </label>
-                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
-                            {mixer.bgMusicVolume}%
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          disabled={!isPremiumFeature || !mixer.bgMusicId}
-                          value={mixer.bgMusicVolume}
-                          onChange={(e) => setMixer({ ...mixer, bgMusicVolume: parseInt(e.target.value) })}
-                          className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                        />
-                        <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-tight">
-                          <span>{isEn ? 'Subtle Background (15%)' : 'Subtil en arrière-plan (15%)'}</span>
-                          <span>{isEn ? 'Balanced (30%)' : 'Équilibré (30%)'}</span>
-                          <span>{isEn ? 'Powerful (60%+)' : 'Puissant (60%+)'}</span>
-                        </div>
                       </div>
                     </div>
 
