@@ -1,4 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 export default async function handler(req: any, res: any) {
   // Configurer les entêtes CORS pour autoriser l'accès depuis n'importe où
@@ -19,6 +24,19 @@ export default async function handler(req: any, res: any) {
   // Refuser tout ce qui n'est pas POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée. Utilisez POST.' });
+  }
+
+  // Vérification du token Supabase
+  if (supabase) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: "Token d'authentification manquant." });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) {
+      return res.status(401).json({ error: "Token d'authentification invalide ou expiré." });
+    }
   }
 
   try {
