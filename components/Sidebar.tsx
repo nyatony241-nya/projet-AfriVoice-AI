@@ -153,7 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Navigation Menu */}
         <div className="space-y-1.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-500 px-3 mb-3">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 px-3 mb-3">
             {language === 'en' ? 'Studio Navigation' : 'Navigation Studio'}
           </p>
           {navItems.map((item) => {
@@ -165,9 +165,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onTabChange(item.id);
                   if (isOpenMobile) onCloseMobile();
                 }}
-                className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-xs font-extrabold transition-all duration-300 group relative ${
+                className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl text-sm font-extrabold transition-all duration-300 group relative ${
                   isActive
-                    ? isDark ? isDark ? 'bg-[#D4FF00]/10 text-[#D4FF00] shadow-sm' : 'bg-[#D4FF00] text-black shadow-md' : 'bg-[#D4FF00] text-black shadow-md'
+                    ? isDark ? 'bg-[#D4FF00]/10 text-[#D4FF00] shadow-sm' : 'bg-[#D4FF00] text-black shadow-md'
                     : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'
                 }`}
               >
@@ -185,7 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                 {item.badge && (
                   <span
-                    className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
                       isActive
                         ? isDark
                           ? 'bg-[#D4FF00] text-black'
@@ -211,10 +211,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               AV
             </div>
             <div>
-              <p className="text-xs font-extrabold truncate">Studio Creator</p>
+              <p className="text-sm font-extrabold truncate">Studio Creator</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{currentPlan.name}</span>
+                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">{currentPlan.name}</span>
               </div>
             </div>
           </div>

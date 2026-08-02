@@ -622,7 +622,7 @@ const App: React.FC = () => {
                       </svg>
                       <span>{isEn ? 'Voice Parameters & Nuances' : 'Paramètres Vocaux & Nuances'}</span>
                     </h2>
-                    <span className="text-[10px] font-mono text-zinc-500 font-bold">
+                    <span className="text-xs font-mono text-zinc-500 font-bold hidden sm:inline">
                       {settings.isClonedVoice ? (isEn ? '🎤 Cloned Voice HD (Authentic Imprint)' : '🎤 Voix Clonée HD (Empreinte Locale)') : settings.gender === 'female' ? (isEn ? 'Aoede (Female)' : 'Aoede (Femme)') : (isEn ? 'Puck (Male)' : 'Puck (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
                     </span>
                   </div>
@@ -650,11 +650,11 @@ const App: React.FC = () => {
                     {/* Emotion */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">
+                          <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
                             {isEn ? 'Emotion & Intonation' : 'Émotion & Intonation'}
                           </label>
                           {!isPremiumFeature && (
-                            <span className="text-[9px] bg-[#D4FF00] text-black px-1.5 py-0.5 rounded font-black">
+                            <span className="text-[10px] bg-[#D4FF00] text-black px-2 py-0.5 rounded font-black">
                               PRO
                             </span>
                           )}
@@ -663,7 +663,7 @@ const App: React.FC = () => {
                           disabled={!isPremiumFeature}
                           value={settings.emotion}
                           onChange={(e) => setSettings({ ...settings, emotion: e.target.value as any })}
-                          className={`w-full border rounded-2xl px-4 py-3.5 text-xs font-bold outline-none transition-colors cursor-pointer ${
+                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
                             isDark
                               ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
                               : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
@@ -678,9 +678,9 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Speed & Age */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-zinc-200 dark:border-white/5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-zinc-200 dark:border-white/5">
                       <div className="space-y-3">
-                        <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">
+                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
                           {isEn ? 'Speaking Rate' : 'Débit de parole'}
                         </label>
                         <div className="flex gap-2">
@@ -688,7 +688,7 @@ const App: React.FC = () => {
                             <button
                               key={speed}
                               onClick={() => setSettings({ ...settings, speed })}
-                              className={`flex-1 py-3 px-1 sm:px-2 rounded-xl text-[10px] sm:text-[11px] font-black uppercase transition-all truncate border ${
+                              className={`flex-1 py-4 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border ${
                                 settings.speed === speed
                                   ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
                                   : isDark
@@ -696,7 +696,7 @@ const App: React.FC = () => {
                                   : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'
                               }`}
                             >
-                              {speed === 1.0 ? 'NORMAL' : speed < 1.0 ? (isEn ? 'SLOW (0.8x)' : 'LENT (0.8x)') : (isEn ? 'FAST (1.2x)' : 'RAPIDE (1.2x)')}
+                              {speed === 1.0 ? 'NORMAL' : speed < 1.0 ? (isEn ? 'SLOW' : 'LENT') : (isEn ? 'FAST' : 'RAPIDE')}
                             </button>
                           ))}
                         </div>
@@ -704,10 +704,10 @@ const App: React.FC = () => {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">
-                            {isEn ? 'Apparent Voice Age' : 'Âge apparent de la voix'}
+                          <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
+                            {isEn ? 'Apparent Voice Age' : 'Âge apparent'}
                           </label>
-                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
+                          <span className="text-sm font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
                             {settings.age} {isEn ? 'Y.O.' : 'ANS'}
                           </span>
                         </div>
@@ -717,11 +717,11 @@ const App: React.FC = () => {
                           max="70"
                           value={settings.age}
                           onChange={(e) => setSettings({ ...settings, age: parseInt(e.target.value) })}
-                          className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                          className="w-full h-3 mt-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
                         />
-                        <div className="flex justify-between text-[9px] font-bold text-zinc-400 uppercase tracking-tight">
-                          <span>{isEn ? 'Young (18yo)' : 'Jeune (18a)'}</span>
-                          <span>{isEn ? 'Mature (70yo)' : 'Mature (70a)'}</span>
+                        <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-tight">
+                          <span>{isEn ? 'Young (18)' : 'Jeune (18)'}</span>
+                          <span>{isEn ? 'Mature (70)' : 'Mature (70)'}</span>
                         </div>
                       </div>
                     </div>

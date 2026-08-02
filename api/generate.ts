@@ -1,8 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 export default async function handler(req: any, res: any) {
@@ -26,17 +26,21 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Méthode non autorisée. Utilisez POST.' });
   }
 
-  // Vérification du token Supabase
-  if (supabase) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: "Token d'authentification manquant." });
-    }
-    const token = authHeader.split(' ')[1];
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data.user) {
-      return res.status(401).json({ error: "Token d'authentification invalide ou expiré." });
-    }
+  // Vérification stricte du token Supabase (Security Audit Fix)
+  if (!supabase) {
+    return res.status(500).json({ error: "Configuration serveur incomplète : Impossible de vérifier l'authentification (Clés Supabase manquantes)." });
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: "Token d'authentification manquant. Accès refusé." });
+  }
+  
+  const token = authHeader.split(' ')[1];
+  const { data, error } = await supabase.auth.getUser(token);
+  
+  if (error || !data.user) {
+    return res.status(401).json({ error: "Token d'authentification invalide ou expiré. Accès refusé." });
   }
 
   try {
@@ -118,7 +122,7 @@ export default async function handler(req: any, res: any) {
 
 Profile: ${voiceId}
 Director's Notes:
-* CRITICAL ACCENT INSTRUCTION: You MUST speak with a heavy, authentic ${accentStr} native to ${countryStr}. Do NOT use a standard Parisian French or standard American/British English accent. Your pronunciation, rhythm, melody, and intonation MUST reflect a native speaker from Africa, specifically ${countryStr}. Roll your Rs if applicable, use local phonetic inflections. This is absolutely mandatory for the role.
+* CRITICAL ACCENT INSTRUCTION: You are a NATIVE speaker from ${countryStr}. You MUST speak with a heavy, authentic, and undeniable ${accentStr}. Do NOT under any circumstances use a standard Parisian French or standard American/British English accent. Your pronunciation, rhythm, melody, intonation, and phonetic placement MUST reflect a true local from ${countryStr}. Roll your Rs if applicable, use local phonetic inflections, and respect the unique musicality of this region's speech. This is absolutely mandatory for the role and the success of the recording.
 * Vocal Actor: ${ageInstruction}
 * Tone/Style: ${styleInstruction}
 * Emotion: ${emotionInstruction}
