@@ -118,7 +118,7 @@ export default async function handler(req: any, res: any) {
 
 Profile: ${voiceId}
 Director's Notes:
-* Accent: ${accentStr} (from ${countryStr})
+* CRITICAL ACCENT INSTRUCTION: You MUST speak with a heavy, authentic ${accentStr} native to ${countryStr}. Do NOT use a standard Parisian French or standard American/British English accent. Your pronunciation, rhythm, melody, and intonation MUST reflect a native speaker from Africa, specifically ${countryStr}. Roll your Rs if applicable, use local phonetic inflections. This is absolutely mandatory for the role.
 * Vocal Actor: ${ageInstruction}
 * Tone/Style: ${styleInstruction}
 * Emotion: ${emotionInstruction}
