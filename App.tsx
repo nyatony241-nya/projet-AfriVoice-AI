@@ -13,6 +13,7 @@ import { generateVoiceOver } from './services/geminiService';
 import { decodeRawPcm, mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './services/audioUtils';
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
+import InstallAppModal from './components/InstallAppModal';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
 const QUOTA_STORAGE_KEY = 'afrivoice_quota_v1';
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('AFRIVOICE_LANG') as Language) || 'fr');
   const isEn = language === 'en';
@@ -452,6 +454,7 @@ const App: React.FC = () => {
       <audio ref={previewAudioRef} preload="auto" hidden />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} isDark={isDark} />
       <AuditModal isOpen={isAuditModalOpen} onClose={() => setIsAuditModalOpen(false)} isDark={isDark} />
+      <InstallAppModal isOpen={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} isDark={isDark} />
 
       {/* SaaS Sidebar Navigation */}
       <Sidebar
@@ -464,6 +467,7 @@ const App: React.FC = () => {
         onCloseMobile={() => setIsOpenMobileSidebar(false)}
         language={language}
         onOpenAuditModal={() => setIsAuditModalOpen(true)}
+        onOpenInstallModal={() => setIsInstallModalOpen(true)}
       />
 
       {/* Main Content Area */}

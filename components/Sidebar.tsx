@@ -12,6 +12,7 @@ interface SidebarProps {
   onCloseMobile: () => void;
   language?: Language;
   onOpenAuditModal?: () => void;
+  onOpenInstallModal?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -24,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   language = 'fr',
   onOpenAuditModal,
+  onOpenInstallModal,
 }) => {
   const navItemsFr = [
     {
@@ -201,14 +203,31 @@ const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
+        {/* Install App Button */}
+        <div className="px-4 mt-6">
+          <button
+            onClick={onOpenInstallModal}
+            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 ${
+              isDark
+                ? 'bg-zinc-800 text-white hover:bg-zinc-700 border border-white/10'
+                : 'bg-white text-zinc-900 hover:bg-zinc-50 border border-zinc-200'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {language === 'en' ? 'Install App' : 'Installer l\'App'}
+          </button>
+        </div>
+
       {/* Bottom Section: User & Status */}
       <div className="pt-6 border-t border-zinc-200 dark:border-white/10 space-y-3">
         <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#181D29] border-white/5' : 'bg-white border-[#E4E4E7] shadow-sm'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-md ${
-              'bg-[#D4FF00] text-black'
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md overflow-hidden ${
+              'bg-[#D4FF00]'
             }`}>
-              AV
+              <img src="/logo.png" alt="AfriVoice" className="w-full h-full object-cover" />
             </div>
             <div>
               <p className="text-sm font-extrabold truncate">Studio Creator</p>

@@ -1,0 +1,21 @@
+{
+  "name": "AfriVoice",
+  "short_name": "AfriVoice",
+  "description": "Studio de Voix-Off IA Africaines",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

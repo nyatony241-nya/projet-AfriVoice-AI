@@ -60,11 +60,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
         
         {/* Branding */}
         <div className="flex flex-col items-center justify-center mb-10 text-center">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl ${isDark ? 'bg-[#D4FF00] shadow-[#D4FF00]/20' : 'bg-[#D4FF00] shadow-[#D4FF00]/30'}`}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-black" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
-              <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
-            </svg>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl overflow-hidden ${isDark ? 'shadow-[#D4FF00]/20' : 'shadow-[#D4FF00]/30'}`}>
+            <img src="/logo.png" alt="AfriVoice Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-black tracking-tighter">AfriVoice<span className="text-[#D4FF00]">.ai</span></h1>
           <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">
