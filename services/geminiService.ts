@@ -8,6 +8,7 @@ export interface GeminiAudioResult {
 }
 
 import { supabase } from './supabaseClient';
+import type { AccentLevel, ContentStyle, VocalPersonality, VocalObjective, ExpertSettings } from '../types';
 
 /**
  * Décode le base64 PCM L16 (Int16) en Float32 pour AudioContext.
@@ -70,19 +71,33 @@ function float32ToWavBlob(float32: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: 'audio/wav' });
 }
 
+/**
+ * Generates a voice-over using the AfriVoice AI Voice Director Engine.
+ * All prompt intelligence is handled server-side by the VoicePromptEngine.
+ */
 export const generateVoiceOver = async (
   script: string,
   voiceId: string,
   options?: {
+    countryId: string;
     countryName: string;
     accentDescription: string;
     gender: string;
+    voiceVariant?: string;
+    isClonedVoice?: boolean;
     age: number;
     emotion: string;
     style: string;
     useLocalExpressions: boolean;
     speed?: number;
     pitch?: number;
+    // AI Voice Director Engine params
+    accentLevel?: AccentLevel;
+    contentStyle?: ContentStyle;
+    personality?: VocalPersonality;
+    vocalObjective?: VocalObjective;
+    expertMode?: boolean;
+    expertSettings?: ExpertSettings;
   }
 ): Promise<GeminiAudioResult> => {
   let customApiKey = '';

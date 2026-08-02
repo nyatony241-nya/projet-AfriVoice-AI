@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { COUNTRIES, VOICE_OPTIONS, PRICING_PLANS, PRICING_PLANS_EN, BG_MUSIC_TRACKS } from './constants';
-import { Country, GenerationState, VoiceSettings, PricingPlan, MixerSettings, HistoryItem, QuotaUsage, Language } from './types';
+import { Country, GenerationState, VoiceSettings, PricingPlan, MixerSettings, HistoryItem, QuotaUsage, Language, AccentLevel, ContentStyle, VocalPersonality, VocalObjective, QualityScore } from './types';
+import { analyzeQuality } from './services/qualityAnalyzer';
 import CountryCard from './components/CountryCard';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -77,16 +78,34 @@ const App: React.FC = () => {
   const [selectedCountry, setSelectedCountry] = useState<Country>(availableCountries[0]);
   const [script, setScript] = useState<string>('');
 
-  const [settings, setSettings] = useState<VoiceSettings>({
-    gender: 'female',
-    age: 30,
-    style: 'pro',
-    pitch: 1.0,
-    speed: 1.0,
-    timbre: 50,
-    emotion: 'neutral',
-    useLocalExpressions: false,
+  const [settings, setSettings] = useState<VoiceSettings>(() => {
+    const saved = localStorage.getItem('AFRIVOICE_PREFS');
+    const defaults: VoiceSettings = {
+      gender: 'female',
+      voiceVariant: 'voice1',
+      age: 28,
+      style: 'pro',
+      pitch: 1.0,
+      speed: 1.0,
+      timbre: 50,
+      emotion: 'neutral',
+      useLocalExpressions: false,
+      accentLevel: 'medium',
+      contentStyle: undefined,
+      personality: undefined,
+      vocalObjective: undefined,
+      expertMode: false,
+      expertSettings: undefined,
+    };
+    if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* ignore */ } }
+    return defaults;
   });
+
+  // Save user preferences (Memory feature)
+  useEffect(() => {
+    const { expertSettings, ...prefsToSave } = settings;
+    localStorage.setItem('AFRIVOICE_PREFS', JSON.stringify(prefsToSave));
+  }, [settings]);
 
   const [mixer, setMixer] = useState<MixerSettings>({
     voiceVolume: 100,
@@ -299,15 +318,24 @@ const App: React.FC = () => {
         : (selectedCountry.geminiVoiceMale || 'Puck');
 
       const result = await generateVoiceOver(script, selectedVoiceId, {
+        countryId: selectedCountry.id,
         countryName: selectedCountry.name,
         accentDescription: selectedCountry.accentDescription,
         gender: settings.gender,
+        voiceVariant: settings.voiceVariant || 'voice1',
+        isClonedVoice: settings.isClonedVoice,
         age: settings.age,
         emotion: settings.emotion,
         style: settings.style,
         useLocalExpressions: settings.useLocalExpressions,
         speed: settings.speed,
         pitch: settings.pitch,
+        accentLevel: settings.accentLevel,
+        contentStyle: settings.contentStyle,
+        personality: settings.personality,
+        vocalObjective: settings.vocalObjective,
+        expertMode: settings.expertMode,
+        expertSettings: settings.expertSettings,
       });
 
       let buffer: AudioBuffer;
@@ -347,8 +375,17 @@ const App: React.FC = () => {
         setHistory((prev) => [newItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
       };
 
-      setStatus({ isGenerating: false, error: null, audioUrl: url });
-      addToast('success', 'Voix africaine générée !', `Production de ${estimatedSeconds}s réussie (${selectedCountry.name} - ${selectedVoiceId}).`);
+      // Quality Analyzer — post-generation score
+      const qScore = analyzeQuality(
+        script,
+        selectedCountry.id,
+        settings.accentLevel || 'medium',
+        settings.contentStyle || 'narration',
+        settings.emotion || 'neutral',
+        estimatedSeconds
+      );
+      setStatus({ isGenerating: false, error: null, audioUrl: url, qualityScore: qScore });
+      addToast('success', isEn ? 'African voice generated!' : 'Voix africaine générée !', `Production de ${estimatedSeconds}s réussie (${selectedCountry.name} — Score: ${qScore.overall}/100).`);
     } catch (err: any) {
       console.error('Erreur lors de la génération vocale:', err?.message || 'Erreur inconnue');
       const isQuotaError = err?.message?.includes('429') || err?.message?.includes('quota') || err?.status === 429;
@@ -633,22 +670,97 @@ const App: React.FC = () => {
 
                   <div className="space-y-8">
                     {/* Gender Selection */}
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                      {['female', 'male'].map((g) => (
-                        <button
-                          key={g}
-                          onClick={() => setSettings({ ...settings, gender: g as any, isClonedVoice: false })}
-                          className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 ${
-                            settings.gender === g && !settings.isClonedVoice
-                              ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/25'
-                              : isDark
-                              ? 'bg-[#09090B] text-zinc-400 border border-white/5 hover:border-white/20'
-                              : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
-                          }`}
-                        >
-                          {g === 'female' ? (isEn ? '👩 Female Voice (Aoede)' : '👩 Voix Féminine (Aoede)') : (isEn ? '👨 Male Voice (Puck)' : '👨 Voix Masculine (Puck)')}
-                        </button>
-                      ))}
+                    <div>
+                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                        {['female', 'male'].map((g) => (
+                          <button
+                            key={g}
+                            onClick={() => setSettings({ ...settings, gender: g as any, voiceVariant: 'voice1', isClonedVoice: false })}
+                            className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 ${
+                              settings.gender === g && !settings.isClonedVoice
+                                ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/25'
+                                : isDark
+                                ? 'bg-[#09090B] text-zinc-400 border border-white/5 hover:border-white/20'
+                                : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
+                            }`}
+                          >
+                            {g === 'female' ? (isEn ? '👩 Female' : '👩 Femme') : (isEn ? '👨 Male' : '👨 Homme')}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Voice Variant Selection (Animated Drawer) */}
+                      {!settings.isClonedVoice && (
+                        <div className="flex flex-col sm:flex-row gap-2 mt-3 animate-in slide-in-from-top-2 fade-in duration-300">
+                          {settings.gender === 'female' ? (
+                            <>
+                              <button
+                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice1' })}
+                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  (!settings.voiceVariant || settings.voiceVariant === 'voice1')
+                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
+                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                {isEn ? 'Voice 1: Soft' : 'Voix 1 : Douce'}
+                              </button>
+                              <button
+                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice2' })}
+                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  settings.voiceVariant === 'voice2'
+                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
+                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                {isEn ? 'Voice 2: Dynamic' : 'Voix 2 : Dynamique'}
+                              </button>
+                              <button
+                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice3' })}
+                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  settings.voiceVariant === 'voice3'
+                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
+                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                {isEn ? 'Voice 3: Mature' : 'Voix 3 : Mature'}
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice1' })}
+                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  (!settings.voiceVariant || settings.voiceVariant === 'voice1')
+                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
+                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                {isEn ? 'Voice 1: Deep' : 'Voix 1 : Grave'}
+                              </button>
+                              <button
+                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice2' })}
+                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  settings.voiceVariant === 'voice2'
+                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
+                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                {isEn ? 'Voice 2: Warm' : 'Voix 2 : Chaleureux'}
+                              </button>
+                              <button
+                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice3' })}
+                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  settings.voiceVariant === 'voice3'
+                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
+                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                {isEn ? 'Voice 3: Energetic' : 'Voix 3 : Énergique'}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Emotion */}
@@ -679,6 +791,197 @@ const App: React.FC = () => {
                           <option value="energetic">{isEn ? 'Energetic / Punchy Ad' : 'Énergique / Publicité Punchy'}</option>
                           <option value="soft">{isEn ? 'Soft / Soothing Storytelling' : 'Doux / Storytelling Apaisant'}</option>
                         </select>
+                    </div>
+
+                    {/* ── AI Voice Director: Accent Level ────────── */}
+                    <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-white/5">
+                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
+                          {isEn ? 'Accent Intensity' : 'Intensité de l\'Accent'}
+                        </label>
+                        <div className="flex gap-2">
+                          {(['light', 'medium', 'strong'] as AccentLevel[]).map((level) => (
+                            <button
+                              key={level}
+                              onClick={() => setSettings({ ...settings, accentLevel: level })}
+                              className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border ${
+                                settings.accentLevel === level
+                                  ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
+                                  : isDark
+                                  ? 'bg-[#09090B] text-zinc-400 border-white/5 hover:border-white/20'
+                                  : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'
+                              }`}
+                            >
+                              {level === 'light' ? (isEn ? 'Light' : 'Léger') : level === 'medium' ? (isEn ? 'Medium' : 'Moyen') : (isEn ? 'Strong' : 'Fort')}
+                            </button>
+                          ))}
+                        </div>
+                    </div>
+
+                    {/* ── AI Voice Director: Content Style ────────── */}
+                    <div className="space-y-3">
+                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
+                          {isEn ? 'Content Style' : 'Style de Contenu'}
+                        </label>
+                        <select
+                          value={settings.contentStyle || ''}
+                          onChange={(e) => setSettings({ ...settings, contentStyle: (e.target.value || undefined) as any })}
+                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
+                            isDark
+                              ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
+                              : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
+                          }`}
+                        >
+                          <option value="">{isEn ? '🤖 Auto-detect (AI)' : '🤖 Détection auto (IA)'}</option>
+                          <option value="tiktok">📱 TikTok / Reels</option>
+                          <option value="advertisement">{isEn ? '📢 Advertisement' : '📢 Publicité'}</option>
+                          <option value="storytelling">📖 Storytelling</option>
+                          <option value="podcast">🎙️ Podcast</option>
+                          <option value="news">{isEn ? '📰 TV / Radio News' : '📰 Journal TV / Radio'}</option>
+                          <option value="radio">📻 Radio</option>
+                          <option value="documentary">{isEn ? '🎬 Documentary' : '🎬 Documentaire'}</option>
+                          <option value="narration">{isEn ? '🎭 Narration' : '🎭 Narration'}</option>
+                          <option value="motivation">🔥 Motivation</option>
+                          <option value="training">{isEn ? '📚 Training / E-learning' : '📚 Formation'}</option>
+                          <option value="commercial">{isEn ? '💼 Commercial' : '💼 Présentation Commerciale'}</option>
+                          <option value="youtube">▶️ YouTube</option>
+                        </select>
+                    </div>
+
+                    {/* ── AI Voice Director: Personality ────────── */}
+                    <div className="space-y-3">
+                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
+                          {isEn ? 'Voice Personality' : 'Personnalité'}
+                        </label>
+                        <select
+                          value={settings.personality || ''}
+                          onChange={(e) => setSettings({ ...settings, personality: (e.target.value || undefined) as any })}
+                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
+                            isDark
+                              ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
+                              : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
+                          }`}
+                        >
+                          <option value="">{isEn ? '🎯 Automatic' : '🎯 Automatique'}</option>
+                          <option value="entrepreneur">🚀 Entrepreneur</option>
+                          <option value="professor">{isEn ? '🎓 Professor' : '🎓 Professeur'}</option>
+                          <option value="student">{isEn ? '📝 Student' : '📝 Étudiant'}</option>
+                          <option value="journalist">{isEn ? '📡 Journalist' : '📡 Journaliste'}</option>
+                          <option value="narrator">{isEn ? '🎭 Narrator' : '🎭 Narrateur'}</option>
+                          <option value="salesperson">{isEn ? '🤝 Salesperson' : '🤝 Commercial'}</option>
+                          <option value="tiktok_creator">{isEn ? '📱 TikTok Creator' : '📱 Créateur TikTok'}</option>
+                          <option value="influencer">⭐ Influenceur</option>
+                          <option value="ceo">{isEn ? '👔 CEO' : '👔 Chef d\'entreprise'}</option>
+                          <option value="coach">💪 Coach</option>
+                          <option value="radio_host">{isEn ? '🎤 Radio Host' : '🎤 Animateur Radio'}</option>
+                        </select>
+                    </div>
+
+                    {/* ── AI Voice Director: Vocal Objective ────────── */}
+                    <div className="space-y-3">
+                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
+                          {isEn ? 'Vocal Objective' : 'Objectif Vocal'}
+                        </label>
+                        <select
+                          value={settings.vocalObjective || ''}
+                          onChange={(e) => setSettings({ ...settings, vocalObjective: (e.target.value || undefined) as any })}
+                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
+                            isDark
+                              ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
+                              : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
+                          }`}
+                        >
+                          <option value="">{isEn ? '🎯 Automatic' : '🎯 Automatique'}</option>
+                          <option value="inform">{isEn ? '📋 Inform' : '📋 Informer'}</option>
+                          <option value="convince">{isEn ? '💡 Convince' : '💡 Convaincre'}</option>
+                          <option value="inspire">{isEn ? '✨ Inspire' : '✨ Inspirer'}</option>
+                          <option value="educate">{isEn ? '📚 Educate' : '📚 Éduquer'}</option>
+                          <option value="entertain">{isEn ? '🎉 Entertain' : '🎉 Divertir'}</option>
+                          <option value="sell">{isEn ? '💰 Sell' : '💰 Vendre'}</option>
+                          <option value="tell_story">{isEn ? '📖 Tell a Story' : '📖 Raconter'}</option>
+                          <option value="motivate">{isEn ? '🔥 Motivate' : '🔥 Motiver'}</option>
+                        </select>
+                    </div>
+
+                    {/* ── Expert Mode Toggle ────────── */}
+                    <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
+                      <button
+                        onClick={() => setSettings({ ...settings, expertMode: !settings.expertMode })}
+                        className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-colors ${
+                          settings.expertMode ? 'text-[#D4FF00]' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                        }`}
+                      >
+                        <span>{settings.expertMode ? '🔬' : '⚗️'}</span>
+                        <span>{isEn ? 'Expert Mode' : 'Mode Expert'}</span>
+                        <span className="text-[10px]">{settings.expertMode ? '▲' : '▼'}</span>
+                      </button>
+
+                      {settings.expertMode && (
+                        <div className="mt-4 space-y-4 animate-fadeIn">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'City' : 'Ville'}</label>
+                              <input type="text" placeholder={isEn ? 'e.g. Douala' : 'ex. Douala'}
+                                value={settings.expertSettings?.city || ''}
+                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, city: e.target.value } })}
+                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'Region' : 'Région'}</label>
+                              <input type="text" placeholder={isEn ? 'e.g. Littoral' : 'ex. Littoral'}
+                                value={settings.expertSettings?.region || ''}
+                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, region: e.target.value } })}
+                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'Setting' : 'Milieu'}</label>
+                              <select
+                                value={settings.expertSettings?.isUrban ? 'urban' : 'rural'}
+                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, isUrban: e.target.value === 'urban' } })}
+                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none cursor-pointer ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
+                              >
+                                <option value="urban">{isEn ? '🏙 Urban' : '🏙 Urbain'}</option>
+                                <option value="rural">{isEn ? '🌾 Rural' : '🌾 Rural'}</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'Education' : 'Éducation'}</label>
+                              <select
+                                value={settings.expertSettings?.educationLevel || 'intermediate'}
+                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, educationLevel: e.target.value as any } })}
+                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none cursor-pointer ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
+                              >
+                                <option value="basic">{isEn ? 'Basic' : 'Basique'}</option>
+                                <option value="intermediate">{isEn ? 'Intermediate' : 'Intermédiaire'}</option>
+                                <option value="advanced">{isEn ? 'Advanced' : 'Avancé'}</option>
+                                <option value="academic">{isEn ? 'Academic' : 'Académique'}</option>
+                              </select>
+                            </div>
+                          </div>
+                          {/* Expert sliders */}
+                          {[
+                            { key: 'energy', label: isEn ? 'Energy' : 'Énergie', emoji: '⚡' },
+                            { key: 'expressiveness', label: isEn ? 'Expressiveness' : 'Expressivité', emoji: '🎭' },
+                            { key: 'smile', label: isEn ? 'Smile' : 'Sourire', emoji: '😊' },
+                            { key: 'charisma', label: isEn ? 'Charisma' : 'Charisme', emoji: '✨' },
+                          ].map(({ key, label, emoji }) => (
+                            <div key={key} className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase">{emoji} {label}</label>
+                                <span className="text-xs font-mono font-black text-[#D4FF00]">{(settings.expertSettings as any)?.[key] || 5}/10</span>
+                              </div>
+                              <input type="range" min="1" max="10"
+                                value={(settings.expertSettings as any)?.[key] || 5}
+                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, [key]: parseInt(e.target.value) } })}
+                                className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Speed & Age */}
@@ -847,6 +1150,40 @@ const App: React.FC = () => {
                         countryFlag={selectedCountry.flag}
                         countryName={selectedCountry.name}
                       />
+
+                      {/* ── Quality Score Gauge ────────── */}
+                      {status.qualityScore && (
+                        <div className={`mt-4 p-4 rounded-2xl border ${isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'}`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                              {isEn ? '🎯 Voice Quality Score' : '🎯 Score de Qualité Vocale'}
+                            </span>
+                            <span className={`text-lg font-black font-mono ${
+                              status.qualityScore.overall >= 80 ? 'text-emerald-500' :
+                              status.qualityScore.overall >= 60 ? 'text-[#D4FF00]' : 'text-orange-400'
+                            }`}>
+                              {status.qualityScore.overall}/100
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { label: isEn ? 'Authenticity' : 'Authenticité', value: status.qualityScore.authenticity, color: '#D4FF00' },
+                              { label: isEn ? 'Naturalness' : 'Naturel', value: status.qualityScore.naturalness, color: '#22D3EE' },
+                              { label: isEn ? 'Expression' : 'Expressivité', value: status.qualityScore.expressiveness, color: '#F472B6' },
+                            ].map(({ label, value, color }) => (
+                              <div key={label} className="space-y-1">
+                                <div className="flex justify-between">
+                                  <span className="text-[9px] font-bold text-zinc-500 uppercase">{label}</span>
+                                  <span className="text-[9px] font-mono font-black" style={{ color }}>{value}%</span>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: color }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
 
                     </div>

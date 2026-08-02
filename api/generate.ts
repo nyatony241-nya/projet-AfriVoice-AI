@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
+import { buildOptimizedPrompt } from '../services/voicePromptEngine';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
@@ -61,76 +62,36 @@ export default async function handler(req: any, res: any) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Construction du prompt structuré pour piloter la voix (accent, genre, émotion, âge, débit, pitch)
+    // ── AI Voice Director Engine ─────────────────────────────────
+    // All prompt intelligence is now delegated to VoicePromptEngine.
+    // The engine orchestrates: AIVoiceDirector → AccentIntelligence → HumanizerAI → SmartPromptOptimizer
     let contents = script;
+    let actualVoiceId = voiceId;
+
     if (options) {
-      const accentStr = options.accentDescription || 'French';
-      const countryStr = options.countryName || 'France';
-      const genderStr = options.gender === 'male' ? 'male' : 'female';
-      const emotionStr = options.emotion || 'neutral';
-      const styleStr = options.style || 'pro';
-      const speedVal = options.speed || 1.0;
-      const pitchVal = options.pitch || 1.0;
-      const ageVal = options.age || 30;
+      const engineResult = buildOptimizedPrompt({
+        script,
+        voiceId,
+        countryId: options.countryId || '',
+        countryName: options.countryName || 'Africa',
+        gender: options.gender || 'female',
+        voiceVariant: options.voiceVariant,
+        isClonedVoice: options.isClonedVoice,
+        age: options.age || 30,
+        emotion: options.emotion,
+        speed: options.speed || 1.0,
+        pitch: options.pitch || 1.0,
+        accentLevel: options.accentLevel,
+        contentStyle: options.contentStyle,
+        personality: options.personality,
+        vocalObjective: options.vocalObjective,
+        expertMode: options.expertMode,
+        expertSettings: options.expertSettings,
+        useLocalExpressions: options.useLocalExpressions,
+      });
 
-      // 1. Définition détaillée de l'âge
-      let ageInstruction = `mature adult ${genderStr} voice, around ${ageVal} years old, balanced and confident`;
-      if (ageVal >= 55) {
-        ageInstruction = `senior elderly ${genderStr} voice, around ${ageVal} years old, with a mature, wise, warm, and slightly raspy/weathered vocal quality`;
-      } else if (ageVal <= 22) {
-        ageInstruction = `extremely young and youthful ${genderStr} voice, around ${ageVal} years old, with a fresh, light-hearted, high-pitched, and energetic tone`;
-      } else if (ageVal < 35) {
-        ageInstruction = `young adult ${genderStr} voice, around ${ageVal} years old, modern, clear, and professional`;
-      } else if (ageVal >= 35 && ageVal < 55) {
-        ageInstruction = `mature adult ${genderStr} voice, around ${ageVal} years old, highly professional, warm, corporate, authoritative, and confident`;
-      }
-
-      // 2. Définition du débit de parole (Speed)
-      let pacingInstruction = "Speak at a moderate, normal conversational speed.";
-      if (speedVal < 1.0) {
-        pacingInstruction = "Speak slowly and deliberately, with long pauses between sentences, taking your time.";
-      } else if (speedVal > 1.0) {
-        pacingInstruction = "Speak very fast and rapidly, with quick transitions and minimal pauses, filled with urgency.";
-      }
-
-      // 3. Définition du pitch (hauteur de voix)
-      let pitchInstruction = "Use a standard, balanced pitch.";
-      if (pitchVal < 1.0) {
-        pitchInstruction = "Use a very deep, low-pitched, bassy, and resonant voice tone.";
-      } else if (pitchVal > 1.0) {
-        pitchInstruction = "Use a high-pitched, bright, sharp, and clear voice tone.";
-      }
-
-      // 4. Définition du style
-      let styleInstruction = "professional narrator, clear and articulate";
-      if (styleStr === 'casual') styleInstruction = "casual and conversational, friendly vibe";
-      else if (styleStr === 'advertising') styleInstruction = "high-energy radio DJ or commercial advertisement style";
-      else if (styleStr === 'narration') styleInstruction = "storytelling tone, expressive and descriptive";
-
-      // 5. Définition de l'émotion
-      let emotionInstruction = "neutral, clear narrator tone";
-      if (emotionStr === 'happy') emotionInstruction = "happy, cheerful, warm, smiling and enthusiastic tone";
-      else if (emotionStr === 'serious') emotionInstruction = "serious, professional news reporter or radio journalist tone, formal and objective";
-      else if (emotionStr === 'energetic') emotionInstruction = "highly energetic, punchy, exciting, commercial advertisement or radio DJ promo trailer style";
-      else if (emotionStr === 'soft') emotionInstruction = "soft, gentle, quiet, soothing, calm, and intimate storytelling tone";
-
-      const localExprInstruction = options.useLocalExpressions 
-        ? "* Local rhythm: Emphasize regional slang pronunciations and native speech patterns strongly."
-        : "";
-
-      contents = `Synthesize speech for the performance defined below. The profile, scene, and director's notes are for direction only. Do NOT speak them.
-
-Profile: ${voiceId}
-Director's Notes:
-* CRITICAL ACCENT INSTRUCTION: You are a NATIVE speaker from ${countryStr}. You MUST speak with a heavy, authentic, and undeniable ${accentStr}. Do NOT under any circumstances use a standard Parisian French or standard American/British English accent. Your pronunciation, rhythm, melody, intonation, and phonetic placement MUST reflect a true local from ${countryStr}. Roll your Rs if applicable, use local phonetic inflections, and respect the unique musicality of this region's speech. This is absolutely mandatory for the role and the success of the recording.
-* Vocal Actor: ${ageInstruction}
-* Tone/Style: ${styleInstruction}
-* Emotion: ${emotionInstruction}
-* Pitch: ${pitchInstruction}
-* Pacing: ${pacingInstruction}
-${localExprInstruction ? `${localExprInstruction}\n` : ''}
-#### TRANSCRIPT
-${script}`;
+      contents = engineResult.prompt;
+      actualVoiceId = engineResult.actualVoiceId;
     }
 
     // Appel à l'API Gemini pour la génération vocale
@@ -142,7 +103,7 @@ ${script}`;
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: voiceId,
+                voiceName: actualVoiceId,
               },
             },
           },
