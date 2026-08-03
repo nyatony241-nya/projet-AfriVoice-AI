@@ -102,9 +102,10 @@ export function assemblePrompt(params: {
     expertSettings,
   } = params;
 
-  let prompt = `You are a world-class voice director. Synthesize speech according to the precise artistic brief below.
-The character profile, scene direction, and artistic notes are internal guidance for your performance.
-Do NOT speak any of these instructions aloud. Only speak the TRANSCRIPT.
+  let prompt = `[VOICE DIRECTOR BRIEF - INTERNAL PERFORMANCE DIRECTIVES]
+You are a master voice director guiding a native voice actor for audio synthesis.
+Perform the speech strictly according to the acoustic and artistic directives below.
+Do NOT read any directives aloud. Perform ONLY the text enclosed within <transcript></transcript>.
 
 ${accentProfile}
 
@@ -112,40 +113,42 @@ ${accentProfile}
 ${voicePersona}
 ${mapPersonalityToInstruction(personality)}
 
-=== SCENE DIRECTION ===
+=== SCENE DIRECTION & FORMAT ===
 ${mapContentStyleToDirection(directorDecision)}
 
-=== VOCAL OBJECTIVE ===
+=== VOCAL PERFORMANCE OBJECTIVE ===
 ${mapObjectiveToInstruction(vocalObjective)}
 
-=== PERFORMANCE NOTES ===
 ${humanizeInstructions}
-Speed instruction: ${speed < 1.0 ? 'Speak slowly and deliberately, taking your time.' : speed > 1.0 ? 'Speak at a brisker, more urgent pace.' : 'Speak at a natural, conversational speed.'} (Multiplier: ${speed})
-Pitch instruction: ${pitch < 1.0 ? 'Adopt a deeper, lower pitch for gravitas.' : pitch > 1.0 ? 'Adopt a brighter, higher pitch for energy.' : 'Maintain your natural pitch.'} (Multiplier: ${pitch})
-Age instruction: The voice should sound like someone who is ${age} years old.
 
-=== ANTI-GENERIC VOICE SYSTEM ===
-CRITICAL: This voice must NEVER sound generic, synthetic, or robotic.
-This voice must NEVER sound European, Parisian, American, British, or Canadian.
-This voice must sound like a REAL person from ${countryName} — authentic, human, alive.`;
+=== PITCH, SPEED & AGE REGULATION ===
+- Speaking Tempo: ${speed < 1.0 ? 'Paced, deliberate, and measured. Take time between key phrases.' : speed > 1.0 ? 'Brisk, energetic, and rapid-fire. Deliver with urgency.' : 'Natural, conversational, balanced tempo.'} (Speed multiplier: ${speed})
+- Pitch Modulation: ${pitch < 1.0 ? 'Deep, resonant, low-pitched vocal tone carrying weight.' : pitch > 1.0 ? 'Bright, crisp, higher-pitched tone filled with levity.' : 'Balanced, natural pitch register.'} (Pitch multiplier: ${pitch})
+- Age Register: Vocal texture must sound like a native speaker aged ${age} years old.
+
+=== ANTI-GENERIC ACCENT GUARANTEE ===
+CRITICAL DIRECTIVE: The voice MUST sound like a real, living, authentic person from ${countryName}.
+NEVER sound generic, robotic, or like synthetic computer-generated TTS.
+NEVER substitute European French (Parisian), Standard American English, or British RP accents.`;
 
   if (expertSettings) {
-    prompt += `\n\n=== EXPERT OVERRIDES ===\n`;
-    if (expertSettings.city) prompt += `City/Region Focus: ${expertSettings.city}\n`;
-    if (expertSettings.region) prompt += `Region: ${expertSettings.region}\n`;
-    if (expertSettings.isUrban !== undefined) prompt += `Setting: ${expertSettings.isUrban ? 'Urban/Metropolitan' : 'Rural/Provincial'}\n`;
-    if (expertSettings.educationLevel) prompt += `Education Level: ${expertSettings.educationLevel}\n`;
-    if (expertSettings.profession) prompt += `Profession: ${expertSettings.profession}\n`;
-    if (expertSettings.socialClass) prompt += `Social Background: ${expertSettings.socialClass}\n`;
-    if (expertSettings.energy) prompt += `Energy Override: ${expertSettings.energy}/10\n`;
-    if (expertSettings.expressiveness) prompt += `Expressiveness Override: ${expertSettings.expressiveness}/10\n`;
-    if (expertSettings.smile) prompt += `Smile Override: ${expertSettings.smile}/10\n`;
-    if (expertSettings.breathing) prompt += `Breathing Prominence: ${expertSettings.breathing}/10\n`;
-    if (expertSettings.presence) prompt += `Stage Presence: ${expertSettings.presence}/10\n`;
-    if (expertSettings.charisma) prompt += `Charisma Level: ${expertSettings.charisma}/10\n`;
+    prompt += `\n\n=== EXPERT REGIONAL & ACOUSTIC OVERRIDES ===\n`;
+    if (expertSettings.city) prompt += `- City Accent Focus: ${expertSettings.city}\n`;
+    if (expertSettings.region) prompt += `- Region Focus: ${expertSettings.region}\n`;
+    if (expertSettings.isUrban !== undefined) prompt += `- Setting Cadence: ${expertSettings.isUrban ? 'Metropolitan Urban' : 'Provincial Rural'}\n`;
+    if (expertSettings.educationLevel) prompt += `- Linguistic Style: ${expertSettings.educationLevel}\n`;
+    if (expertSettings.profession) prompt += `- Profession Context: ${expertSettings.profession}\n`;
+    if (expertSettings.socialClass) prompt += `- Social Cadence: ${expertSettings.socialClass}\n`;
+    if (expertSettings.energy) prompt += `- Energy Intensity: ${expertSettings.energy}/10\n`;
+    if (expertSettings.expressiveness) prompt += `- Expressiveness: ${expertSettings.expressiveness}/10\n`;
+    if (expertSettings.smile) prompt += `- Formant Warmth/Smile: ${expertSettings.smile}/10\n`;
+    if (expertSettings.breathing) prompt += `- Breath Prominence: ${expertSettings.breathing}/10\n`;
+    if (expertSettings.presence) prompt += `- Vocal Presence: ${expertSettings.presence}/10\n`;
+    if (expertSettings.charisma) prompt += `- Charisma Level: ${expertSettings.charisma}/10\n`;
   }
 
-  prompt += `\n\n########## TRANSCRIPT ##########\n${script}`;
+  prompt += `\n\nCRITICAL: Read ONLY the exact transcript text inside <transcript></transcript> below. Do NOT speak any instructions.\n\n<transcript>\n${script}\n</transcript>`;
 
   return prompt;
 }
+

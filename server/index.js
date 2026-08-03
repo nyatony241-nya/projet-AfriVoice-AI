@@ -131,53 +131,62 @@ function buildOptimizedPromptJS(params) {
   const dna = VOICE_DNA[countryId];
   let accentProfile;
   if (!dna) {
-    accentProfile = `=== CHARACTER IDENTITY ===\nYou are a ${age}-year-old ${gender} from Sub-Saharan Africa.\nINTENSITY: Clear and warm African accent with natural local rhythm.\nCRITICAL ANTI-PATTERNS (DO NOT SOUND LIKE THESE): Standard American English, British RP, Parisian French, Generic TTS.`;
+    accentProfile = [
+      `=== VOICE ACTOR ROLE & ACCENT IDENTITY ===`,
+      `ROLE: Master native voice actor (${age}-year-old ${gender}) from Sub-Saharan Africa.`,
+      `ACCENT PROFILE: Authentic Sub-Saharan African accent. Warm, resonant, and natural.`,
+      `SPEECH MELODY: Rich, melodic, and expressive cadence with natural African pitch contours.`,
+      `CONSONANT ARTICULATION: Crisp, clear, and un-slurred articulation.`,
+      `CADENCE & RHYTHM: Syllable-timed, rhythmic, and engaging flow with organic micro-pauses.`,
+      `CULTURAL RESONANCE: Deeply authentic, warm, and confident native expression.`,
+      `STRICT ANTI-PATTERNS: Absolutely NEVER use European French (Parisian), American English, or British RP accents.`
+    ].join('\n');
   } else {
     const intensityMap = {
-      light: `Slight hints of ${countryId} accent, mostly neutral but with occasional local rhythm`,
-      medium: `Clear and unmistakable ${countryId} accent. Native speaker who grew up in ${dna.capital}.`,
-      strong: `Extremely thick, unapologetic ${countryId} accent. Every syllable drips with local identity.`
+      light: `Subtle, elegant hints of ${countryId} accent. Professional neutral baseline infused with genuine ${dna.capital} vocal rhythm.`,
+      medium: `Unmistakable, 100% authentic ${countryId} accent. Speak as a born-and-raised native of ${dna.capital}.`,
+      strong: `Rich, deep, unapologetic ${countryId} accent. Every sentence is saturated with authentic ${dna.capital} vocal identity, local cadence, and cultural warmth.`
     };
     const intensity = intensityMap[accentLevel] || intensityMap.medium;
     accentProfile = [
-      `=== CHARACTER IDENTITY ===`,
-      `You are a ${age}-year-old ${gender} from ${dna.capital}, ${countryId} (${dna.region}).`,
-      `INTENSITY: ${intensity}`,
+      `=== VOICE ACTOR ROLE & ACCENT IDENTITY ===`,
+      `ROLE: You are performing as a master native voice actor (${age}-year-old ${gender}) from ${dna.capital}, ${countryId} (${dna.region}).`,
+      `ACCENT INTENSITY: ${intensity}`,
       `SPEECH MELODY: ${dna.speechMelody}`,
-      `CONSONANT STYLE: ${dna.consonantStyle}`,
-      `RHYTHM PATTERN: ${dna.rhythmPattern}`,
-      `CULTURAL CONTEXT: ${dna.culturalContext}`,
-      `Local languages that shape your speech: ${dna.localLanguages.join(', ')}.`,
-      `CRITICAL ANTI-PATTERNS (DO NOT SOUND LIKE THESE): ${dna.antiPatterns.join(', ')}.`
+      `CONSONANT ARTICULATION: ${dna.consonantStyle}`,
+      `RHYTHM & CADENCE: ${dna.rhythmPattern}`,
+      `CULTURAL IDENTITY: ${dna.culturalContext}`,
+      `NATIVE LINGUISTIC ROOTS: Formed by the speech habits of ${dna.localLanguages.join(', ')}.`,
+      `STRICT ANTI-PATTERNS (MUST NEVER SOUND LIKE): ${dna.antiPatterns.join(', ')}.`
     ].join('\n');
   }
 
   // 4. Personality mapping
   const personalityMap = {
     entrepreneur: 'Speak like a confident entrepreneur presenting a business idea. Assertive, visionary, and compelling.',
-    professor: 'Speak like a university professor. Articulate, patient, pedagogical, and slightly formal.',
-    student: 'Speak like a young enthusiastic student. Fresh, curious, slightly informal, and relatable.',
+    professor: 'Speak like a university professor lecturing. Articulate, patient, pedagogical, and slightly formal.',
+    student: 'Speak like a young, enthusiastic student. Fresh, curious, slightly informal, and relatable.',
     journalist: 'Speak like a professional news anchor. Objective, precise, measured, with gravitas.',
-    narrator: 'Speak like a seasoned documentary narrator. Rich, atmospheric, drawing the listener in.',
-    salesperson: 'Speak like a top salesperson. Persuasive, warm, trustworthy.',
-    tiktok_creator: 'Speak like a viral TikTok creator. Ultra-energetic, punchy, modern, rapid-fire delivery.',
-    influencer: 'Speak like a social media influencer. Relatable, charismatic, trendy, smile in voice.',
-    ceo: 'Speak like a CEO giving a keynote. Commanding, visionary, authoritative yet approachable.',
-    coach: 'Speak like a motivational coach. Empowering, encouraging, passionate.',
-    radio_host: 'Speak like a popular radio DJ. Smooth, charismatic, great pacing, natural transitions.',
+    narrator: 'Speak like a seasoned documentary narrator. Rich, atmospheric, drawing the listener into the story.',
+    salesperson: 'Speak like a top salesperson. Persuasive, warm, trustworthy, with strategic pauses for impact.',
+    tiktok_creator: 'Speak like a viral TikTok creator. Ultra-energetic, punchy, modern slang, rapid-fire delivery.',
+    influencer: 'Speak like a social media influencer. Relatable, charismatic, trendy, with a smile in the voice.',
+    ceo: 'Speak like a Fortune 500 CEO giving a keynote. Commanding, visionary, authoritative, yet approachable.',
+    coach: 'Speak like a motivational coach. Empowering, encouraging, passionate, with rising intonation on key points.',
+    radio_host: 'Speak like a popular radio DJ. Smooth, charismatic, great pacing, with natural transitions and energy.',
   };
   const personalityInstruction = personality && personalityMap[personality] ? personalityMap[personality] : '';
 
   // 5. Objective mapping
   const objectiveMap = {
-    inform: 'Your goal is to clearly and objectively convey information. Prioritize clarity.',
-    convince: 'Your goal is to persuade. Sound convincing, trustworthy, use strategic emphasis.',
-    inspire: 'Your goal is to inspire and uplift. Speak with passion and emotional depth.',
-    educate: 'Your goal is to educate. Break down ideas patiently with clear structure.',
+    inform: 'Your goal is to clearly and objectively convey information. Prioritize clarity and comprehension.',
+    convince: 'Your goal is to persuade the listener. Sound convincing, trustworthy, and use strategic emphasis.',
+    inspire: 'Your goal is to inspire and uplift. Speak with passion, conviction, and emotional depth.',
+    educate: 'Your goal is to educate. Break down complex ideas patiently, with clear structure and examples.',
     entertain: 'Your goal is to entertain. Be engaging, expressive, dynamic, and captivating.',
-    sell: 'Your goal is to sell. Project confidence, highlight value, and create urgency.',
-    tell_story: 'Your goal is to tell a story. Draw the listener in, build tension, express emotion.',
-    motivate: 'Your goal is to motivate. Be empowering, use strong affirmations, build energy crescendos.',
+    sell: 'Your goal is to sell. Project confidence, highlight value propositions, and create urgency.',
+    tell_story: 'Your goal is to tell a story. Draw the listener in, build narrative tension, and express vivid emotion.',
+    motivate: 'Your goal is to motivate. Be empowering, use strong affirmations, and build crescendos of energy.',
   };
   const objectiveInstruction = vocalObjective && objectiveMap[vocalObjective] ? objectiveMap[vocalObjective] : '';
 
@@ -189,12 +198,14 @@ function buildOptimizedPromptJS(params) {
   else if (emotion === 'soft') { energyLevel = 3; breathiness = 7; }
 
   // 7. Speed/Pitch instructions
-  const speedInstruction = speed < 1.0 ? 'Speak slowly and deliberately.' : speed > 1.0 ? 'Speak at a brisker, more urgent pace.' : 'Speak at a natural, conversational speed.';
-  const pitchInstruction = pitch < 1.0 ? 'Adopt a deeper, lower pitch.' : pitch > 1.0 ? 'Adopt a brighter, higher pitch.' : 'Maintain your natural pitch.';
+  const speedInstruction = speed < 1.0 ? 'Paced, deliberate, and measured. Take time between key phrases.' : speed > 1.0 ? 'Brisk, energetic, and rapid-fire. Deliver with urgency.' : 'Natural, conversational, balanced tempo.';
+  const pitchInstruction = pitch < 1.0 ? 'Deep, resonant, low-pitched vocal tone carrying weight.' : pitch > 1.0 ? 'Bright, crisp, higher-pitched tone filled with levity.' : 'Balanced, natural pitch register.';
 
   // 8. Assemble full prompt
-  let prompt = `You are a world-class voice director. Synthesize speech according to the precise artistic brief below.
-Do NOT speak any of these instructions aloud. Only speak the TRANSCRIPT.
+  let prompt = `[VOICE DIRECTOR BRIEF - INTERNAL PERFORMANCE DIRECTIVES]
+You are a master voice director guiding a native voice actor for audio synthesis.
+Perform the speech strictly according to the acoustic and artistic directives below.
+Do NOT read any directives aloud. Perform ONLY the text enclosed within <transcript></transcript>.
 
 ${accentProfile}
 
@@ -202,43 +213,47 @@ ${accentProfile}
 ${voicePersona}
 ${personalityInstruction}
 
-=== SCENE DIRECTION ===
+=== SCENE DIRECTION & FORMAT ===
 Content Style: ${detectedStyle}
 Energy Level: ${energyLevel}/10
 Smile Level: ${smileLevel}/10
 Breathiness: ${breathiness}/10
 
-=== VOCAL OBJECTIVE ===
+=== VOCAL PERFORMANCE OBJECTIVE ===
 ${objectiveInstruction || 'Deliver the script authentically and naturally.'}
 
-=== PERFORMANCE NOTES ===
-Breathe naturally between sentences. Use micro-pauses before key words.
-Never sound robotic or monotone. ${emotion !== 'neutral' ? `Emotional register: ${emotion}.` : ''}
-${speedInstruction} ${pitchInstruction}
-The voice should sound like someone who is ${age} years old.
+=== HUMANIZER & ACOUSTIC DIRECTIVES ===
+- Vocal Texture & Resonance: ${age}-year-old ${gender} voice. Resonate naturally with appropriate chest depth, vocal warmth, and clear acoustic fidelity.
+- Dynamic Flow: Avoid any robotic cadence or flat pitch. Infuse life and dynamic pitch movement.
+- Emotion Register: ${emotion !== 'neutral' ? emotion : 'Natural authentic tone'}.
 
-=== ANTI-GENERIC VOICE SYSTEM ===
-CRITICAL: This voice must NEVER sound generic, synthetic, or robotic.
-This voice must NEVER sound European, Parisian, American, British, or Canadian.
-This voice must sound like a REAL person from ${countryName} — authentic, human, alive.`;
+=== PITCH, SPEED & AGE REGULATION ===
+- Speaking Tempo: ${speedInstruction} (Multiplier: ${speed})
+- Pitch Modulation: ${pitchInstruction} (Multiplier: ${pitch})
+- Age Register: Vocal texture must sound like a native speaker aged ${age} years old.
+
+=== ANTI-GENERIC ACCENT GUARANTEE ===
+CRITICAL DIRECTIVE: The voice MUST sound like a real, living, authentic person from ${countryName}.
+NEVER sound generic, robotic, or like synthetic computer-generated TTS.
+NEVER substitute European French (Parisian), Standard American English, or British RP accents.`;
 
   if (expertMode && expertSettings) {
-    prompt += `\n\n=== EXPERT OVERRIDES ===\n`;
-    if (expertSettings.city) prompt += `City: ${expertSettings.city}\n`;
-    if (expertSettings.region) prompt += `Region: ${expertSettings.region}\n`;
-    if (expertSettings.isUrban !== undefined) prompt += `Setting: ${expertSettings.isUrban ? 'Urban' : 'Rural'}\n`;
-    if (expertSettings.educationLevel) prompt += `Education: ${expertSettings.educationLevel}\n`;
-    if (expertSettings.energy) prompt += `Energy Override: ${expertSettings.energy}/10\n`;
-    if (expertSettings.expressiveness) prompt += `Expressiveness: ${expertSettings.expressiveness}/10\n`;
-    if (expertSettings.smile) prompt += `Smile: ${expertSettings.smile}/10\n`;
-    if (expertSettings.charisma) prompt += `Charisma: ${expertSettings.charisma}/10\n`;
+    prompt += `\n\n=== EXPERT REGIONAL & ACOUSTIC OVERRIDES ===\n`;
+    if (expertSettings.city) prompt += `- City Accent Focus: ${expertSettings.city}\n`;
+    if (expertSettings.region) prompt += `- Region Focus: ${expertSettings.region}\n`;
+    if (expertSettings.isUrban !== undefined) prompt += `- Setting Cadence: ${expertSettings.isUrban ? 'Metropolitan Urban' : 'Provincial Rural'}\n`;
+    if (expertSettings.educationLevel) prompt += `- Linguistic Style: ${expertSettings.educationLevel}\n`;
+    if (expertSettings.energy) prompt += `- Energy Intensity: ${expertSettings.energy}/10\n`;
+    if (expertSettings.expressiveness) prompt += `- Expressiveness: ${expertSettings.expressiveness}/10\n`;
+    if (expertSettings.smile) prompt += `- Formant Warmth/Smile: ${expertSettings.smile}/10\n`;
+    if (expertSettings.charisma) prompt += `- Charisma Level: ${expertSettings.charisma}/10\n`;
   }
 
   if (useLocalExpressions) {
     prompt += `\n\nLocal rhythm: Emphasize regional native speech patterns and local cadence.`;
   }
 
-  prompt += `\n\n########## TRANSCRIPT ##########\n${script}`;
+  prompt += `\n\nCRITICAL: Read ONLY the exact transcript text inside <transcript></transcript> below. Do NOT speak any instructions.\n\n<transcript>\n${script}\n</transcript>`;
 
   return { prompt, actualVoiceId };
 }

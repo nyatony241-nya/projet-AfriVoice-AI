@@ -14,46 +14,46 @@ import { VOICE_DNA } from './voiceDNA';
 export function buildAccentProfile(countryId: string, accentLevel: AccentLevel, gender: string, age: number): string {
   const dna = VOICE_DNA[countryId];
   if (!dna) {
-    // Graceful fallback — generic African accent profile rather than crashing
     console.warn(`[AccentIntelligence] Voice DNA not found for country: "${countryId}". Using generic African profile.`);
     return [
-      `=== CHARACTER IDENTITY ===`,
-      `You are a ${age}-year-old ${gender} from Sub-Saharan Africa.`,
-      `INTENSITY: Clear and warm African accent with natural local rhythm.`,
-      `SPEECH MELODY: Melodic, warm, and expressive with natural African cadence.`,
-      `CONSONANT STYLE: Clear, precise articulation with natural African consonant patterns.`,
-      `RHYTHM PATTERN: Flowing, syllable-timed rhythm with natural African pacing.`,
-      `CULTURAL CONTEXT: Warm, confident, and culturally authentic African voice.`,
-      `CRITICAL ANTI-PATTERNS (DO NOT SOUND LIKE THESE): Standard American English, British RP, Parisian French, Generic TTS voice.`
+      `=== VOICE ACTOR ROLE & ACCENT IDENTITY ===`,
+      `ROLE: Master native voice actor (${age}-year-old ${gender}) from Sub-Saharan Africa.`,
+      `ACCENT PROFILE: Authentic Sub-Saharan African accent. Warm, resonant, and natural.`,
+      `SPEECH MELODY: Rich, melodic, and expressive cadence with natural African pitch contours.`,
+      `CONSONANT ARTICULATION: Crisp, clear, and un-slurred articulation.`,
+      `CADENCE & RHYTHM: Syllable-timed, rhythmic, and engaging flow with organic micro-pauses.`,
+      `CULTURAL RESONANCE: Deeply authentic, warm, and confident native expression.`,
+      `STRICT ANTI-PATTERNS: Absolutely NEVER use European French (Parisian), American English, or British RP accents.`
     ].join('\n');
   }
 
   let intensityDescription = '';
   switch (accentLevel) {
     case 'light':
-      intensityDescription = `Slight hints of ${dna.countryId} accent, mostly neutral but with occasional local rhythm`;
+      intensityDescription = `Subtle, elegant hints of ${dna.countryId} accent. Professional neutral baseline infused with genuine ${dna.capital} vocal rhythm.`;
       break;
     case 'medium':
-      intensityDescription = `Clear and unmistakable ${dna.countryId} accent. Native speaker who grew up in ${dna.capital}.`;
+      intensityDescription = `Unmistakable, 100% authentic ${dna.countryId} accent. Speak as a born-and-raised native of ${dna.capital}.`;
       break;
     case 'strong':
-      intensityDescription = `Extremely thick, heavy, unapologetic ${dna.countryId} accent. Deep cultural roots. Every syllable drips with local identity.`;
+      intensityDescription = `Rich, deep, unapologetic ${dna.countryId} accent. Every sentence is saturated with authentic ${dna.capital} vocal identity, local cadence, and cultural warmth.`;
       break;
     default:
-      intensityDescription = `Clear and unmistakable ${dna.countryId} accent.`;
+      intensityDescription = `Clear and 100% authentic ${dna.countryId} accent.`;
   }
 
   const profileParts = [
-    `=== CHARACTER IDENTITY ===`,
-    `You are a ${age}-year-old ${gender} from ${dna.capital}, ${dna.countryId} (${dna.region}).`,
-    `INTENSITY: ${intensityDescription}`,
+    `=== VOICE ACTOR ROLE & ACCENT IDENTITY ===`,
+    `ROLE: You are performing as a master native voice actor (${age}-year-old ${gender}) from ${dna.capital}, ${dna.countryId} (${dna.region}).`,
+    `ACCENT INTENSITY: ${intensityDescription}`,
     `SPEECH MELODY: ${dna.speechMelody}`,
-    `CONSONANT STYLE: ${dna.consonantStyle}`,
-    `RHYTHM PATTERN: ${dna.rhythmPattern}`,
-    `CULTURAL CONTEXT: ${dna.culturalContext}`,
-    `You speak with the soul of a native whose local languages include ${dna.localLanguages.join(', ')}.`,
-    `CRITICAL ANTI-PATTERNS (DO NOT SOUND LIKE THESE): ${dna.antiPatterns.join(', ')}.`
+    `CONSONANT ARTICULATION: ${dna.consonantStyle}`,
+    `RHYTHM & CADENCE: ${dna.rhythmPattern}`,
+    `CULTURAL IDENTITY: ${dna.culturalContext}`,
+    `NATIVE LINGUISTIC ROOTS: Formed by the speech habits of ${dna.localLanguages.join(', ')}.`,
+    `STRICT ANTI-PATTERNS (MUST NEVER SOUND LIKE): ${dna.antiPatterns.join(', ')}.`
   ];
 
   return profileParts.join('\n');
 }
+
