@@ -14,7 +14,18 @@ import { VOICE_DNA } from './voiceDNA';
 export function buildAccentProfile(countryId: string, accentLevel: AccentLevel, gender: string, age: number): string {
   const dna = VOICE_DNA[countryId];
   if (!dna) {
-    throw new Error(`Voice DNA not found for country: ${countryId}`);
+    // Graceful fallback — generic African accent profile rather than crashing
+    console.warn(`[AccentIntelligence] Voice DNA not found for country: "${countryId}". Using generic African profile.`);
+    return [
+      `=== CHARACTER IDENTITY ===`,
+      `You are a ${age}-year-old ${gender} from Sub-Saharan Africa.`,
+      `INTENSITY: Clear and warm African accent with natural local rhythm.`,
+      `SPEECH MELODY: Melodic, warm, and expressive with natural African cadence.`,
+      `CONSONANT STYLE: Clear, precise articulation with natural African consonant patterns.`,
+      `RHYTHM PATTERN: Flowing, syllable-timed rhythm with natural African pacing.`,
+      `CULTURAL CONTEXT: Warm, confident, and culturally authentic African voice.`,
+      `CRITICAL ANTI-PATTERNS (DO NOT SOUND LIKE THESE): Standard American English, British RP, Parisian French, Generic TTS voice.`
+    ].join('\n');
   }
 
   let intensityDescription = '';
