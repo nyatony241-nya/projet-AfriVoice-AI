@@ -122,6 +122,10 @@ const App: React.FC = () => {
 
   const [isApplyingMix, setIsApplyingMix] = useState(false);
 
+  // ── 3 Variants System ──────────────────────────────
+  const [variants, setVariants] = useState<{ label: string; audioUrl: string; emotion: string }[]>([]);
+  const [isGeneratingVariants, setIsGeneratingVariants] = useState(false);
+
   // Audio & DOM Refs
   const voiceBufferRef = useRef<AudioBuffer | null>(null);
   const bgMusicBufferRef = useRef<AudioBuffer | null>(null);
@@ -257,6 +261,62 @@ const App: React.FC = () => {
     setLanguage(nextLang);
     localStorage.setItem('AFRIVOICE_LANG', nextLang);
     addToast('info', nextLang === 'fr' ? 'Langue : Français' : 'Language : English', nextLang === 'fr' ? 'L’interface est maintenant en français.' : 'Interface switched to English.');
+  };
+
+  // ── 3 Variants Handler ──────────────────────────────
+  const handleGenerateVariants = async () => {
+    if (!script.trim() || status.isGenerating || isGeneratingVariants) return;
+    setIsGeneratingVariants(true);
+    setVariants([]);
+    addToast('info', isEn ? '3 Variants Mode' : 'Mode 3 Variantes', isEn ? 'Generating 3 emotion variants...' : 'Génération de 3 variantes émotionnelles...');
+
+    const variantConfigs = [
+      { label: 'Version A', emotion: 'happy' as const, description: isEn ? 'Warm & Friendly' : 'Chaleureuse' },
+      { label: 'Version B', emotion: 'serious' as const, description: isEn ? 'Professional & Confident' : 'Professionnelle' },
+      { label: 'Version C', emotion: 'energetic' as const, description: isEn ? 'Dynamic & Punchy' : 'Dynamique' },
+    ];
+
+    const selectedVoiceId = settings.gender === 'female'
+      ? (selectedCountry.geminiVoiceFemale || 'Aoede')
+      : (selectedCountry.geminiVoiceMale || 'Puck');
+
+    const results: { label: string; audioUrl: string; emotion: string }[] = [];
+
+    for (const variant of variantConfigs) {
+      try {
+        const result = await generateVoiceOver(script, selectedVoiceId, {
+          countryId: selectedCountry.id,
+          countryName: selectedCountry.name,
+          accentDescription: selectedCountry.accentDescription,
+          gender: settings.gender,
+          voiceVariant: settings.voiceVariant || 'voice1',
+          isClonedVoice: settings.isClonedVoice,
+          age: settings.age,
+          emotion: variant.emotion,
+          style: settings.style,
+          useLocalExpressions: settings.useLocalExpressions,
+          speed: settings.speed,
+          pitch: settings.pitch,
+          accentLevel: settings.accentLevel,
+          contentStyle: settings.contentStyle,
+          personality: settings.personality,
+          vocalObjective: settings.vocalObjective,
+          expertMode: settings.expertMode,
+          expertSettings: settings.expertSettings,
+        });
+        const url = URL.createObjectURL(result.blob);
+        results.push({ label: `${variant.label} — ${variant.description}`, audioUrl: url, emotion: variant.emotion });
+        // Update quota
+        const estimatedSeconds = Math.max(3, Math.round(script.length / 14));
+        setUsedSeconds((prev) => prev + estimatedSeconds);
+      } catch (err: any) {
+        results.push({ label: `${variant.label} — ❌ ${isEn ? 'Error' : 'Erreur'}`, audioUrl: '', emotion: variant.emotion });
+      }
+    }
+
+    setVariants(results);
+    setIsGeneratingVariants(false);
+    addToast('success', isEn ? '3 variants ready!' : '3 variantes prêtes !', isEn ? 'Compare versions A, B, C below.' : 'Comparez les versions A, B, C ci-dessous.');
   };
 
   const handleGenerate = async () => {
@@ -1112,6 +1172,28 @@ const App: React.FC = () => {
                     )}
                   </button>
 
+                  {/* ── 3 Variants Button ────────── */}
+                  <button
+                    onClick={handleGenerateVariants}
+                    disabled={isGeneratingVariants || status.isGenerating || !script.trim() || script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds}
+                    className={`w-full py-3.5 rounded-[20px] font-black text-xs sm:text-sm uppercase tracking-wider transition-all border ${
+                      isGeneratingVariants || status.isGenerating || !script.trim()
+                        ? 'bg-transparent text-zinc-400 dark:text-zinc-600 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
+                        : isDark
+                        ? 'bg-transparent text-[#D4FF00] border-[#D4FF00]/30 hover:bg-[#D4FF00]/10 hover:border-[#D4FF00]/50'
+                        : 'bg-transparent text-zinc-900 border-zinc-300 hover:bg-zinc-100 hover:border-zinc-400'
+                    }`}
+                  >
+                    {isGeneratingVariants ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        <span>{isEn ? 'GENERATING 3 VARIANTS...' : 'GÉNÉRATION DE 3 VARIANTES...'}</span>
+                      </div>
+                    ) : (
+                      isEn ? '🔀 CREATE 3 VARIANTS (A · B · C)' : '🔀 CRÉER 3 VARIANTES (A · B · C)'
+                    )}
+                  </button>
+
                   {/* Shimmer Skeleton Loading State while generating */}
                   {status.isGenerating && (
                     <div className="mt-8 p-6 rounded-3xl border border-dashed border-zinc-300 dark:border-white/10 animate-pulse space-y-4">
@@ -1185,6 +1267,43 @@ const App: React.FC = () => {
                         </div>
                       )}
 
+                      {/* ── 3 Variants Player Cards ────────── */}
+                      {variants.length > 0 && (
+                        <div className="mt-6 space-y-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            {isEn ? '🔀 Variant Comparison' : '🔀 Comparaison des Variantes'}
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {variants.map((v, i) => (
+                              <div
+                                key={i}
+                                className={`p-3 rounded-2xl border transition-all hover:scale-[1.02] ${
+                                  isDark ? 'bg-[#09090B] border-white/5 hover:border-[#D4FF00]/30' : 'bg-zinc-50 border-zinc-200 hover:border-zinc-400'
+                                }`}
+                              >
+                                <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: i === 0 ? '#D4FF00' : i === 1 ? '#22D3EE' : '#F472B6' }}>
+                                  {v.label}
+                                </p>
+                                {v.audioUrl ? (
+                                  <div className="space-y-2">
+                                    <audio src={v.audioUrl} controls className="w-full h-8" style={{ filter: isDark ? 'invert(1) hue-rotate(180deg)' : 'none' }} />
+                                    <button
+                                      onClick={() => { const a = document.createElement('a'); a.href = v.audioUrl; a.download = `afrivoice_variant_${String.fromCharCode(65 + i)}_${Date.now()}.wav`; a.click(); }}
+                                      className={`w-full py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                                        isDark ? 'border-white/10 text-zinc-400 hover:text-[#D4FF00] hover:border-[#D4FF00]/30' : 'border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:border-zinc-400'
+                                      }`}
+                                    >
+                                      ⬇ {isEn ? 'Download' : 'Télécharger'}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-red-400 font-bold">{isEn ? 'Generation failed' : 'Échec de la génération'}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                     </div>
                   )}
