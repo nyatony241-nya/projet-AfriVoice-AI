@@ -110,11 +110,20 @@ export default async function handler(req: any, res: any) {
       actualVoiceId = engineResult.actualVoiceId;
     }
 
+    // Extraire uniquement les directives (systemInstruction) du prompt complet
+    // Le transcript est toujours passé séparément dans contents pour que Gemini TTS ne lise pas les instructions
+    const systemInstruction = contents !== script
+      ? contents.replace(/\[TRANSCRIPT - READ ONLY THIS TEXT\]\n<transcript>[\s\S]*?<\/transcript>\s*$/m, '').trim()
+      : undefined;
+
     // Appel à l'API Gemini pour la génération vocale
+    // IMPORTANT: Le prompt de direction va dans systemInstruction (pas lu à voix haute)
+    // Le transcript seul va dans contents (seul texte prononcé)
     const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-tts-preview',
-        contents: contents,
+        model: 'gemini-2.5-flash-preview-tts',
+        contents: [{ role: 'user', parts: [{ text: script }] }],
         config: {
+          systemInstruction,
           responseModalities: ["AUDIO"],
           speechConfig: {
             voiceConfig: {
@@ -126,13 +135,15 @@ export default async function handler(req: any, res: any) {
         },
     });
 
-    const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const part = response.candidates?.[0]?.content?.parts?.[0];
+    const audioData = part?.inlineData?.data;
+    const mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
 
     if (!audioData) {
         throw new Error("No audio data returned from Gemini");
     }
 
-    return res.status(200).json({ base64Audio: audioData });
+    return res.status(200).json({ base64Audio: audioData, mimeType });
   } catch (error: any) {
     console.error("Vercel Serverless Error (Gemini):", error);
     return res.status(500).json({ 

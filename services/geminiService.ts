@@ -132,10 +132,20 @@ export const generateVoiceOver = async (
     body: JSON.stringify({ script, voiceId, customApiKey, options }),
   });
 
-  const data = await response.json();
+  // Parse la réponse de façon défensive : Vercel peut renvoyer du HTML en cas d'erreur 500
+  const rawText = await response.text();
+  let data: any;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    // La réponse n'est pas du JSON valide (probablement une page HTML d'erreur Vercel)
+    throw new Error(
+      `Erreur serveur (${response.status}). Le serveur a renvoyé une réponse non-JSON. Vérifiez que GEMINI_API_KEY et les variables Supabase sont configurées dans Vercel.`
+    );
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Erreur lors de la communication avec le serveur vocal sécurisé.');
+    throw new Error(data.error || `Erreur serveur ${response.status}.`);
   }
 
   if (!data.base64Audio) {
