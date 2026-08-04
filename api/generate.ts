@@ -6,6 +6,15 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL ||
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
+const aiClientCache = new Map<string, GoogleGenAI>();
+
+function getGoogleGenAIClient(apiKey: string): GoogleGenAI {
+  if (!aiClientCache.has(apiKey)) {
+    aiClientCache.set(apiKey, new GoogleGenAI({ apiKey }));
+  }
+  return aiClientCache.get(apiKey)!;
+}
+
 export default async function handler(req: any, res: any) {
   // Configurer les entêtes CORS pour autoriser l'accès depuis n'importe où
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -13,7 +22,7 @@ export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
 
   // Gérer la requête de pre-flight (OPTIONS)
@@ -60,7 +69,7 @@ export default async function handler(req: any, res: any) {
       return res.status(401).json({ error: "Aucune clé API Gemini configurée. Veuillez l'ajouter dans les variables d'environnement Vercel (GEMINI_API_KEY)." });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = getGoogleGenAIClient(apiKey);
 
     // ── AI Voice Director Engine ─────────────────────────────────
     // All prompt intelligence is now delegated to VoicePromptEngine.

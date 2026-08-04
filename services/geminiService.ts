@@ -16,16 +16,19 @@ import type { AccentLevel, ContentStyle, VocalPersonality, VocalObjective, Exper
  */
 function decodePcmL16ToFloat32(base64Pcm: string): { samples: Float32Array; sampleRate: number } {
   const binaryString = atob(base64Pcm);
-  const pcmBytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
+  const len = binaryString.length;
+  const pcmBytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
     pcmBytes[i] = binaryString.charCodeAt(i);
   }
 
   // PCM L16 = Int16, little-endian
-  const int16View = new Int16Array(pcmBytes.buffer);
-  const float32 = new Float32Array(int16View.length);
-  for (let i = 0; i < int16View.length; i++) {
-    float32[i] = int16View[i] / 32768.0; // Normalise [-1, 1]
+  const int16View = new Int16Array(pcmBytes.buffer, 0, Math.floor(len / 2));
+  const sampleCount = int16View.length;
+  const float32 = new Float32Array(sampleCount);
+  const invScale = 1.0 / 32768.0;
+  for (let i = 0; i < sampleCount; i++) {
+    float32[i] = int16View[i] * invScale;
   }
 
   return { samples: float32, sampleRate: 24000 };

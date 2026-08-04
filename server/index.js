@@ -14,8 +14,34 @@ if (fs.existsSync('.env.local')) {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// CORS restreint aux origines légitimes (pas de wildcard *)
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL, // URL de production (ex: https://afrivoice.ai)
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Autoriser les requêtes sans origin (Postman, curl, SSR)
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Origine non autorisée par CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
+
+// Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 const generateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -29,8 +55,7 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     keyConfigured: !!(process.env.GEMINI_API_KEY),
-    keyPrefix: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 10) + '...' : 'NOT SET',
-    engine: 'VoicePromptEngine v2 — AI Voice Director'
+    engine: 'VoicePromptEngine v3 — AI Voice Director'
   });
 });
 
@@ -40,8 +65,7 @@ const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, su
 
 const verifyAuthToken = async (req, res, next) => {
   if (!supabase) {
-    console.warn("⚠️ Supabase non configuré. Auth contournée (dev local).");
-    return next();
+    return res.status(503).json({ error: "Service d'authentification indisponible. Configurez les variables Supabase." });
   }
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -56,209 +80,178 @@ const verifyAuthToken = async (req, res, next) => {
   next();
 };
 
-// ── Voice DNA (subset des 20 pays — données critiques pour le serveur) ──
+// ══════════════════════════════════════════════════════════════
+// AI VOICE DIRECTOR v3 — Narrative-Driven Prompt Engine (JS)
+// ══════════════════════════════════════════════════════════════
+
+// Voice DNA — concise profiles for 20 African countries
 const VOICE_DNA = {
-  'NG': { capital: 'Abuja/Lagos', region: 'West Africa', localLanguages: ['Hausa', 'Yoruba', 'Igbo', 'Pidgin English'], speechMelody: 'Dynamic, expressive, highly melodic with varied pitch emphasizing key nouns and verbs.', consonantStyle: 'Crisp and pronounced consonants, hard "t" and "d" sounds with deep resonance.', rhythmPattern: 'Syllable-timed, staccato yet flowing and energetic rhythm.', culturalContext: 'Direct, confident, persuasive. Rooted in oral storytelling and lively market interactions.', antiPatterns: ['British RP English', 'Standard American English', 'Australian English'] },
-  'CI': { capital: 'Abidjan', region: 'West Africa', localLanguages: ['Baoulé', 'Dioula', 'Nouchi'], speechMelody: 'Musical, warm, expressive with rising intonations at phrase ends.', consonantStyle: 'Softened "r" sounds, distinct nasal vowels, clearly articulated bilabials.', rhythmPattern: 'Bouncy and rhythmic. Syllables elongated for emphasis.', culturalContext: 'Joyful, convivial, influenced by Nouchi rhythm.', antiPatterns: ['Parisian French', 'Canadian French', 'Standard European French'] },
-  'CM': { capital: 'Yaoundé/Douala', region: 'Central Africa', localLanguages: ['Ewondo', 'Duala', 'Camfranglais'], speechMelody: 'Deep, resonant, authoritative with robust pitch and deliberate pauses.', consonantStyle: 'Strong percussive consonants, distinct plosives (p, b, t, d, k, g).', rhythmPattern: 'Measured and deliberate, heavy confident cadence.', culturalContext: 'Assertive, serious, deeply grounded. Conveys authority and respect.', antiPatterns: ['Parisian French', 'Standard European French', 'West African French'] },
-  'SN': { capital: 'Dakar', region: 'West Africa', localLanguages: ['Wolof', 'Pulaar', 'Jola'], speechMelody: 'Smooth, fluid, polite with gentle cascading intonations.', consonantStyle: 'Softer consonants, Wolof-influenced vowels, lightly tapped "r".', rhythmPattern: 'Flowing and continuous with poetic cadence.', culturalContext: 'Rooted in Teranga (hospitality). Respectful, calm, dignified.', antiPatterns: ['Parisian French', 'Canadian French'] },
-  'CD': { capital: 'Kinshasa', region: 'Central Africa', localLanguages: ['Lingala', 'Kikongo', 'Tshiluba'], speechMelody: 'Warm, flowing, musical. Lingala influence creates rhythmic, tonal quality.', consonantStyle: 'Soft, melodic consonants. "R" is light and rolled.', rhythmPattern: 'Rhythmic, dance-like cadence, reflecting Congolese musical heritage.', culturalContext: 'Warm, artistic, resilient. Known for musical expression and lively communication.', antiPatterns: ['Parisian French', 'Belgian French', 'Standard European French'] },
-  'GH': { capital: 'Accra', region: 'West Africa', localLanguages: ['Twi', 'Ga', 'Ewe', 'Hausa'], speechMelody: 'Clear, educated, warm with slight tonal quality from Akan languages.', consonantStyle: 'Precise articulation, clear vowels, softened final consonants.', rhythmPattern: 'Moderate, dignified pace with confident stress patterns.', culturalContext: 'Educated, proud, warm. Known for hospitality and strong civic identity.', antiPatterns: ['British RP English', 'Standard American English'] },
-  'MA': { capital: 'Casablanca/Rabat', region: 'North Africa', localLanguages: ['Darija', 'Amazigh', 'Modern Standard Arabic'], speechMelody: 'Melodic with Arabic musical phrasing, French-influenced rhythm.', consonantStyle: 'Strong guttural sounds from Arabic, softened by French influence.', rhythmPattern: 'Flowing bilingual rhythm switching smoothly between Arabic and French patterns.', culturalContext: 'Sophisticated, cosmopolitan, rooted in Maghrebi culture and French-Arabic fusion.', antiPatterns: ['Parisian French', 'Standard Arabic', 'Egyptian Arabic'] },
-  'ZA': { capital: 'Johannesburg', region: 'Southern Africa', localLanguages: ['Zulu', 'Xhosa', 'Sotho', 'Afrikaans'], speechMelody: 'Clear, multicultural, confident. Subtle click consonant influence from Nguni languages.', consonantStyle: 'Crisp consonants, click-influenced subtleties in certain vowel formations.', rhythmPattern: 'Moderate, professional, urban pace reflecting multicultural Johannesburg.', culturalContext: 'Modern, diverse, resilient. Ubuntu philosophy shapes warm community-minded tone.', antiPatterns: ['British RP English', 'Australian English'] },
-  'KE': { capital: 'Nairobi', region: 'East Africa', localLanguages: ['Kikuyu', 'Luo', 'Kamba', 'Swahili'], speechMelody: 'Crisp, articulate, educated. Swahili influence adds melodic Bantu tonal quality.', consonantStyle: 'Clear, precise consonants with Swahili-influenced vowel purity.', rhythmPattern: 'Brisk, professional, urban pace. East African syllable rhythm.', culturalContext: 'Ambitious, entrepreneurial, educated. Nairobi as a tech hub shapes confident modern voice.', antiPatterns: ['British English', 'Standard American English'] },
-  'GA': { capital: 'Libreville', region: 'Central Africa', localLanguages: ['Fang', 'Myene', 'Nzebi'], speechMelody: 'Smooth, elegant, refined. Central African French with soft melodic quality.', consonantStyle: 'Softened consonants, elegant French-influenced articulation.', rhythmPattern: 'Relaxed, measured, sophisticated cadence.', culturalContext: 'Calm, cultivated, oil-rich nation confidence. Diplomatic and measured in expression.', antiPatterns: ['Parisian French', 'Canadian French', 'Belgian French', 'Standard European French'] },
-  'BJ': { capital: 'Cotonou', region: 'West Africa', localLanguages: ['Fon', 'Yoruba', 'Bariba'], speechMelody: 'Warm, storytelling-rich cadence with Fon and Yoruba tonal influences.', consonantStyle: 'Rounded consonants, gentle articulation influenced by Fon language.', rhythmPattern: 'Lyrical, flowing rhythm. Narrative-style pacing.', culturalContext: 'Rich oral tradition and Vodoun culture. Expressive, warm, deeply connected to ancestral wisdom.', antiPatterns: ['Parisian French', 'Standard European French', 'Nigerian Pidgin'] },
-  'BF': { capital: 'Ouagadougou', region: 'West Africa', localLanguages: ['Mooré', 'Dioula', 'Fulfulde'], speechMelody: 'Grounded, warm, measured. Mooré language creates steady tonal bass.', consonantStyle: 'Strong aspirated consonants from Mooré, softened in French delivery.', rhythmPattern: 'Slow to moderate, dignified pacing. Emphasis on syllable weight.', culturalContext: 'Deeply grounded, communal, resilient. Land of honest people (Pays des hommes intègres).', antiPatterns: ['Parisian French', 'Ivorian French', 'Standard European French'] },
-  'ML': { capital: 'Bamako', region: 'West Africa', localLanguages: ['Bambara', 'Fulfulde', 'Soninke'], speechMelody: 'Rich, griot-inspired storytelling tone. Deep, musical, ancestral.', consonantStyle: 'Percussive consonants from Bambara, with warm open vowels.', rhythmPattern: 'Flowing like a griot performance, with narrative peaks and gentle cadences.', culturalContext: 'Ancient Mali Empire legacy. Voice is instrument for history, wisdom, and community.', antiPatterns: ['Parisian French', 'Standard European French', 'Senegalese French'] },
-  'TG': { capital: 'Lomé', region: 'West Africa', localLanguages: ['Ewe', 'Kabiyé', 'Tem'], speechMelody: 'Gentle, warm, Ewe tonal music influence creates natural melodic phrasing.', consonantStyle: 'Soft consonants influenced by Ewe language tonal system.', rhythmPattern: 'Relaxed, melodic, unhurried rhythm reflecting coastal Lomé lifestyle.', culturalContext: 'Peaceful, artisanal, coastal. Voice reflects Lomé market warmth and Gulf of Guinea identity.', antiPatterns: ['Parisian French', 'Standard European French', 'Ghanaian English'] },
-  'CG': { capital: 'Brazzaville', region: 'Central Africa', localLanguages: ['Lingala', 'Kituba', 'Lari'], speechMelody: 'Warm, Lingala-musical. Rich bass quality with flowing Central African cadence.', consonantStyle: 'Melodic, soft consonants. Lingala musical influence on French delivery.', rhythmPattern: 'Flowing, musical rhythm. Congo River pace — steady, deep, continuous.', culturalContext: 'Artistic, musical, Congo Basin identity. Strong Lingala cultural pride.', antiPatterns: ['Parisian French', 'Belgian French', 'Congolese DRC style'] },
-  'TN': { capital: 'Tunis', region: 'North Africa', localLanguages: ['Tunisian Darija', 'Modern Standard Arabic'], speechMelody: 'Mediterranean warmth with Arabic musicality. More nasal French than Moroccan.', consonantStyle: 'French-influenced articulation with Arabic guttural depth.', rhythmPattern: 'Moderate, Mediterranean pace. Thoughtful pauses, scholarly rhythm.', culturalContext: 'Ancient Carthaginian heritage. Educated, democratic-minded, Mediterranean-Arab identity.', antiPatterns: ['Parisian French', 'Moroccan Darija', 'Egyptian Arabic'] },
-  'DZ': { capital: 'Alger', region: 'North Africa', localLanguages: ['Algerian Darija', 'Tamazight', 'Modern Standard Arabic'], speechMelody: 'Bold, direct, Mediterranean-Arab. French-Algerian creole rhythm.', consonantStyle: 'Strong Arabic consonants, French-influenced syllable structure.', rhythmPattern: 'Energetic, assertive, direct. City pace of Algiers.', culturalContext: 'Revolution heritage, independence pride, strong cultural identity blending Amazigh, Arab and French.', antiPatterns: ['Parisian French', 'Moroccan Darija', 'Tunisian Arabic'] },
-  'EG': { capital: 'Le Caire', region: 'North Africa', localLanguages: ['Egyptian Arabic', 'Sa\'idi Arabic'], speechMelody: 'Classic Egyptian Arabic musicality — the most recognized Arabic accent globally.', consonantStyle: 'Distinctive "j" as "g" (Cairo dialect), warm open vowels, guttural depth.', rhythmPattern: 'Measured, expressive, cinematic. Egyptian media has shaped a global standard.', culturalContext: '7,000 years of civilization. Confident, cultural center, reference for Arab media.', antiPatterns: ['Modern Standard Arabic', 'Levantine Arabic', 'Gulf Arabic', 'Moroccan Darija'] },
-  'UG': { capital: 'Kampala', region: 'East Africa', localLanguages: ['Luganda', 'Acholi', 'Langi', 'Swahili'], speechMelody: 'Warm, measured, Luganda-influenced tonal quality blended with clear English.', consonantStyle: 'Clear English consonants with Bantu-influenced vowel purity.', rhythmPattern: 'Steady, dignified East African pace. Kampala urban confidence.', culturalContext: 'Pearl of Africa identity. Warm, hospitable, proud East African nation.', antiPatterns: ['British English', 'Kenyan English', 'Standard American English'] },
-  'TZ': { capital: 'Dar es Salaam', region: 'East Africa', localLanguages: ['Swahili', 'Sukuma', 'Chaga'], speechMelody: 'Swahili-pure, melodic, East African warmth. Most musically Bantu of all East African voices.', consonantStyle: 'Pure Bantu consonants from Swahili — no clicks, clear open vowels.', rhythmPattern: 'Flowing, musical, slightly slower than Kenyan. Coastal Dar es Salaam ease.', culturalContext: 'Swahili cultural heart. Tanzania as cradle of ujamaa (communal solidarity). Warm and inclusive.', antiPatterns: ['British English', 'Kenyan English', 'Standard American English'] }
+  'NG': { capital: 'Abuja/Lagos', region: 'West Africa', lang: 'Hausa, Yoruba, Igbo', style: 'Dynamic, melodic, confident. Nigerian English with Pidgin cadence.', anti: 'British RP, Standard American, Australian English' },
+  'CI': { capital: 'Abidjan', region: 'West Africa', lang: 'Baoulé, Dioula, Nouchi', style: 'Musical, warm, bouncy Nouchi rhythm. Rising intonations.', anti: 'Parisian French, Canadian French' },
+  'CM': { capital: 'Yaoundé/Douala', region: 'Central Africa', lang: 'Ewondo, Duala, Camfranglais', style: 'Deep, authoritative, percussive consonants. Deliberate pacing.', anti: 'Parisian French, European French' },
+  'SN': { capital: 'Dakar', region: 'West Africa', lang: 'Wolof, Pulaar', style: 'Smooth, poetic, flowing. Teranga hospitality in every word.', anti: 'Parisian French, Canadian French' },
+  'CD': { capital: 'Kinshasa', region: 'Central Africa', lang: 'Lingala, Kikongo', style: 'Warm, dance-like, Lingala musicality. Vibrant expression.', anti: 'Parisian French, Belgian French' },
+  'GH': { capital: 'Accra', region: 'West Africa', lang: 'Twi, Ga, Ewe', style: 'Clear, educated, dignified. Akan tonal quality.', anti: 'British RP, Standard American' },
+  'MA': { capital: 'Casablanca/Rabat', region: 'North Africa', lang: 'Darija, Tamazight', style: 'Melodic Arabic-French fusion. Cosmopolitan Maghrebi warmth.', anti: 'Parisian French, Egyptian Arabic' },
+  'ZA': { capital: 'Johannesburg', region: 'Southern Africa', lang: 'Zulu, Xhosa, Afrikaans', style: 'Bold, multicultural, Ubuntu warmth. Click consonant influence.', anti: 'British RP, Australian English' },
+  'KE': { capital: 'Nairobi', region: 'East Africa', lang: 'Swahili, Kikuyu, Sheng', style: 'Crisp, tech-hub energy. Swahili melodic Bantu quality.', anti: 'British English, Standard American' },
+  'GA': { capital: 'Libreville', region: 'Central Africa', lang: 'Fang, Myene', style: 'Smooth, refined, diplomatic. Equatorial elegance.', anti: 'Parisian French, Belgian French' },
+  'BJ': { capital: 'Cotonou', region: 'West Africa', lang: 'Fon, Yoruba', style: 'Warm, storytelling-rich. Fon tonal influence.', anti: 'Parisian French, European French' },
+  'BF': { capital: 'Ouagadougou', region: 'West Africa', lang: 'Mooré, Dioula', style: 'Grounded, sincere, steady. Land of upright people.', anti: 'Parisian French, Rushed urban French' },
+  'ML': { capital: 'Bamako', region: 'West Africa', lang: 'Bambara, Songhai', style: 'Griot-inspired, poetic, deeply musical. Ancestral storytelling.', anti: 'Parisian French, European French' },
+  'TG': { capital: 'Lomé', region: 'West Africa', lang: 'Ewe, Kabiyé', style: 'Gentle, warm, inviting. Coastal Lomé brightness.', anti: 'Parisian French, Cold European tone' },
+  'CG': { capital: 'Brazzaville', region: 'Central Africa', lang: 'Lingala, Kituba', style: 'Velvety, stylish La Sape elegance. Musical Lingala flow.', anti: 'Parisian French, Belgian French' },
+  'TN': { capital: 'Tunis', region: 'North Africa', lang: 'Tunisian Derja', style: 'Bright, Mediterranean vitality. Scholarly warmth.', anti: 'Parisian French, Gulf Arabic' },
+  'DZ': { capital: 'Alger', region: 'North Africa', lang: 'Darja, Tamazight', style: 'Bold, assertive, passionate. Algerian independence pride.', anti: 'Parisian French, Egyptian Arabic' },
+  'EG': { capital: 'Le Caire', region: 'North Africa', lang: 'Egyptian Arabic', style: 'Theatrical, cinematic Cairo melody. Master storyteller.', anti: 'Standard American, Gulf Arabic' },
+  'UG': { capital: 'Kampala', region: 'East Africa', lang: 'Luganda, Swahili', style: 'Gentle, sing-song. Pearl of Africa warmth and politeness.', anti: 'British English, Standard American' },
+  'TZ': { capital: 'Dar es Salaam', region: 'East Africa', lang: 'Swahili', style: 'Pure Swahili melody. Peaceful, coastal, harmonious.', anti: 'British English, Standard American' },
 };
 
-// ── AI Voice Director: Prompt Builder (JS port du VoicePromptEngine TS) ──
+// Scene descriptions for each content style
+const SCENE_DESCRIPTIONS = {
+  advertisement: (cn) => `You are recording a premium TV advertisement in ${cn}. Punchy, persuasive, magnetic. Smile through selling points. Vary pace: slow for brand name, fast for urgency.`,
+  tiktok: (cn) => `You are filming a viral TikTok in ${cn}. Speaking to camera like your best friend. Ultra-energetic, authentic, slightly breathless. Short punchy phrases.`,
+  podcast: (cn) => `You are hosting a popular podcast in ${cn}. Conversational, intimate, thoughtful. One person across from you. Let ideas breathe.`,
+  news: (cn) => `You are a primetime news anchor on national TV in ${cn}. Serious, authoritative, measured. Zero smiling. Deliberate pauses between facts.`,
+  storytelling: (cn) => `You are a master storyteller in ${cn}. Build tension slowly. Whisper at suspense peaks. Let your voice soar for triumph.`,
+  documentary: (cn) => `You are narrating a cinematic documentary about ${cn}. Calm, contemplative, wise. Every sentence creates a mental picture.`,
+  motivation: (cn) => `You are on stage at a massive conference in ${cn}. Voice builds like a wave. Hit key phrases with power. Pause after important statements.`,
+  youtube: (cn) => `You are a popular YouTuber in ${cn}. Energetic but genuine. Sharing something incredible. Casual, smile audibly.`,
+  radio: (cn) => `You are a beloved FM radio host in ${cn}. Smooth, charismatic, flowing. Make every listener feel like a close friend.`,
+  training: (cn) => `You are leading a training course in ${cn}. Patient, clear, pedagogical. Slow down for key terms. Encouraging.`,
+  commercial: (cn) => `You are presenting a business solution in ${cn}. Confident, credible, polished. Strategic pauses before claims.`,
+  narration: (cn) => `You are recording a professional voiceover in ${cn}. Clear, expressive, engaging. Balanced pacing.`,
+};
+
 function buildOptimizedPromptJS(params) {
   const { script, voiceId, countryId, countryName, gender, voiceVariant, isClonedVoice, age, emotion, speed, pitch, accentLevel, contentStyle, personality, vocalObjective, expertMode, expertSettings, useLocalExpressions } = params;
 
-  // 1. Voice Variant Mapping
+  // 1. Voice Variant
   let actualVoiceId = voiceId;
-  let voicePersona = 'A natural and expressive voice.';
+  let voicePersona = '';
   if (!isClonedVoice) {
-    const variantMap = {
-      'female-voice1': { id: 'Aoede', persona: 'Soft, calm, elegant narrator' },
-      'female-voice2': { id: 'Kore', persona: 'Dynamic, energetic, bright' },
-      'female-voice3': { id: 'Aoede', persona: 'Mature, authoritative, wise' },
-      'male-voice1': { id: 'Puck', persona: 'Deep, resonant, imposing' },
-      'male-voice2': { id: 'Charon', persona: 'Warm, friendly, reassuring' },
-      'male-voice3': { id: 'Fenrir', persona: 'Energetic, fast-paced, punchy' },
+    const variants = {
+      'female-voice1': { id: 'Aoede', p: 'soft, warm, and elegant' },
+      'female-voice2': { id: 'Kore', p: 'bright, dynamic, and youthful' },
+      'female-voice3': { id: 'Leda', p: 'mature, authoritative, and wise' },
+      'male-voice1': { id: 'Puck', p: 'deep, resonant, and commanding' },
+      'male-voice2': { id: 'Charon', p: 'warm, reassuring, and conversational' },
+      'male-voice3': { id: 'Fenrir', p: 'energetic, sharp, and fast-paced' },
     };
     const key = `${(gender || 'female').toLowerCase()}-${voiceVariant || 'voice1'}`;
-    if (variantMap[key]) {
-      actualVoiceId = variantMap[key].id;
-      voicePersona = variantMap[key].persona;
-    } else {
-      actualVoiceId = gender?.toLowerCase() === 'male' ? 'Puck' : 'Aoede';
-      voicePersona = gender?.toLowerCase() === 'male' ? 'Deep, resonant, imposing' : 'Soft, calm, elegant narrator';
-    }
+    const v = variants[key] || (gender?.toLowerCase() === 'male' ? variants['male-voice1'] : variants['female-voice1']);
+    actualVoiceId = v.id;
+    voicePersona = v.p;
   }
 
-  // 2. Content Style Detection
-  const CONTENT_KEYWORDS = {
-    advertisement: ['promo', 'offre', 'achetez', 'buy', 'limited', 'discount', 'offer', 'soldes', 'remise'],
+  // 2. Content style auto-detection
+  const KEYWORDS = {
+    advertisement: ['promo', 'offre', 'achetez', 'buy', 'discount', 'offer', 'soldes'],
     tiktok: ['follow', 'like', 'abonnez', 'trending', 'viral', 'tiktok', 'reels'],
-    podcast: ['bienvenue', 'épisode', 'welcome to', 'episode', 'podcast', 'auditeurs'],
-    news: ['breaking', 'reportage', 'sources', 'information', 'actualité', 'journal'],
+    podcast: ['bienvenue', 'épisode', 'welcome to', 'podcast', 'auditeurs'],
+    news: ['breaking', 'reportage', 'sources', 'actualité', 'journal'],
     storytelling: ['il était', 'once upon', 'imagine', 'histoire', 'conte'],
     motivation: ['réussite', 'croire', 'believe', 'achieve', 'success', 'courage'],
     youtube: ['vidéo', 'chaîne', 'channel', 'subscribe'],
     radio: ['fréquence', 'ondes', 'station', 'radio', 'FM'],
-    training: ['leçon', 'étape', 'lesson', 'step', 'module', 'formation'],
+    training: ['leçon', 'étape', 'lesson', 'module', 'formation'],
     commercial: ['entreprise', 'service', 'solution', 'partenaire', 'business'],
   };
-  let detectedStyle = contentStyle || 'narration';
+  let style = contentStyle || 'narration';
   if (!contentStyle) {
-    const lowerScript = script.toLowerCase();
-    for (const [style, kws] of Object.entries(CONTENT_KEYWORDS)) {
-      if (kws.some(kw => lowerScript.includes(kw.toLowerCase()))) { detectedStyle = style; break; }
+    const lower = script.toLowerCase();
+    for (const [s, kws] of Object.entries(KEYWORDS)) {
+      if (kws.some(kw => lower.includes(kw))) { style = s; break; }
     }
   }
 
-  // 3. Accent Profile
+  // 3. Build prompt sections
   const dna = VOICE_DNA[countryId];
-  let accentProfile;
-  if (!dna) {
-    accentProfile = [
-      `=== VOICE ACTOR ROLE & ACCENT IDENTITY ===`,
-      `ROLE: Master native voice actor (${age}-year-old ${gender}) from Sub-Saharan Africa.`,
-      `ACCENT PROFILE: Authentic Sub-Saharan African accent. Warm, resonant, and natural.`,
-      `SPEECH MELODY: Rich, melodic, and expressive cadence with natural African pitch contours.`,
-      `CONSONANT ARTICULATION: Crisp, clear, and un-slurred articulation.`,
-      `CADENCE & RHYTHM: Syllable-timed, rhythmic, and engaging flow with organic micro-pauses.`,
-      `CULTURAL RESONANCE: Deeply authentic, warm, and confident native expression.`,
-      `STRICT ANTI-PATTERNS: Absolutely NEVER use European French (Parisian), American English, or British RP accents.`
-    ].join('\n');
-  } else {
-    const intensityMap = {
-      light: `Subtle, elegant hints of ${countryId} accent. Professional neutral baseline infused with genuine ${dna.capital} vocal rhythm.`,
-      medium: `Unmistakable, 100% authentic ${countryId} accent. Speak as a born-and-raised native of ${dna.capital}.`,
-      strong: `Rich, deep, unapologetic ${countryId} accent. Every sentence is saturated with authentic ${dna.capital} vocal identity, local cadence, and cultural warmth.`
-    };
-    const intensity = intensityMap[accentLevel] || intensityMap.medium;
-    accentProfile = [
-      `=== VOICE ACTOR ROLE & ACCENT IDENTITY ===`,
-      `ROLE: You are performing as a master native voice actor (${age}-year-old ${gender}) from ${dna.capital}, ${countryId} (${dna.region}).`,
-      `ACCENT INTENSITY: ${intensity}`,
-      `SPEECH MELODY: ${dna.speechMelody}`,
-      `CONSONANT ARTICULATION: ${dna.consonantStyle}`,
-      `RHYTHM & CADENCE: ${dna.rhythmPattern}`,
-      `CULTURAL IDENTITY: ${dna.culturalContext}`,
-      `NATIVE LINGUISTIC ROOTS: Formed by the speech habits of ${dna.localLanguages.join(', ')}.`,
-      `STRICT ANTI-PATTERNS (MUST NEVER SOUND LIKE): ${dna.antiPatterns.join(', ')}.`
-    ].join('\n');
-  }
+  const sections = [];
+  const gw = (gender || 'female').toLowerCase() === 'female' ? 'woman' : 'man';
 
-  // 4. Personality mapping
+  // SYSTEM HEADER FOR GEMINI TTS
+  sections.push(`[DIRECTOR BRIEF - INTERNAL PERFORMANCE GUIDANCE ONLY - DO NOT READ ALOUD]`);
+
+  // [CHARACTER]
+  const charParts = [`You are a ${age}-year-old ${gw} from ${dna?.capital || countryName}.`];
+  if (dna) charParts.push(`You grew up there — ${dna.style}`);
+  if (voicePersona) charParts.push(`Your natural voice quality: ${voicePersona}.`);
   const personalityMap = {
-    entrepreneur: 'Speak like a confident entrepreneur presenting a business idea. Assertive, visionary, and compelling.',
-    professor: 'Speak like a university professor lecturing. Articulate, patient, pedagogical, and slightly formal.',
-    student: 'Speak like a young, enthusiastic student. Fresh, curious, slightly informal, and relatable.',
-    journalist: 'Speak like a professional news anchor. Objective, precise, measured, with gravitas.',
-    narrator: 'Speak like a seasoned documentary narrator. Rich, atmospheric, drawing the listener into the story.',
-    salesperson: 'Speak like a top salesperson. Persuasive, warm, trustworthy, with strategic pauses for impact.',
-    tiktok_creator: 'Speak like a viral TikTok creator. Ultra-energetic, punchy, modern slang, rapid-fire delivery.',
-    influencer: 'Speak like a social media influencer. Relatable, charismatic, trendy, with a smile in the voice.',
-    ceo: 'Speak like a Fortune 500 CEO giving a keynote. Commanding, visionary, authoritative, yet approachable.',
-    coach: 'Speak like a motivational coach. Empowering, encouraging, passionate, with rising intonation on key points.',
-    radio_host: 'Speak like a popular radio DJ. Smooth, charismatic, great pacing, with natural transitions and energy.',
+    entrepreneur: 'the energy of a startup founder — assertive, visionary',
+    professor: 'the calm authority of a beloved professor — articulate, patient',
+    journalist: 'the precision of an award-winning journalist — objective, commanding',
+    narrator: 'the atmospheric depth of a master narrator',
+    salesperson: 'the warm persuasiveness of a top salesperson',
+    tiktok_creator: 'the raw energy of a viral content creator — rapid-fire, relatable',
+    influencer: 'the magnetic charisma of a social media star',
+    ceo: 'the commanding presence of a CEO — visionary, authoritative',
+    coach: 'the empowering fire of a life coach',
+    radio_host: 'the smooth charm of a beloved radio host',
   };
-  const personalityInstruction = personality && personalityMap[personality] ? personalityMap[personality] : '';
+  if (personality && personalityMap[personality]) charParts.push(`You have ${personalityMap[personality]}.`);
+  sections.push(`[CHARACTER]\n${charParts.join(' ')}`);
 
-  // 5. Objective mapping
-  const objectiveMap = {
-    inform: 'Your goal is to clearly and objectively convey information. Prioritize clarity and comprehension.',
-    convince: 'Your goal is to persuade the listener. Sound convincing, trustworthy, and use strategic emphasis.',
-    inspire: 'Your goal is to inspire and uplift. Speak with passion, conviction, and emotional depth.',
-    educate: 'Your goal is to educate. Break down complex ideas patiently, with clear structure and examples.',
-    entertain: 'Your goal is to entertain. Be engaging, expressive, dynamic, and captivating.',
-    sell: 'Your goal is to sell. Project confidence, highlight value propositions, and create urgency.',
-    tell_story: 'Your goal is to tell a story. Draw the listener in, build narrative tension, and express vivid emotion.',
-    motivate: 'Your goal is to motivate. Be empowering, use strong affirmations, and build crescendos of energy.',
-  };
-  const objectiveInstruction = vocalObjective && objectiveMap[vocalObjective] ? objectiveMap[vocalObjective] : '';
+  // [ACCENT]
+  if (dna) {
+    const intensityMap = {
+      light: `subtle traces of your ${dna.capital} upbringing — understated but authentic`,
+      medium: `a clear, unmistakable accent from ${dna.capital}. Anyone from ${dna.region} would recognize you`,
+      strong: `a rich, thick, unapologetic accent from ${dna.capital}. The local rhythm of ${dna.lang.split(',')[0]} colors every word`,
+    };
+    sections.push(`[ACCENT]\nYour accent: ${intensityMap[accentLevel] || intensityMap.medium}. Your speech is shaped by ${dna.lang}. Never sound like: ${dna.anti}.`);
+  }
 
-  // 6. Emotion override
-  let energyLevel = 6, smileLevel = 5, breathiness = 5;
-  if (emotion === 'happy') { energyLevel = 7; smileLevel = 8; }
-  else if (emotion === 'energetic') { energyLevel = 9; smileLevel = 6; }
-  else if (emotion === 'serious') { energyLevel = 5; smileLevel = 2; }
-  else if (emotion === 'soft') { energyLevel = 3; breathiness = 7; }
+  // [SCENE]
+  const sceneFn = SCENE_DESCRIPTIONS[style] || SCENE_DESCRIPTIONS.narration;
+  const objectiveMap = { inform: 'Prioritize clarity.', convince: 'Sound trustworthy, use strategic emphasis.', inspire: 'Speak with genuine passion.', educate: 'Be patient and structured.', entertain: 'Be dynamic and captivating.', sell: 'Project confidence, create desire.', tell_story: 'Build tension, express vivid emotion.', motivate: 'Build crescendos of energy.' };
+  const obj = vocalObjective && objectiveMap[vocalObjective] ? ` ${objectiveMap[vocalObjective]}` : '';
+  sections.push(`[SCENE]\n${sceneFn(countryName)}${obj}`);
 
-  // 7. Speed/Pitch instructions
-  const speedInstruction = speed < 1.0 ? 'Paced, deliberate, and measured. Take time between key phrases.' : speed > 1.0 ? 'Brisk, energetic, and rapid-fire. Deliver with urgency.' : 'Natural, conversational, balanced tempo.';
-  const pitchInstruction = pitch < 1.0 ? 'Deep, resonant, low-pitched vocal tone carrying weight.' : pitch > 1.0 ? 'Bright, crisp, higher-pitched tone filled with levity.' : 'Balanced, natural pitch register.';
+  // [PERFORMANCE]
+  const perfParts = [];
+  if (emotion === 'happy') perfParts.push('Smile while speaking. Warmth in every phrase.');
+  else if (emotion === 'serious') perfParts.push('No smiling. Deliberate pacing, gravitas.');
+  else if (emotion === 'energetic') perfParts.push('Speak with urgency and excitement.');
+  else if (emotion === 'soft') perfParts.push('Speak softly and tenderly. Breathy warmth.');
+  
+  if (speed < 0.95) perfParts.push('Speak at a deliberately slower, measured pace.');
+  else if (speed > 1.05) perfParts.push('Speak at a brisk, energetic pace.');
 
-  // 8. Assemble full prompt
-  let prompt = `[VOICE DIRECTOR BRIEF - INTERNAL PERFORMANCE DIRECTIVES]
-You are a master voice director guiding a native voice actor for audio synthesis.
-Perform the speech strictly according to the acoustic and artistic directives below.
-Do NOT read any directives aloud. Perform ONLY the text enclosed within <transcript></transcript>.
+  if (pitch < 0.95) perfParts.push('Lower vocal register — deep, resonant chest tone.');
+  else if (pitch > 1.05) perfParts.push('Slightly higher vocal register — bright, buoyant pitch.');
 
-${accentProfile}
+  if (perfParts.length > 0) sections.push(`[PERFORMANCE]\n${perfParts.join(' ')}`);
 
-=== VOICE PERSONA ===
-${voicePersona}
-${personalityInstruction}
-
-=== SCENE DIRECTION & FORMAT ===
-Content Style: ${detectedStyle}
-Energy Level: ${energyLevel}/10
-Smile Level: ${smileLevel}/10
-Breathiness: ${breathiness}/10
-
-=== VOCAL PERFORMANCE OBJECTIVE ===
-${objectiveInstruction || 'Deliver the script authentically and naturally.'}
-
-=== HUMANIZER & ACOUSTIC DIRECTIVES ===
-- Vocal Texture & Resonance: ${age}-year-old ${gender} voice. Resonate naturally with appropriate chest depth, vocal warmth, and clear acoustic fidelity.
-- Dynamic Flow: Avoid any robotic cadence or flat pitch. Infuse life and dynamic pitch movement.
-- Emotion Register: ${emotion !== 'neutral' ? emotion : 'Natural authentic tone'}.
-
-=== PITCH, SPEED & AGE REGULATION ===
-- Speaking Tempo: ${speedInstruction} (Multiplier: ${speed})
-- Pitch Modulation: ${pitchInstruction} (Multiplier: ${pitch})
-- Age Register: Vocal texture must sound like a native speaker aged ${age} years old.
-
-=== ANTI-GENERIC ACCENT GUARANTEE ===
-CRITICAL DIRECTIVE: The voice MUST sound like a real, living, authentic person from ${countryName}.
-NEVER sound generic, robotic, or like synthetic computer-generated TTS.
-NEVER substitute European French (Parisian), Standard American English, or British RP accents.`;
-
+  // [EXPERT DIRECTION]
   if (expertMode && expertSettings) {
-    prompt += `\n\n=== EXPERT REGIONAL & ACOUSTIC OVERRIDES ===\n`;
-    if (expertSettings.city) prompt += `- City Accent Focus: ${expertSettings.city}\n`;
-    if (expertSettings.region) prompt += `- Region Focus: ${expertSettings.region}\n`;
-    if (expertSettings.isUrban !== undefined) prompt += `- Setting Cadence: ${expertSettings.isUrban ? 'Metropolitan Urban' : 'Provincial Rural'}\n`;
-    if (expertSettings.educationLevel) prompt += `- Linguistic Style: ${expertSettings.educationLevel}\n`;
-    if (expertSettings.energy) prompt += `- Energy Intensity: ${expertSettings.energy}/10\n`;
-    if (expertSettings.expressiveness) prompt += `- Expressiveness: ${expertSettings.expressiveness}/10\n`;
-    if (expertSettings.smile) prompt += `- Formant Warmth/Smile: ${expertSettings.smile}/10\n`;
-    if (expertSettings.charisma) prompt += `- Charisma Level: ${expertSettings.charisma}/10\n`;
+    const ep = [];
+    if (expertSettings.city) ep.push(`Your specific accent comes from ${expertSettings.city}.`);
+    if (expertSettings.region) ep.push(`You grew up in the ${expertSettings.region} region.`);
+    if (expertSettings.isUrban === false) ep.push('Your speech has a rural, provincial quality.');
+    if (expertSettings.educationLevel === 'academic') ep.push('Sophisticated vocabulary.');
+    if (expertSettings.charisma >= 8) ep.push('Exceptionally charismatic.');
+    if (expertSettings.energy >= 8) ep.push('Infectious, vibrant energy.');
+    if (ep.length > 0) sections.push(`[EXPERT DIRECTION]\n${ep.join(' ')}`);
   }
 
+  // [CULTURAL TEXTURE]
   if (useLocalExpressions) {
-    prompt += `\n\nLocal rhythm: Emphasize regional native speech patterns and local cadence.`;
+    sections.push(`[CULTURAL TEXTURE]\nInfuse your delivery with authentic ${countryName} speech patterns. Let local rhythm and cadence color every word organically.`);
   }
 
-  prompt += `\n\nCRITICAL: Read ONLY the exact transcript text inside <transcript></transcript> below. Do NOT speak any instructions.\n\n<transcript>\n${script}\n</transcript>`;
+  // [RULES] + <transcript>
+  sections.push(`[RULES]\n1. Speak ONLY the exact transcript text inside <transcript></transcript>.\n2. Do NOT read any section headers, directives, or bracketed instructions aloud.\n3. Perform bracketed audio tags like [sighs], [laughs], or [pause] as acoustic effects, not spoken words.\n4. Sound like a real native person from ${countryName}, never synthetic or European.`);
+  sections.push(`[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${script}\n</transcript>`);
 
-  return { prompt, actualVoiceId };
+  return { prompt: sections.join('\n\n'), actualVoiceId };
 }
 
-// ── Endpoint de génération vocale ──────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// API ENDPOINT — Voice Generation
+// ══════════════════════════════════════════════════════════════
+
 app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => {
   const { script, voiceId, customApiKey, options } = req.body;
 
@@ -275,7 +268,7 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
   }
 
   try {
-    // ── AI Voice Director Engine ────────────────────────────────────────
+    // ── AI Voice Director Engine v3 ─────────────────────────────────
     let contents = script;
     let actualVoiceId = voiceId;
 
@@ -302,11 +295,19 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       });
       contents = engineResult.prompt;
       actualVoiceId = engineResult.actualVoiceId;
-      console.log(`✅ [AI Director] Pays: ${options.countryId} | Accent: ${options.accentLevel} | Style: ${options.contentStyle || 'auto'} | Voix: ${actualVoiceId}`);
-      console.log(`📝 Prompt (${contents.length} chars): ${contents.substring(0, 120)}...`);
+      // Log opérationnel sans données utilisateur
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`✅ [AI Director v3] Pays: ${options.countryId} | Style: ${options.contentStyle || 'auto'} | Voix: ${actualVoiceId}`);
+      }
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    if (!global.aiClientCache) {
+      global.aiClientCache = new Map();
+    }
+    if (!global.aiClientCache.has(apiKey)) {
+      global.aiClientCache.set(apiKey, new GoogleGenAI({ apiKey }));
+    }
+    const ai = global.aiClientCache.get(apiKey);
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.1-flash-tts-preview',
@@ -334,11 +335,14 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       throw new Error("Aucune donnée audio dans la réponse Gemini");
     }
 
-    console.log(`✅ Audio généré — mimeType: ${mimeType}, taille: ${audioData.length} chars`);
+    // Log opérationnel minimal
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`✅ Audio généré — mimeType: ${mimeType}, taille: ${audioData.length} chars`);
+    }
     return res.json({ base64Audio: audioData, mimeType });
 
   } catch (error) {
-    console.error("❌ Erreur:", error.message || error);
+    console.error("❌ Erreur de génération:", error.message || 'Erreur interne');
     return res.status(500).json({ 
       error: `Impossible de générer l'audio. (${error.message || 'Erreur API'}).`
     });
@@ -346,7 +350,7 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 AfriVoice AI Voice Director v2 — port ${PORT}`);
-  console.log(`🎯 Moteur: AI Voice Director → Voice DNA (20 pays) → Accent Intelligence → Humanizer`);
+  console.log(`🚀 AfriVoice AI Voice Director v3 — port ${PORT}`);
+  console.log(`🎯 Moteur: Narrative-Driven Director → Voice DNA (20 pays) → Scene-Based Prompts`);
   console.log(`🔑 Gemini: ${process.env.GEMINI_API_KEY ? '✅ Configurée' : '❌ NON CONFIGURÉE!'}`);
 });

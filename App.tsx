@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { COUNTRIES, VOICE_OPTIONS, PRICING_PLANS, PRICING_PLANS_EN, BG_MUSIC_TRACKS } from './constants';
 import { Country, GenerationState, VoiceSettings, PricingPlan, MixerSettings, HistoryItem, QuotaUsage, Language, AccentLevel, ContentStyle, VocalPersonality, VocalObjective, QualityScore } from './types';
 import { analyzeQuality } from './services/qualityAnalyzer';
@@ -11,7 +11,7 @@ import QuotaBar from './components/QuotaBar';
 import ToastContainer, { Toast } from './components/ToastContainer';
 import AuditModal from './components/AuditModal';
 import { generateVoiceOver } from './services/geminiService';
-import { decodeRawPcm, mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './services/audioUtils';
+import { mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './services/audioUtils';
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
 import InstallAppModal from './components/InstallAppModal';
@@ -47,7 +47,7 @@ const App: React.FC = () => {
   const [recentGenerationsCount, setRecentGenerationsCount] = useState<number>(0);
 
   // Auth State
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const availableCountries = useMemo(() => {
@@ -87,7 +87,6 @@ const App: React.FC = () => {
       style: 'pro',
       pitch: 1.0,
       speed: 1.0,
-      timbre: 50,
       emotion: 'neutral',
       useLocalExpressions: false,
       accentLevel: 'medium',
@@ -125,6 +124,21 @@ const App: React.FC = () => {
   // ── 3 Variants System ──────────────────────────────
   const [variants, setVariants] = useState<{ label: string; audioUrl: string; emotion: string }[]>([]);
   const [isGeneratingVariants, setIsGeneratingVariants] = useState(false);
+  const [playingVariant, setPlayingVariant] = useState<number | null>(null);
+
+  const playVariant = (url: string, idx: number) => {
+    const audio = previewAudioRef.current;
+    if (!audio) return;
+    if (playingVariant === idx) {
+      audio.pause();
+      setPlayingVariant(null);
+    } else {
+      audio.src = url;
+      audio.play().catch(() => {});
+      setPlayingVariant(idx);
+      audio.onended = () => setPlayingVariant(null);
+    }
+  };
 
   // Audio & DOM Refs
   const voiceBufferRef = useRef<AudioBuffer | null>(null);
@@ -267,6 +281,8 @@ const App: React.FC = () => {
   const handleGenerateVariants = async () => {
     if (!script.trim() || status.isGenerating || isGeneratingVariants) return;
     setIsGeneratingVariants(true);
+    // Révoquer les anciennes URLs pour éviter les fuites mémoire
+    variants.forEach(v => { if (v.audioUrl) URL.revokeObjectURL(v.audioUrl); });
     setVariants([]);
     addToast('info', isEn ? '3 Variants Mode' : 'Mode 3 Variantes', isEn ? 'Generating 3 emotion variants...' : 'Génération de 3 variantes émotionnelles...');
 
@@ -1093,6 +1109,30 @@ const App: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Local Expressions Toggle */}
+                    <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+                      settings.useLocalExpressions
+                        ? isDark ? 'bg-[#D4FF00]/10 border-[#D4FF00]/30' : 'bg-[#D4FF00]/10 border-[#D4FF00]/40'
+                        : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
+                    }`}
+                      onClick={() => setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions })}
+                    >
+                      <div>
+                        <p className={`text-xs font-black uppercase tracking-widest ${settings.useLocalExpressions ? (isDark ? 'text-[#D4FF00]' : 'text-zinc-900') : 'text-zinc-500'}`}>
+                          {isEn ? '🌍 Local African Expressions' : '🌍 Expressions Locales Africaines'}
+                        </p>
+                        <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
+                          {isEn ? 'Injects authentic local idioms and cultural phrases' : 'Injecte des expressions et idiomes locaux authentiques'}
+                        </p>
+                      </div>
+                      <div className={`w-11 h-6 rounded-full transition-all duration-300 relative shrink-0 ${
+                        settings.useLocalExpressions ? 'bg-[#D4FF00]' : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
+                      }`}>
+                        <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
+                          settings.useLocalExpressions ? 'translate-x-5' : 'translate-x-0.5'
+                        }`} />
+                      </div>
+                    </div>
 
                   </div>
                 </section>
@@ -1108,7 +1148,7 @@ const App: React.FC = () => {
                       : 'bg-white border-[#E4E4E7] shadow-xl shadow-[#D4FF00]/5'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-black tracking-tight flex items-center gap-2.5">
                       <span>{isEn ? 'Studio Script Editor' : 'Éditeur de Script Studio'}</span>
                       <div className="flex gap-1.5">
@@ -1117,8 +1157,38 @@ const App: React.FC = () => {
                         <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700" />
                       </div>
                     </h2>
-                    <span className={`text-xs font-mono font-bold ${script.length > quota.maxCharsPerScript ? 'text-red-500 font-black' : 'text-zinc-400'}`}>
-                      {script.length} / {quota.maxCharsPerScript} {isEn ? 'char.' : 'car.'} • ~{Math.ceil(script.length / 14)} sec
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-mono font-bold ${
+                        script.length > quota.maxCharsPerScript ? 'text-red-500 font-black' :
+                        script.length > quota.maxCharsPerScript * 0.8 ? 'text-amber-400 font-black' :
+                        'text-zinc-400'
+                      }`}>
+                        {script.length} / {quota.maxCharsPerScript} {isEn ? 'char.' : 'car.'} • ~{Math.ceil(script.length / 14)} sec
+                      </span>
+                      {script.trim() && (
+                        <button
+                          onClick={() => setScript('')}
+                          title={isEn ? 'Clear script' : 'Effacer le script'}
+                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg transition-colors ${
+                            isDark ? 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10' : 'text-zinc-400 hover:text-red-500 hover:bg-red-50'
+                          }`}
+                        >
+                          ✕ {isEn ? 'Clear' : 'Effacer'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {/* Selected country badge */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                      isDark ? 'bg-[#D4FF00]/10 border-[#D4FF00]/20 text-[#D4FF00]' : 'bg-[#D4FF00]/10 border-[#D4FF00]/30 text-zinc-900'
+                    }`}>
+                      <span>{selectedCountry.flag}</span>
+                      <span>{selectedCountry.name}</span>
+                      <span className="opacity-50">•</span>
+                      <span className="opacity-70">{settings.gender === 'female' ? (isEn ? 'Female' : 'Femme') : (isEn ? 'Male' : 'Homme')}</span>
+                      <span className="opacity-50">•</span>
+                      <span className="opacity-70">{settings.accentLevel === 'light' ? (isEn ? 'Light' : 'Léger') : settings.accentLevel === 'strong' ? (isEn ? 'Strong' : 'Fort') : (isEn ? 'Medium' : 'Moyen')}</span>
                     </span>
                   </div>
 
@@ -1126,10 +1196,21 @@ const App: React.FC = () => {
                     <textarea
                       value={script}
                       onChange={(e) => setScript(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                          e.preventDefault();
+                          if (script.trim() && !status.isGenerating && script.length <= quota.maxCharsPerScript && usedSeconds < quota.maxSeconds) {
+                            handleGenerate();
+                          }
+                        }
+                      }}
                       placeholder={isEn ? `Type or paste your script... (Secured limit: Max ${quota.maxCharsPerScript} characters for ${currentPlan.name} plan)` : `Écrivez ou collez votre script... (Plafond sécurisé : Max ${quota.maxCharsPerScript} caractères pour le forfait ${currentPlan.name})`}
                       className={`w-full min-h-[260px] sm:min-h-[300px] p-6 sm:p-7 rounded-[28px] border outline-none resize-none text-base sm:text-lg font-medium transition-all custom-scrollbar ${
                         (status.error && !script.trim()) || script.length > quota.maxCharsPerScript
                           ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                          : script.length > quota.maxCharsPerScript * 0.8
+                          ? isDark ? 'bg-[#09090B] border-amber-400/40 text-white placeholder-zinc-600 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10'
+                                   : 'bg-zinc-50 border-amber-400/50 text-zinc-800 placeholder-zinc-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10'
                           : isDark
                           ? 'bg-[#09090B] border-white/10 text-white placeholder-zinc-600 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
                           : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
@@ -1171,6 +1252,13 @@ const App: React.FC = () => {
                       isEn ? 'GENERATE AFRICAN VOICE' : 'GÉNÉRER LA VOIX AFRICAINE'
                     )}
                   </button>
+
+                  {/* Keyboard shortcut hint */}
+                  {script.trim() && !status.isGenerating && (
+                    <p className="text-center text-[10px] text-zinc-400 font-mono mt-1.5 select-none">
+                      {isEn ? '⌨ Ctrl+Enter to generate' : '⌨ Ctrl+Entrée pour générer'}
+                    </p>
+                  )}
 
                   {/* ── 3 Variants Button ────────── */}
                   <button
@@ -1277,23 +1365,37 @@ const App: React.FC = () => {
                             {variants.map((v, i) => (
                               <div
                                 key={i}
-                                className={`p-3 rounded-2xl border transition-all hover:scale-[1.02] ${
+                                className={`p-3 rounded-2xl border transition-all ${
                                   isDark ? 'bg-[#09090B] border-white/5 hover:border-[#D4FF00]/30' : 'bg-zinc-50 border-zinc-200 hover:border-zinc-400'
                                 }`}
                               >
-                                <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: i === 0 ? '#D4FF00' : i === 1 ? '#22D3EE' : '#F472B6' }}>
+                                <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: i === 0 ? '#D4FF00' : i === 1 ? '#22D3EE' : '#F472B6' }}>
                                   {v.label}
                                 </p>
                                 {v.audioUrl ? (
-                                  <div className="space-y-2">
-                                    <audio src={v.audioUrl} controls className="w-full h-8" style={{ filter: isDark ? 'invert(1) hue-rotate(180deg)' : 'none' }} />
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => playVariant(v.audioUrl, i)}
+                                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                                        playingVariant === i
+                                          ? 'bg-[#D4FF00] text-black border-transparent'
+                                          : isDark ? 'border-white/10 text-zinc-300 hover:border-white/20' : 'border-zinc-300 text-zinc-700 hover:border-zinc-400'
+                                      }`}
+                                    >
+                                      {playingVariant === i ? (
+                                        <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>{isEn ? 'Pause' : 'Pause'}</>
+                                      ) : (
+                                        <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>{isEn ? 'Play' : 'Écouter'}</>
+                                      )}
+                                    </button>
                                     <button
                                       onClick={() => { const a = document.createElement('a'); a.href = v.audioUrl; a.download = `afrivoice_variant_${String.fromCharCode(65 + i)}_${Date.now()}.wav`; a.click(); }}
-                                      className={`w-full py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                                      title={isEn ? 'Download' : 'Télécharger'}
+                                      className={`p-2 rounded-xl border transition-all ${
                                         isDark ? 'border-white/10 text-zinc-400 hover:text-[#D4FF00] hover:border-[#D4FF00]/30' : 'border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:border-zinc-400'
                                       }`}
                                     >
-                                      ⬇ {isEn ? 'Download' : 'Télécharger'}
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                     </button>
                                   </div>
                                 ) : (

@@ -111,4 +111,4 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
   );
 };
 
-export default QuotaBar;
+export default React.memo(QuotaBar);

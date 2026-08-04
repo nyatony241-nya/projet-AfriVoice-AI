@@ -101,4 +101,4 @@ const CountryCard: React.FC<CountryCardProps> = ({ country, isSelected, onSelect
   );
 };
 
-export default CountryCard;
+export default React.memo(CountryCard);

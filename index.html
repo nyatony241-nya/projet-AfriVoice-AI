@@ -9,27 +9,9 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/logo192.png" />
     <meta name="theme-color" content="#09090b" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        accent: {
-                            DEFAULT: '#D4FF00',
-                            dark: '#D4FF00',
-                            warm: '#E2FF3B'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', '"DM Sans"', 'sans-serif'],
-                        mono: ['"Space Mono"', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS loaded via Vite build pipeline (see tailwind.config.js) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -79,7 +61,7 @@
         }
         .btn-maddox {
             background: #D4FF00;
-            color: #FFFFFF;
+            color: #000000;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .btn-maddox:hover {
@@ -108,17 +90,7 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.37.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+<!-- Modules resolved by Vite bundler — no importmap needed -->
 </head>
 <body class="min-h-screen">
     <div class="noise-overlay"></div>

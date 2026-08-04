@@ -1,21 +1,33 @@
+const audioBufferCache = new Map<string, AudioBuffer>();
+let sharedAudioContext: AudioContext | null = null;
 
-export function decode(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+/**
+ * Returns a shared, singleton AudioContext instance to avoid creating new OS threads.
+ */
+export function getSharedAudioContext(): AudioContext {
+  if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    sharedAudioContext = new AudioContextClass();
   }
-  return bytes;
+  if (sharedAudioContext.state === 'suspended') {
+    sharedAudioContext.resume().catch(() => {});
+  }
+  return sharedAudioContext;
 }
 
 /**
- * Fetch and decode an audio file from a URL.
+ * Fetch and decode an audio file from a URL with in-memory caching.
  */
-export async function fetchAndDecodeAudio(url: string, ctx: AudioContext): Promise<AudioBuffer> {
+export async function fetchAndDecodeAudio(url: string, ctx?: AudioContext): Promise<AudioBuffer> {
+  if (audioBufferCache.has(url)) {
+    return audioBufferCache.get(url)!;
+  }
+  const audioCtx = ctx || getSharedAudioContext();
   const response = await fetch(url);
   const arrayBuffer = await response.arrayBuffer();
-  return await ctx.decodeAudioData(arrayBuffer);
+  const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+  audioBufferCache.set(url, decoded);
+  return decoded;
 }
 
 /**

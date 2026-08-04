@@ -5,8 +5,6 @@ export interface Country {
   flag: string;
   primaryLanguage: 'French' | 'English' | 'Arabic';
   accentDescription: string;
-  azureVoiceMale?: string;
-  azureVoiceFemale?: string;
   geminiVoiceMale?: string;
   geminiVoiceFemale?: string;
 }
@@ -51,7 +49,6 @@ export interface VoiceSettings {
   style: string;
   pitch: number;
   speed: number;
-  timbre: number;
   emotion?: 'neutral' | 'happy' | 'serious' | 'energetic' | 'soft';
   useLocalExpressions?: boolean;
   isClonedVoice?: boolean;
