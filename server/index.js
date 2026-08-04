@@ -12,7 +12,7 @@ if (fs.existsSync('.env.local')) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3005;
 
 // CORS restreint aux origines légitimes (pas de wildcard *)
 const ALLOWED_ORIGINS = [

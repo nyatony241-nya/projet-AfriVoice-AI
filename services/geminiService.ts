@@ -116,7 +116,7 @@ export const generateVoiceOver = async (
   let backendUrl = '/api/generate';
   if (isDev && typeof window !== 'undefined') {
     const hostname = window.location.hostname || 'localhost';
-    backendUrl = `http://${hostname}:3001/api/generate`;
+    backendUrl = `http://${hostname}:3005/api/generate`;
   }
 
   // Get Supabase Session Token

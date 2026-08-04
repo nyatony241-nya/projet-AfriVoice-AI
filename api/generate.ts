@@ -2,9 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import { buildOptimizedPrompt } from '../services/voicePromptEngine';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+// Supabase is initialized inside the handler to prevent module crash if URL is invalid
+
 
 const aiClientCache = new Map<string, GoogleGenAI>();
 
@@ -36,24 +35,32 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Méthode non autorisée. Utilisez POST.' });
   }
 
-  // Vérification stricte du token Supabase (Security Audit Fix)
-  if (!supabase) {
-    return res.status(500).json({ error: "Configuration serveur incomplète : Impossible de vérifier l'authentification (Clés Supabase manquantes)." });
-  }
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: "Token d'authentification manquant. Accès refusé." });
-  }
-  
-  const token = authHeader.split(' ')[1];
-  const { data, error } = await supabase.auth.getUser(token);
-  
-  if (error || !data.user) {
-    return res.status(401).json({ error: "Token d'authentification invalide ou expiré. Accès refusé." });
-  }
-
   try {
+    // Safe initialization of Supabase Client inside try-catch
+    let supabase = null;
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+    if (supabaseUrl && supabaseAnonKey) {
+      supabase = createClient(supabaseUrl, supabaseAnonKey);
+    }
+
+    // Vérification stricte du token Supabase (Security Audit Fix)
+    if (!supabase) {
+      return res.status(500).json({ error: "Configuration serveur incomplète : Impossible de vérifier l'authentification (Clés Supabase manquantes)." });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: "Token d'authentification manquant. Accès refusé." });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const { data, error } = await supabase.auth.getUser(token);
+    
+    if (error || !data.user) {
+      return res.status(401).json({ error: "Token d'authentification invalide ou expiré. Accès refusé." });
+    }
+
     const { script, voiceId, customApiKey, options } = req.body;
 
     if (!script || !voiceId) {
