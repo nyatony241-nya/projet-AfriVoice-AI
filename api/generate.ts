@@ -60,7 +60,7 @@ const VOICE_DNA: Record<string, VoiceDNA> = {
     speechMelody: 'Vibrant, melodious, and highly expressive. Pitch moves in graceful tonal arches shaped by Lingala musicality.',
     consonantStyle: 'Soft, rounded consonants with open, bright, sustained vowels and smooth vocalic resonance.',
     rhythmPattern: 'Lively, dance-like, syncopated cadence with rhythmic pauses and expressive vocal warmth.',
-    culturalContext: 'Flamboyant, artistic, warm, and captivating. Reflects Kinshasa's legendary music and cultural energy.',
+    culturalContext: `Flamboyant, artistic, warm, and captivating. Reflects Kinshasa's legendary music and cultural energy.`,
     antiPatterns: ['Parisian French', 'Belgian French', 'Flat monotone delivery', 'Dull robotic speech'],
   },
   GH: {
@@ -202,20 +202,20 @@ const VOICE_DNA: Record<string, VoiceDNA> = {
 
 const LOCAL_EXPRESSIONS: Record<string, string> = {
   NG: 'Natural fillers & interjections: "you know", "I tell you", "my brother", "ehn", "Na so!", "I swear!".',
-  CI: 'Natural fillers & interjections: "dêh", "wôrô-wôrô", "kpakpatoya", "on dit quoi", "C'est chaud!", "Walahi!".',
-  CM: 'Natural fillers & interjections: "c'est ça même", "je dis seulement", "tu vois non", "Wèè!", "Aïe!".',
+  CI: `Natural fillers & interjections: "dêh", "wôrô-wôrô", "kpakpatoya", "on dit quoi", "C'est chaud!", "Walahi!".`,
+  CM: `Natural fillers & interjections: "c'est ça même", "je dis seulement", "tu vois non", "Wèè!", "Aïe!".`,
   SN: 'Natural fillers & interjections: "ndéysan", "nanga déf?", "Yalla!", "Inchallah!", "Machallah!".',
   CD: 'Natural fillers & interjections: "pona nini", "yo", "Mbote!", "Tozali!", "Eh eh!".',
   GH: 'Natural fillers & interjections: "chale", "you see", "Ete sen?", "Charley!", "Ei!".',
   MA: 'Natural fillers & interjections: "walakin", "yak", "safi", "Labas?", "Wallah!", "Ya Salaam!".',
   ZA: 'Natural fillers & interjections: "shame", "just now", "Howzit?", "Eish!", "Haibo!", "Yoh!".',
   KE: 'Natural fillers & interjections: "si you know", "ati", "lakini", "Sasa!", "Mambo vipi?", "Aki!".',
-  GA: 'Natural fillers & interjections: "disons", "non mais", "Mbolo!", "Ah bon?", "C'est sérieux!".',
+  GA: `Natural fillers & interjections: "disons", "non mais", "Mbolo!", "Ah bon?", "C'est sérieux!".`,
   BJ: 'Natural fillers & interjections: "kpèkpè", "à côté de ça", "A fon gbé?", "Azô!".',
-  BF: 'Natural fillers & interjections: "bon", "ça va aller", "en tout cas", "Laafi?", "C'est sûr!".',
+  BF: `Natural fillers & interjections: "bon", "ça va aller", "en tout cas", "Laafi?", "C'est sûr!".`,
   ML: 'Natural fillers & interjections: "bon", "voilà", "I ni ce!", "Wallahi!", "Barika!".',
-  TG: 'Natural fillers & interjections: "éfè", "n'est-ce pas", "Efoa?", "Yoo!".',
-  CG: 'Natural fillers & interjections: "eh bien", "c'est ça", "Mbote!", "C'est fort!".',
+  TG: `Natural fillers & interjections: "éfè", "n'est-ce pas", "Efoa?", "Yoo!".`,
+  CG: `Natural fillers & interjections: "eh bien", "c'est ça", "Mbote!", "C'est fort!".`,
   TN: 'Natural fillers & interjections: "barcha", "ya3ni", "Labès?", "Wallahi!", "Ya hasra!".',
   DZ: 'Natural fillers & interjections: "bezaf", "saha", "Wach rak?", "Wallah!", "Ya Rebbi!".',
   EG: 'Natural fillers & interjections: "ya3ni", "tab3an", "ma3lesh", "Ahlan!", "Wallahi!", "Yalla!".',
@@ -344,8 +344,8 @@ ${LOCAL_EXPRESSIONS[countryId]}
     `3. Be 100% authentically ${countryName} — zero robotic or European TTS sound.`,
   ].filter(line => line !== undefined && line !== '');
 
-  return { directorBrief: lines.join('
-'), actualVoiceId };
+  return { directorBrief: lines.join('\n'), actualVoiceId };
+
 }
 
 const aiClientCache = new Map<string, GoogleGenAI>();
@@ -415,7 +415,7 @@ export default async function handler(req: any, res: any) {
     const { directorBrief, actualVoiceId } = buildDirectorPrompt({
       script,
       countryId: options?.countryId,
-      countryName: options?.countryName || 'Côte d'Ivoire',
+      countryName: options?.countryName || "Côte d'Ivoire",
       gender: options?.gender || 'female',
       age: options?.age || 30,
       voiceVariant: options?.voiceVariant || voiceId,
@@ -429,12 +429,7 @@ export default async function handler(req: any, res: any) {
       pitch: options?.pitch,
     });
 
-    const fullPrompt = `${directorBrief}
-
-[TRANSCRIPT - READ ONLY THIS TEXT]
-<transcript>
-${script.trim()}
-</transcript>`;
+    const fullPrompt = `${directorBrief}\n\n[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${script.trim()}\n</transcript>`;
 
     const ai = getAiClient(apiKey);
 
