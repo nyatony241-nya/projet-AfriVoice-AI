@@ -119,9 +119,20 @@ export const generateVoiceOver = async (
     backendUrl = `http://${hostname}:3005/api/generate`;
   }
 
-  // Get Supabase Session Token
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  // Toujours rafraîchir la session pour avoir un token frais (évite l'erreur "token expiré")
+  let token: string | undefined;
+  try {
+    const { data: refreshData } = await supabase.auth.refreshSession();
+    token = refreshData.session?.access_token;
+    if (!token) {
+      // Si pas de session active, essayer de récupérer la session existante
+      const { data: { session } } = await supabase.auth.getSession();
+      token = session?.access_token;
+    }
+  } catch {
+    // Aucune session — la génération continuera sans auth (non-bloquant côté serveur)
+    token = undefined;
+  }
 
   const response = await fetch(backendUrl, {
     method: 'POST',
@@ -131,6 +142,7 @@ export const generateVoiceOver = async (
     },
     body: JSON.stringify({ script, voiceId, customApiKey, options }),
   });
+
 
   // Parse la réponse de façon défensive : Vercel peut renvoyer du HTML en cas d'erreur 500
   const rawText = await response.text();
