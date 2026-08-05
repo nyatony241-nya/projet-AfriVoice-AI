@@ -126,14 +126,18 @@ export default async function handler(req: any, res: any) {
         if (authHeader && authHeader.startsWith("Bearer ")) {
           const token = authHeader.split(" ")[1];
           const { data, error } = await supabase.auth.getUser(token);
+          // Auth is advisory only — log but never block generation
           if (error || !data.user) {
-            return res.status(401).json({ error: "Token invalide ou expire. Reconnectez-vous." });
+            console.warn("[AfriVoice] Auth token invalid/expired — continuing (quota managed client-side):", error?.message);
+          } else {
+            console.log("[AfriVoice] Auth OK — user:", data.user.email);
           }
         }
       } catch (authError: any) {
-        console.warn("[AfriVoice] Supabase auth failed (non-blocking):", authError?.message);
+        console.warn("[AfriVoice] Supabase auth check failed (non-blocking):", authError?.message);
       }
     }
+
 
     const { directorBrief, actualVoiceId } = buildDirectorPrompt({
       voiceVariant: options?.voiceVariant,
