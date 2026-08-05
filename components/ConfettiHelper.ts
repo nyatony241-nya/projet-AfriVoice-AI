@@ -43,6 +43,10 @@ export function triggerCelebration(): void {
   canvas.style.height = '100vh';
   canvas.style.pointerEvents = 'none';
   canvas.style.zIndex = '9999';
+  canvas.style.background = 'transparent';
+  canvas.style.backgroundColor = 'transparent';
+  canvas.style.border = 'none';
+  canvas.style.outline = 'none';
   document.body.appendChild(canvas);
 
   const ctx = canvas.getContext('2d');
