@@ -2,8 +2,17 @@ import type {
   DirectorDecision,
   VocalPersonality,
   VocalObjective,
-  ExpertSettings,
 } from '../types';
+
+// Local definition (expert mode removed from UI but engine logic preserved)
+interface ExpertSettings {
+  city?: string;
+  region?: string;
+  isUrban?: boolean;
+  educationLevel?: 'basic' | 'intermediate' | 'advanced' | 'academic';
+  energy?: number;
+  charisma?: number;
+}
 import { VOICE_DNA } from './voiceDNA';
 
 // ──────────────────────────────────────────────────────

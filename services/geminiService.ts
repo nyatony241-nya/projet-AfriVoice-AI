@@ -8,7 +8,7 @@ export interface GeminiAudioResult {
 }
 
 import { supabase } from './supabaseClient';
-import type { AccentLevel, ContentStyle, VocalPersonality, VocalObjective, ExpertSettings } from '../types';
+import type { AccentLevel, ContentStyle, VocalPersonality, VocalObjective } from '../types';
 
 /**
  * Décode le base64 PCM L16 (Int16) en Float32 pour AudioContext.
@@ -92,15 +92,13 @@ export const generateVoiceOver = async (
     emotion: string;
     style: string;
     useLocalExpressions: boolean;
+    phoneticHumanizer?: boolean;
     speed?: number;
     pitch?: number;
-    // AI Voice Director Engine params
     accentLevel?: AccentLevel;
     contentStyle?: ContentStyle;
     personality?: VocalPersonality;
     vocalObjective?: VocalObjective;
-    expertMode?: boolean;
-    expertSettings?: ExpertSettings;
   }
 ): Promise<GeminiAudioResult> => {
   let customApiKey = '';

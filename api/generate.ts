@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
+import { humanizeScript } from "../services/phonetic-humanizer/index.js";
 
 // ─────────────────────────────────────────────────────────────
 // VOICE DNA DATABASE (20 African Countries)
@@ -429,7 +430,11 @@ export default async function handler(req: any, res: any) {
       pitch: options?.pitch,
     });
 
-    const fullPrompt = `${directorBrief}\n\n[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${script.trim()}\n</transcript>`;
+    const finalScript = options?.phoneticHumanizer
+      ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
+      : script;
+
+    const fullPrompt = `${directorBrief}\n\n[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${finalScript.trim()}\n</transcript>`;
 
     const ai = getAiClient(apiKey);
 

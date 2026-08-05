@@ -6,9 +6,18 @@ import type {
   ContentStyle, 
   VocalPersonality, 
   VocalObjective, 
-  ExpertSettings,
   DirectorDecision
 } from '../types';
+
+// Local definition (expert mode removed from UI but engine logic preserved)
+interface ExpertSettings {
+  city?: string;
+  region?: string;
+  isUrban?: boolean;
+  educationLevel?: 'basic' | 'intermediate' | 'advanced' | 'academic';
+  energy?: number;
+  charisma?: number;
+}
 
 /**
  * VoicePromptEngine v3 — AI Voice Director
@@ -41,8 +50,6 @@ export function buildOptimizedPrompt(params: {
   contentStyle?: ContentStyle;
   personality?: VocalPersonality;
   vocalObjective?: VocalObjective;
-  expertMode?: boolean;
-  expertSettings?: ExpertSettings;
   useLocalExpressions?: boolean;
 }): { prompt: string; actualVoiceId: string } {
   
@@ -142,7 +149,7 @@ export function buildOptimizedPrompt(params: {
     pitch: params.pitch,
     personality: params.personality,
     vocalObjective: params.vocalObjective,
-    expertSettings: params.expertMode ? params.expertSettings : undefined,
+    expertSettings: undefined,
     useLocalExpressions: params.useLocalExpressions,
   });
 

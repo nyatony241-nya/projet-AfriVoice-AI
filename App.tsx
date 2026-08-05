@@ -89,22 +89,22 @@ const App: React.FC = () => {
       speed: 1.0,
       emotion: 'neutral',
       useLocalExpressions: false,
+      phoneticHumanizer: true,
       accentLevel: 'medium',
       contentStyle: undefined,
       personality: undefined,
       vocalObjective: undefined,
-      expertMode: false,
-      expertSettings: undefined,
     };
+
     if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* ignore */ } }
     return defaults;
   });
 
   // Save user preferences (Memory feature)
   useEffect(() => {
-    const { expertSettings, ...prefsToSave } = settings;
-    localStorage.setItem('AFRIVOICE_PREFS', JSON.stringify(prefsToSave));
+    localStorage.setItem('AFRIVOICE_PREFS', JSON.stringify(settings));
   }, [settings]);
+
 
   const [mixer, setMixer] = useState<MixerSettings>({
     voiceVolume: 100,
@@ -311,14 +311,13 @@ const App: React.FC = () => {
           emotion: variant.emotion,
           style: settings.style,
           useLocalExpressions: settings.useLocalExpressions,
+          phoneticHumanizer: settings.phoneticHumanizer,
           speed: settings.speed,
           pitch: settings.pitch,
           accentLevel: settings.accentLevel,
           contentStyle: settings.contentStyle,
           personality: settings.personality,
           vocalObjective: settings.vocalObjective,
-          expertMode: settings.expertMode,
-          expertSettings: settings.expertSettings,
         });
         const url = URL.createObjectURL(result.blob);
         results.push({ label: `${variant.label} — ${variant.description}`, audioUrl: url, emotion: variant.emotion });
@@ -404,14 +403,13 @@ const App: React.FC = () => {
         emotion: settings.emotion,
         style: settings.style,
         useLocalExpressions: settings.useLocalExpressions,
+        phoneticHumanizer: settings.phoneticHumanizer,
         speed: settings.speed,
         pitch: settings.pitch,
         accentLevel: settings.accentLevel,
         contentStyle: settings.contentStyle,
         personality: settings.personality,
         vocalObjective: settings.vocalObjective,
-        expertMode: settings.expertMode,
-        expertSettings: settings.expertSettings,
       });
 
       let buffer: AudioBuffer;
@@ -978,87 +976,7 @@ const App: React.FC = () => {
                         </select>
                     </div>
 
-                    {/* ── Expert Mode Toggle ────────── */}
-                    <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
-                      <button
-                        onClick={() => setSettings({ ...settings, expertMode: !settings.expertMode })}
-                        className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-colors ${
-                          settings.expertMode ? 'text-[#D4FF00]' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-                        }`}
-                      >
-                        <span>{settings.expertMode ? '🔬' : '⚗️'}</span>
-                        <span>{isEn ? 'Expert Mode' : 'Mode Expert'}</span>
-                        <span className="text-[10px]">{settings.expertMode ? '▲' : '▼'}</span>
-                      </button>
 
-                      {settings.expertMode && (
-                        <div className="mt-4 space-y-4 animate-fadeIn">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'City' : 'Ville'}</label>
-                              <input type="text" placeholder={isEn ? 'e.g. Douala' : 'ex. Douala'}
-                                value={settings.expertSettings?.city || ''}
-                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, city: e.target.value } })}
-                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'Region' : 'Région'}</label>
-                              <input type="text" placeholder={isEn ? 'e.g. Littoral' : 'ex. Littoral'}
-                                value={settings.expertSettings?.region || ''}
-                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, region: e.target.value } })}
-                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
-                              />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'Setting' : 'Milieu'}</label>
-                              <select
-                                value={settings.expertSettings?.isUrban ? 'urban' : 'rural'}
-                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, isUrban: e.target.value === 'urban' } })}
-                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none cursor-pointer ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
-                              >
-                                <option value="urban">{isEn ? '🏙 Urban' : '🏙 Urbain'}</option>
-                                <option value="rural">{isEn ? '🌾 Rural' : '🌾 Rural'}</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-zinc-400 uppercase">{isEn ? 'Education' : 'Éducation'}</label>
-                              <select
-                                value={settings.expertSettings?.educationLevel || 'intermediate'}
-                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, educationLevel: e.target.value as any } })}
-                                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none cursor-pointer ${isDark ? 'bg-[#09090B] text-white border-white/10' : 'bg-zinc-50 text-zinc-900 border-zinc-200'}`}
-                              >
-                                <option value="basic">{isEn ? 'Basic' : 'Basique'}</option>
-                                <option value="intermediate">{isEn ? 'Intermediate' : 'Intermédiaire'}</option>
-                                <option value="advanced">{isEn ? 'Advanced' : 'Avancé'}</option>
-                                <option value="academic">{isEn ? 'Academic' : 'Académique'}</option>
-                              </select>
-                            </div>
-                          </div>
-                          {/* Expert sliders */}
-                          {[
-                            { key: 'energy', label: isEn ? 'Energy' : 'Énergie', emoji: '⚡' },
-                            { key: 'expressiveness', label: isEn ? 'Expressiveness' : 'Expressivité', emoji: '🎭' },
-                            { key: 'smile', label: isEn ? 'Smile' : 'Sourire', emoji: '😊' },
-                            { key: 'charisma', label: isEn ? 'Charisma' : 'Charisme', emoji: '✨' },
-                          ].map(({ key, label, emoji }) => (
-                            <div key={key} className="space-y-1">
-                              <div className="flex justify-between items-center">
-                                <label className="text-[10px] font-bold text-zinc-400 uppercase">{emoji} {label}</label>
-                                <span className="text-xs font-mono font-black text-[#D4FF00]">{(settings.expertSettings as any)?.[key] || 5}/10</span>
-                              </div>
-                              <input type="range" min="1" max="10"
-                                value={(settings.expertSettings as any)?.[key] || 5}
-                                onChange={(e) => setSettings({ ...settings, expertSettings: { ...settings.expertSettings, [key]: parseInt(e.target.value) } })}
-                                className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
 
                     {/* Speed & Age */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-zinc-200 dark:border-white/5">
@@ -1130,6 +1048,36 @@ const App: React.FC = () => {
                       }`}>
                         <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
                           settings.useLocalExpressions ? 'translate-x-5' : 'translate-x-0.5'
+                        }`} />
+                      </div>
+                    </div>
+
+                    {/* IA Phonetic Humanizer Toggle */}
+                    <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+                      settings.phoneticHumanizer
+                        ? isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-500/10 border-amber-500/40'
+                        : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
+                    }`}
+                      onClick={() => setSettings({ ...settings, phoneticHumanizer: !settings.phoneticHumanizer })}
+                    >
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className={`text-xs font-black uppercase tracking-widest ${settings.phoneticHumanizer ? 'text-amber-500' : 'text-zinc-500'}`}>
+                            {isEn ? '✨ AI Phonetic Humanization' : '✨ Humanisation Phonétique IA'}
+                          </p>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-bold uppercase tracking-wider">
+                            {isEn ? 'New' : 'Nouveau'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
+                          {isEn ? 'Adds natural vowel extensions, breathing breaks & audio acting tags' : 'Ajoute des allongements de voyelles, pauses et expressions vocales'}
+                        </p>
+                      </div>
+                      <div className={`w-11 h-6 rounded-full transition-all duration-300 relative shrink-0 ${
+                        settings.phoneticHumanizer ? 'bg-amber-500' : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
+                      }`}>
+                        <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
+                          settings.phoneticHumanizer ? 'translate-x-5' : 'translate-x-0.5'
                         }`} />
                       </div>
                     </div>

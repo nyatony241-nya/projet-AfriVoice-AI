@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import { humanizeScript } from './services/phonetic-humanizer/index.js';
 
 dotenv.config();
 if (fs.existsSync('.env.local')) {
@@ -125,7 +126,7 @@ const SCENE_DESCRIPTIONS = {
 };
 
 function buildOptimizedPromptJS(params) {
-  const { script, voiceId, countryId, countryName, gender, voiceVariant, isClonedVoice, age, emotion, speed, pitch, accentLevel, contentStyle, personality, vocalObjective, expertMode, expertSettings, useLocalExpressions } = params;
+  const { script, voiceId, countryId, countryName, gender, voiceVariant, isClonedVoice, age, emotion, speed, pitch, accentLevel, contentStyle, personality, vocalObjective, useLocalExpressions, phoneticHumanizer } = params;
 
   // 1. Voice Variant
   let actualVoiceId = voiceId;
@@ -224,17 +225,6 @@ function buildOptimizedPromptJS(params) {
 
   if (perfParts.length > 0) sections.push(`[PERFORMANCE]\n${perfParts.join(' ')}`);
 
-  // [EXPERT DIRECTION]
-  if (expertMode && expertSettings) {
-    const ep = [];
-    if (expertSettings.city) ep.push(`Your specific accent comes from ${expertSettings.city}.`);
-    if (expertSettings.region) ep.push(`You grew up in the ${expertSettings.region} region.`);
-    if (expertSettings.isUrban === false) ep.push('Your speech has a rural, provincial quality.');
-    if (expertSettings.educationLevel === 'academic') ep.push('Sophisticated vocabulary.');
-    if (expertSettings.charisma >= 8) ep.push('Exceptionally charismatic.');
-    if (expertSettings.energy >= 8) ep.push('Infectious, vibrant energy.');
-    if (ep.length > 0) sections.push(`[EXPERT DIRECTION]\n${ep.join(' ')}`);
-  }
 
   // [CULTURAL TEXTURE]
   if (useLocalExpressions) {
@@ -242,8 +232,12 @@ function buildOptimizedPromptJS(params) {
   }
 
   // [RULES] + <transcript>
+  const finalScript = phoneticHumanizer
+    ? humanizeScript(script, countryId, { contentStyle, emotion })
+    : script;
+
   sections.push(`[RULES]\n1. Speak ONLY the exact transcript text inside <transcript></transcript>.\n2. Do NOT read any section headers, directives, or bracketed instructions aloud.\n3. Perform bracketed audio tags like [sighs], [laughs], or [pause] as acoustic effects, not spoken words.\n4. Sound like a real native person from ${countryName}, never synthetic or European.`);
-  sections.push(`[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${script}\n</transcript>`);
+  sections.push(`[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${finalScript}\n</transcript>`);
 
   return { prompt: sections.join('\n\n'), actualVoiceId };
 }
@@ -289,9 +283,8 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
         contentStyle: options.contentStyle,
         personality: options.personality,
         vocalObjective: options.vocalObjective,
-        expertMode: options.expertMode,
-        expertSettings: options.expertSettings,
         useLocalExpressions: options.useLocalExpressions,
+        phoneticHumanizer: options.phoneticHumanizer,
       });
       contents = engineResult.prompt;
       actualVoiceId = engineResult.actualVoiceId;

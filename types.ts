@@ -27,20 +27,7 @@ export type VocalObjective =
   | 'inform' | 'convince' | 'inspire' | 'educate'
   | 'entertain' | 'sell' | 'tell_story' | 'motivate';
 
-export interface ExpertSettings {
-  city?: string;
-  region?: string;
-  isUrban?: boolean;
-  educationLevel?: 'basic' | 'intermediate' | 'advanced' | 'academic';
-  profession?: string;
-  socialClass?: 'popular' | 'middle' | 'upper';
-  energy?: number;       // 1-10
-  expressiveness?: number; // 1-10
-  smile?: number;        // 1-10
-  breathing?: number;    // 1-10
-  presence?: number;     // 1-10
-  charisma?: number;     // 1-10
-}
+
 
 export interface VoiceSettings {
   gender: 'male' | 'female';
@@ -53,13 +40,12 @@ export interface VoiceSettings {
   useLocalExpressions?: boolean;
   isClonedVoice?: boolean;
   clonedVoiceName?: string;
+  phoneticHumanizer?: boolean;
   // AI Voice Director Engine additions
   accentLevel?: AccentLevel;
   contentStyle?: ContentStyle;
   personality?: VocalPersonality;
   vocalObjective?: VocalObjective;
-  expertMode?: boolean;
-  expertSettings?: ExpertSettings;
 }
 
 // ── Voice DNA (per-country vocal identity) ───────────────────────
