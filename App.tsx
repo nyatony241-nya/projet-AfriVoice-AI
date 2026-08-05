@@ -15,6 +15,7 @@ import { mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './servic
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
 import InstallAppModal from './components/InstallAppModal';
+import { triggerCelebration } from './components/ConfettiHelper';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
 const QUOTA_STORAGE_KEY = 'afrivoice_quota_v1';
@@ -38,6 +39,7 @@ const App: React.FC = () => {
     return found || PRICING_PLANS[0];
   });
   const [showQuotaError, setShowQuotaError] = useState(false);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
   // Safety Rails: Quota & Rate Limit state
@@ -57,14 +59,14 @@ const App: React.FC = () => {
 
   // Dynamic Quota limits by plan (Safety Rail #1 & #3) + Recharge bonus
   const quota = useMemo<QuotaUsage>(() => {
-    let baseMaxSeconds = 99999; // Capacité de test illimitée pour le MVP
-    let maxChars = 5000;
+    let baseMaxSeconds = 600; // Starter: 10 min
+    let maxChars = 500;
 
     if (currentPlan.id === 'creator') {
-      baseMaxSeconds = 3600; // 60 min monthly cap
+      baseMaxSeconds = 1800; // Creator: 30 min
       maxChars = 1500;
     } else if (currentPlan.id === 'pro') {
-      baseMaxSeconds = 9600; // 160 min monthly cap
+      baseMaxSeconds = 3600; // Pro: 60 min
       maxChars = 3000;
     }
 
@@ -238,6 +240,12 @@ const App: React.FC = () => {
     }
   }, [isPremiumFeature]);
 
+  useEffect(() => {
+    if (currentPlan.id === 'free') {
+      setSettings((prev) => ({ ...prev, useLocalExpressions: false, phoneticHumanizer: false }));
+    }
+  }, [currentPlan]);
+
   // Synchronize dark/light class with HTML tag & background
   useEffect(() => {
     const root = document.documentElement;
@@ -280,6 +288,11 @@ const App: React.FC = () => {
   // ── 3 Variants Handler ──────────────────────────────
   const handleGenerateVariants = async () => {
     if (!script.trim() || status.isGenerating || isGeneratingVariants) return;
+    if (usedSeconds >= quota.maxSeconds) {
+      setShowRechargeModal(true);
+      addToast('warning', isEn ? 'Quota Exhausted' : 'Quota épuisé', isEn ? 'Please recharge to continue.' : 'Veuillez recharger pour continuer.');
+      return;
+    }
     setIsGeneratingVariants(true);
     // Révoquer les anciennes URLs pour éviter les fuites mémoire
     variants.forEach(v => { if (v.audioUrl) URL.revokeObjectURL(v.audioUrl); });
@@ -345,9 +358,12 @@ const App: React.FC = () => {
     if (usedSeconds >= quota.maxSeconds) {
       setStatus((prev) => ({
         ...prev,
-        error: `Plafond ${currentPlan.name} atteint (${Math.round(usedSeconds / 60)} min / ${Math.round(quota.maxSeconds / 60)} min max). Passez au forfait supérieur ou rechargez pour continuer.`,
+        error: isEn
+          ? `Quota for ${currentPlan.name} exhausted. Please recharge or upgrade.`
+          : `Plafond ${currentPlan.name} atteint. Veuillez recharger ou passer au forfait supérieur.`,
       }));
-      addToast('warning', 'Plafond de Synthèse Atteint', 'Plafond mensuel de votre forfait atteint. Passez au forfait supérieur ou rechargez pour continuer.');
+      setShowRechargeModal(true);
+      addToast('warning', isEn ? 'Quota Exhausted' : 'Plafond de Synthèse Atteint', isEn ? 'Please recharge your account to continue.' : 'Votre quota est épuisé. Veuillez recharger pour continuer.');
       return;
     }
 
@@ -458,6 +474,7 @@ const App: React.FC = () => {
         settings.emotion || 'neutral',
         estimatedSeconds
       );
+      triggerCelebration();
       setStatus({ isGenerating: false, error: null, audioUrl: url, qualityScore: qScore });
       addToast('success', isEn ? 'African voice generated!' : 'Voix africaine générée !', `Production de ${estimatedSeconds}s réussie (${selectedCountry.name} — Score: ${qScore.overall}/100).`);
     } catch (err: any) {
@@ -544,7 +561,17 @@ const App: React.FC = () => {
   };
 
   const handleSelectPlan = (plan: PricingPlan) => {
+    if (currentPlan.id === plan.id) {
+      if (usedSeconds >= quota.maxSeconds) {
+        setUsedSeconds(0);
+        addToast('success', isEn ? 'Plan Renewed' : 'Abonnement Renouvelé', isEn ? 'Your monthly quota has been reset.' : 'Votre quota mensuel a été réinitialisé.');
+      } else {
+        addToast('info', isEn ? 'Already Active' : 'Déjà Actif', isEn ? 'You are already subscribed to this plan.' : 'Vous êtes déjà abonné à ce forfait.');
+      }
+      return;
+    }
     setCurrentPlan(plan);
+    setUsedSeconds(0);
     addToast('success', `Forfait ${plan.name} Actif`, `Vous bénéficiez désormais des minutes et fonctionnalités du plan ${plan.name}.`);
   };
 
@@ -566,6 +593,83 @@ const App: React.FC = () => {
       <ToastContainer toasts={toasts} onDismiss={dismissToast} isDark={isDark} />
       <AuditModal isOpen={isAuditModalOpen} onClose={() => setIsAuditModalOpen(false)} isDark={isDark} />
       <InstallAppModal isOpen={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} isDark={isDark} />
+
+      {/* Recharge Modal */}
+      {showRechargeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className={`w-full max-w-lg p-8 sm:p-10 rounded-[36px] border shadow-2xl animate-in zoom-in-95 duration-300 ${
+            isDark ? 'bg-[#14151C] border-white/10 text-white' : 'bg-white border-[#E4E4E7] text-zinc-900'
+          }`}>
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 bg-red-500/10 px-3 py-1 rounded-full">
+                  {isEn ? 'Quota Finished' : 'Quota Épuisé'}
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black tracking-tight mt-2">
+                  {isEn ? 'Buy Minute Recharge' : 'Recharger votre Crédit'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowRechargeModal(false)}
+                className={`p-2 rounded-xl transition-colors ${
+                  isDark ? 'hover:bg-white/5 text-zinc-400' : 'hover:bg-zinc-100 text-zinc-500'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-sm text-zinc-400 font-medium mb-8 leading-relaxed">
+              {isEn
+                ? `Your plan's base quota is finished. Buy an instant recharge to continue generating voiceovers immediately. Recharges carry over and do not expire.`
+                : `Le quota de votre forfait est épuisé. Achetez une recharge immédiate pour continuer à générer vos voix off. Les recharges restent acquises et n’expirent pas.`}
+            </p>
+
+            {/* Recharge Grid */}
+            <div className="space-y-4">
+              {[
+                { seconds: 600, label: '10 min', price: '1 200 FCFA', desc: isEn ? 'Perfect for 1-2 small projects' : 'Parfait pour 1-2 petits projets' },
+                { seconds: 1800, label: '30 min', price: '2 900 FCFA', desc: isEn ? 'Great for creators' : 'Idéal pour les créateurs', popular: true },
+                { seconds: 3600, label: '60 min', price: '4 900 FCFA', desc: isEn ? 'Best value for studios' : 'Idéal pour les studios' }
+              ].map((opt) => (
+                <div
+                  key={opt.label}
+                  className={`p-5 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer relative ${
+                    opt.popular
+                      ? 'border-amber-500 bg-amber-500/5'
+                      : isDark ? 'border-white/5 bg-[#09090B] hover:border-white/20' : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300'
+                  }`}
+                  onClick={() => {
+                    // Simulate purchase
+                    setBonusSeconds((prev) => prev + opt.seconds);
+                    setShowRechargeModal(false);
+                    addToast('success', isEn ? 'Recharge Successful!' : 'Recharge Réussie !', isEn ? `Added ${opt.label} to your credit.` : `Ajout de ${opt.label} à vos crédits.`);
+                  }}
+                >
+                  {opt.popular && (
+                    <span className="absolute -top-3 right-6 bg-amber-500 text-black text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">
+                      {isEn ? 'BEST VALUE' : 'RECOMMANDÉ'}
+                    </span>
+                  )}
+                  <div>
+                    <p className="font-black text-base tracking-tight">{opt.label}</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5 font-medium">{opt.desc}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-black text-sm text-amber-500">{opt.price}</span>
+                    <div className="px-4 py-2 rounded-xl bg-zinc-900 text-[#D4FF00] hover:scale-105 transition-transform text-xs font-black uppercase tracking-widest">
+                      {isEn ? 'Buy' : 'Acheter'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SaaS Sidebar Navigation */}
       <Sidebar
@@ -1029,16 +1133,31 @@ const App: React.FC = () => {
 
                     {/* Local Expressions Toggle */}
                     <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
-                      settings.useLocalExpressions
+                      currentPlan.id === 'free'
+                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#09090B]/50'
+                        : settings.useLocalExpressions
                         ? isDark ? 'bg-[#D4FF00]/10 border-[#D4FF00]/30' : 'bg-[#D4FF00]/10 border-[#D4FF00]/40'
                         : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
                     }`}
-                      onClick={() => setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions })}
+                      onClick={() => {
+                        if (currentPlan.id === 'free') {
+                          addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan to unlock local African expressions.' : 'Veuillez passer au forfait Creator ou Pro pour débloquer les expressions locales.');
+                          return;
+                        }
+                        setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions });
+                      }}
                     >
                       <div>
-                        <p className={`text-xs font-black uppercase tracking-widest ${settings.useLocalExpressions ? (isDark ? 'text-[#D4FF00]' : 'text-zinc-900') : 'text-zinc-500'}`}>
-                          {isEn ? '🌍 Local African Expressions' : '🌍 Expressions Locales Africaines'}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p className={`text-xs font-black uppercase tracking-widest ${settings.useLocalExpressions ? (isDark ? 'text-[#D4FF00]' : 'text-zinc-900') : 'text-zinc-500'}`}>
+                            {isEn ? '🌍 Local African Expressions' : '🌍 Expressions Locales Africaines'}
+                          </p>
+                          {currentPlan.id === 'free' && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-500 font-bold uppercase tracking-wider">
+                              🔒 PRO
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
                           {isEn ? 'Injects authentic local idioms and cultural phrases' : 'Injecte des expressions et idiomes locaux authentiques'}
                         </p>
@@ -1054,11 +1173,19 @@ const App: React.FC = () => {
 
                     {/* IA Phonetic Humanizer Toggle */}
                     <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
-                      settings.phoneticHumanizer
+                      currentPlan.id === 'free'
+                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#09090B]/50'
+                        : settings.phoneticHumanizer
                         ? isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-500/10 border-amber-500/40'
                         : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
                     }`}
-                      onClick={() => setSettings({ ...settings, phoneticHumanizer: !settings.phoneticHumanizer })}
+                      onClick={() => {
+                        if (currentPlan.id === 'free') {
+                          addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan to unlock AI Humanization.' : 'Veuillez passer au forfait Creator ou Pro pour débloquer l\'humanisation phonétique IA.');
+                          return;
+                        }
+                        setSettings({ ...settings, phoneticHumanizer: !settings.phoneticHumanizer });
+                      }}
                     >
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -1066,7 +1193,7 @@ const App: React.FC = () => {
                             {isEn ? '✨ AI Phonetic Humanization' : '✨ Humanisation Phonétique IA'}
                           </p>
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-bold uppercase tracking-wider">
-                            {isEn ? 'New' : 'Nouveau'}
+                            {currentPlan.id === 'free' ? '🔒 PRO' : (isEn ? 'New' : 'Nouveau')}
                           </span>
                         </div>
                         <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
@@ -1706,15 +1833,19 @@ const App: React.FC = () => {
                         onClick={() => handleSelectPlan(plan)}
                         className={`w-full py-5 rounded-[24px] font-black text-xs uppercase tracking-widest transition-all ${
                           isActivePlan
-                            ? isDark
-                              ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/20'
+                            ? usedSeconds >= quota.maxSeconds
+                              ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 scale-105 animate-pulse'
                               : 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/20'
                             : isDark
                             ? 'bg-zinc-800 text-zinc-300 hover:bg-white hover:text-black'
                             : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-900 hover:text-white'
                         }`}
                       >
-                        {isActivePlan ? (isEn ? 'Currently Selected' : 'Actuellement Sélectionné') : (isEn ? 'Select This Plan' : 'Sélectionner ce Forfait')}
+                        {isActivePlan
+                          ? usedSeconds >= quota.maxSeconds
+                            ? (isEn ? 'RENEW PLAN' : 'SE RÉABONNER')
+                            : (isEn ? 'ACTIVE PLAN' : 'FORFAIT ACTIF')
+                          : (isEn ? 'Select This Plan' : 'Sélectionner ce Forfait')}
                       </button>
                     </div>
                   );

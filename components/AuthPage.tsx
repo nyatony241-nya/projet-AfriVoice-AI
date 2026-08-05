@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Toast } from './ToastContainer';
+import { triggerCelebration } from './ConfettiHelper';
 
 interface AuthPageProps {
   onAuthSuccess: () => void;
@@ -50,6 +51,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
       addToast('error', isEn ? 'Invalid Code' : 'Code Invalide', error.message);
     } else {
       addToast('success', isEn ? 'Connected' : 'Connecté', isEn ? 'Welcome to AfriVoice Studio.' : 'Bienvenue sur AfriVoice Studio.');
+      triggerCelebration();
       onAuthSuccess();
     }
   };

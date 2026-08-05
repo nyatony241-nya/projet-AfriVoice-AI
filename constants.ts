@@ -41,48 +41,51 @@ export const BG_MUSIC_TRACKS: BackgroundMusic[] = [
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'free',
-    name: 'FREE – Découverte',
-    price: '0 FCFA',
-    description: 'Pour tester la voix de l’Afrique',
+    name: 'STARTER',
+    price: '1 900 FCFA',
+    description: 'Pour démarrer la voix off africaine',
     color: 'stone',
     features: [
-      '3 générations / jour',
-      '30 secondes max / audio',
-      '5 pays débloqués',
-      'Accent léger standard',
-      'MP3 standard',
-      'Filigrane audio non commercial'
+      '10 minutes / mois sécurisées',
+      '5 pays d’Afrique débloqués',
+      'Voix standards de base',
+      'Qualité audio standard MP3',
+      'Utilisation personnelle uniquement',
+      '❌ Pas d’Expressions Locales ni d’Humanisation IA',
+      '❌ Pas de Mastering ni de Clonage Vocal'
     ]
   },
   {
     id: 'creator',
     name: 'CREATOR',
-    price: '3 500 FCFA',
-    description: 'Créateurs TikTok & YouTube',
+    price: '4 900 FCFA',
+    description: 'Créateurs de contenu & Réseaux Sociaux',
     color: 'amber',
     isPopular: true,
     features: [
-      '60 minutes / mois sécurisées',
-      '20 pays & tous les accents',
-      'Expressions Locales & Accent Typique',
-      'Sans filigrane • Export MP3 + WAV',
-      'Utilisation commerciale monétisée',
-      'Mastering audio de base'
+      '30 minutes / mois sécurisées',
+      '20 pays & tous les accents débloqués',
+      'Expressions Locales Africaines incluses',
+      '✨ Humanisation Phonétique IA incluse',
+      'Qualité audio Haute Définition MP3 + WAV',
+      'Mastering audio de base standard',
+      'Utilisation commerciale autorisée'
     ]
   },
   {
     id: 'pro',
-    name: 'PRO – Business HD',
-    price: '9 900 FCFA',
-    description: 'Studios, Médias & Podcasts',
+    name: 'PRO – STUDIO HD',
+    price: '8 900 FCFA',
+    description: 'Studios, Entreprises & Publicités HD',
     color: 'indigo',
     features: [
-      '160 minutes / mois sécurisées',
+      '60 minutes / mois sécurisées',
       '🧬 Clonage Vocal Instantané (1 Voix)',
       'Qualité Studio HD 24kHz PCM',
-      'Expressions & Émotions radio',
-      'Console de Mastering HD + Afrobeat',
-      'Support prioritaire par e-mail'
+      'Expressions locales & Humanisation IA',
+      'Console de Mastering HD + Beats Afrobeat',
+      'Intégration musique de fond illimitée',
+      'Support prioritaire par e-mail 24/7'
     ]
   }
 ];
@@ -90,48 +93,51 @@ export const PRICING_PLANS: PricingPlan[] = [
 export const PRICING_PLANS_EN: PricingPlan[] = [
   {
     id: 'free',
-    name: 'FREE – Discovery',
-    price: '0 FCFA ($0)',
-    description: 'To test the voice of Africa',
+    name: 'STARTER',
+    price: '1,900 FCFA ($3.00)',
+    description: 'To start with African voice-over',
     color: 'stone',
     features: [
-      '3 generations / day',
-      '30 seconds max / audio',
-      '5 countries unlocked',
-      'Standard light accent',
-      'Standard MP3 quality',
-      'Non-commercial audio watermark'
+      '10 minutes / month secured',
+      '5 unlocked African countries',
+      'Standard basic voices',
+      'Standard MP3 audio quality',
+      'Personal use only',
+      '❌ No Local Expressions or AI Humanization',
+      '❌ No Mastering or Voice Cloning'
     ]
   },
   {
     id: 'creator',
     name: 'CREATOR',
-    price: '3,500 FCFA ($6)',
-    description: 'TikTok & YouTube Creators',
+    price: '4,900 FCFA ($8.00)',
+    description: 'Content Creators & Social Media',
     color: 'amber',
     isPopular: true,
     features: [
-      '60 minutes / month secured',
-      '20 countries & all accents',
-      'Local Expressions & Authentic Accent',
-      'No watermark • MP3 + WAV export',
-      'Monetized commercial use',
-      'Basic audio mastering'
+      '30 minutes / month secured',
+      '20 countries & all accents unlocked',
+      'Local African Expressions included',
+      '✨ AI Phonetic Humanization included',
+      'High Definition MP3 + WAV exports',
+      'Standard basic audio mastering',
+      'Commercial use authorized'
     ]
   },
   {
     id: 'pro',
-    name: 'PRO – Business HD',
-    price: '9,900 FCFA ($16.50)',
-    description: 'Studios, Media & Podcasts',
+    name: 'PRO – STUDIO HD',
+    price: '8,900 FCFA ($14.50)',
+    description: 'Studios, Business & HD Advertisements',
     color: 'indigo',
     features: [
-      '160 minutes / month secured',
+      '60 minutes / month secured',
       '🧬 Instant Voice Cloning (1 Voice)',
       'HD Studio Quality 24kHz PCM',
-      'Radio expressions & emotions',
-      'HD Mastering Console + Afrobeat',
-      'Priority email support'
+      'Local expressions & AI Humanization',
+      'HD Mastering Console + Afrobeat Beats',
+      'Unlimited background music integration',
+      'Priority email support 24/7'
     ]
   }
 ];
