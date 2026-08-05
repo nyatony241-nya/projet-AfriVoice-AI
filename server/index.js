@@ -309,15 +309,14 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
     }
     const ai = global.aiClientCache.get(apiKey);
 
-    const systemInstruction = contents !== script
-      ? contents.replace(/\[TRANSCRIPT - READ ONLY THIS TEXT\]\n<transcript>[\s\S]*?<\/transcript>\s*$/m, '').trim()
-      : undefined;
+    const fullPrompt = contents !== script
+      ? `${contents}`
+      : script;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-preview-tts',
-      contents: [{ role: 'user', parts: [{ text: script }] }],
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
       config: {
-        systemInstruction,
         responseModalities: ["AUDIO"],
         speechConfig: {
           voiceConfig: {
