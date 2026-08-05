@@ -75,8 +75,7 @@ function buildDirectorPrompt(params: {
     "3. Sound like a real native person from " + countryName + " - never generic or robotic.",
   ].filter((l): l is string => Boolean(l));
 
-  return { systemInstruction: lines.join("
-"), actualVoiceId };
+  return { directorBrief: lines.join("\n"), actualVoiceId };
 }
 
 const aiClientCache = new Map<string, GoogleGenAI>();
@@ -136,7 +135,7 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    const { systemInstruction, actualVoiceId } = buildDirectorPrompt({
+    const { directorBrief, actualVoiceId } = buildDirectorPrompt({
       voiceVariant: options?.voiceVariant,
       countryName: options?.countryName || "Africa",
       gender: options?.gender || "female",
@@ -146,13 +145,18 @@ export default async function handler(req: any, res: any) {
       personality: options?.personality,
     });
 
+    // Pour Gemini TTS, les instructions doivent etre dans le texte, pas dans systemInstruction.
+    // On construit un prompt narratif : instructions + script.
+    const fullPrompt = directorBrief
+      ? `${directorBrief}\n\nSpeak this text now:\n${script.trim()}`
+      : script.trim();
+
     const ai = getAiClient(apiKey);
 
     const geminiResponse = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ role: "user", parts: [{ text: script.trim() }] }],
+      contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
       config: {
-        systemInstruction,
         responseModalities: ["AUDIO"],
         speechConfig: {
           voiceConfig: {
@@ -165,6 +169,7 @@ export default async function handler(req: any, res: any) {
     const part = geminiResponse.candidates?.[0]?.content?.parts?.[0];
     const audioData = (part as any)?.inlineData?.data;
     const mimeType = (part as any)?.inlineData?.mimeType || "audio/L16;rate=24000";
+
 
     if (!audioData) {
       return res.status(500).json({
