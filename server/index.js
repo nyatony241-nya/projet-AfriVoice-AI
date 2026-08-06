@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import multer from 'multer';
 import { humanizeScript } from './services/phonetic-humanizer/index.js';
 
 dotenv.config();
@@ -346,8 +347,107 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
   }
 });
 
+// ── ElevenLabs Voice Cloning API Endpoints ──────────────────────
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/clone-voice', upload.single('audio'), async (req, res) => {
+  try {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({
+        error: "Clé API ElevenLabs non configurée. Veuillez ajouter ELEVENLABS_API_KEY dans votre fichier .env.local."
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "Aucun fichier audio n'a été fourni pour le clonage." });
+    }
+
+    const name = req.body.name || 'Ma Voix Clonée';
+    const blob = new Blob([req.file.buffer], { type: req.file.mimetype || 'audio/wav' });
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('files', blob, req.file.originalname || 'sample.wav');
+
+    const elevenRes = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey,
+      },
+      body: formData,
+    });
+
+    const data = await elevenRes.json();
+    if (!elevenRes.ok) {
+      console.error('ElevenLabs Clone Error:', data);
+      return res.status(elevenRes.status).json({
+        error: data.detail?.message || data.message || "Erreur lors de la création du clone vocal chez ElevenLabs."
+      });
+    }
+
+    console.log(`✅ [ElevenLabs Clone] Voix clonée créée: ${name} (${data.voice_id})`);
+    return res.json({ voice_id: data.voice_id, name });
+  } catch (err) {
+    console.error('❌ Error /api/clone-voice:', err);
+    return res.status(500).json({ error: err.message || 'Erreur interne lors du clonage vocal.' });
+  }
+});
+
+app.post('/api/generate-cloned', async (req, res) => {
+  try {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({
+        error: "Clé API ElevenLabs non configurée. Veuillez ajouter ELEVENLABS_API_KEY dans votre .env.local."
+      });
+    }
+
+    const { voiceId, script } = req.body;
+    if (!voiceId || !script) {
+      return res.status(400).json({ error: "voiceId et script sont requis." });
+    }
+
+    const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey,
+        'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text: script,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        },
+      }),
+    });
+
+    if (!elevenRes.ok) {
+      const errJson = await elevenRes.json().catch(() => ({}));
+      console.error('ElevenLabs TTS Error:', errJson);
+      return res.status(elevenRes.status).json({
+        error: errJson.detail?.message || "Échec de la génération avec la voix clonée ElevenLabs."
+      });
+    }
+
+    const audioBuffer = await elevenRes.arrayBuffer();
+    const base64Audio = Buffer.from(audioBuffer).toString('base64');
+
+    console.log(`✅ [ElevenLabs TTS] Audio voix clonée généré (${audioBuffer.byteLength} octets)`);
+    return res.json({ base64Audio, mimeType: 'audio/mpeg' });
+  } catch (err) {
+    console.error('❌ Error /api/generate-cloned:', err);
+    return res.status(500).json({ error: err.message || 'Erreur lors de la génération avec la voix clonée.' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 AfriVoice AI Voice Director v3 — port ${PORT}`);
   console.log(`🎯 Moteur: Narrative-Driven Director → Voice DNA (20 pays) → Scene-Based Prompts`);
   console.log(`🔑 Gemini: ${process.env.GEMINI_API_KEY ? '✅ Configurée' : '❌ NON CONFIGURÉE!'}`);
+  console.log(`🧬 ElevenLabs: ${process.env.ELEVENLABS_API_KEY ? '✅ Configurée' : '⚠️ NON CONFIGURÉE'}`);
 });
+

@@ -145,3 +145,10 @@ export interface QuotaUsage {
   remainingGenerationsToday?: number;
 }
 
+export interface ClonedVoiceProfile {
+  elevenLabsVoiceId: string;
+  name: string;
+  createdAt: number;
+  usedSeconds: number;     // quota cloné utilisé ce mois
+  maxSeconds: number;      // 15 * 60 = 900 secondes
+}

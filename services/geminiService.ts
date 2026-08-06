@@ -176,3 +176,58 @@ export const generateVoiceOver = async (
   const blob = await base64Response.blob();
   return { blob, float32Samples: new Float32Array(0), sampleRate: 24000 };
 };
+
+/**
+ * Generates audio using ElevenLabs Cloned Voice endpoint.
+ */
+export const generateClonedVoiceOver = async (
+  script: string,
+  elevenLabsVoiceId: string
+): Promise<GeminiAudioResult> => {
+  const isDev = import.meta.env.DEV;
+  let backendUrl = '/api/generate-cloned';
+  if (isDev && typeof window !== 'undefined') {
+    const hostname = window.location.hostname || 'localhost';
+    backendUrl = `http://${hostname}:3005/api/generate-cloned`;
+  }
+
+  let token: string | undefined;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token;
+  } catch {
+    token = undefined;
+  }
+
+  const response = await fetch(backendUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ script, voiceId: elevenLabsVoiceId }),
+  });
+
+  const rawText = await response.text();
+  let data: any;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(`Erreur serveur (${response.status}) lors de la génération voix clonée.`);
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error || `Erreur serveur ${response.status}.`);
+  }
+
+  if (!data.base64Audio) {
+    throw new Error('Aucune donnée audio reçue du serveur pour la voix clonée.');
+  }
+
+  const mimeType = data.mimeType || 'audio/mpeg';
+  const base64Response = await fetch(`data:${mimeType};base64,${data.base64Audio}`);
+  const blob = await base64Response.blob();
+
+  return { blob, float32Samples: new Float32Array(0), sampleRate: 24000 };
+};
+

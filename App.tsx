@@ -10,7 +10,8 @@ import WaveformPlayer from './components/WaveformPlayer';
 import QuotaBar from './components/QuotaBar';
 import ToastContainer, { Toast } from './components/ToastContainer';
 import AuditModal from './components/AuditModal';
-import { generateVoiceOver } from './services/geminiService';
+import VoiceClonePanel from './components/VoiceClonePanel';
+import { generateVoiceOver, generateClonedVoiceOver } from './services/geminiService';
 import { mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './services/audioUtils';
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
@@ -47,6 +48,23 @@ const App: React.FC = () => {
   const [bonusSeconds, setBonusSeconds] = useState<number>(0);
   const [lastGenTimestamp, setLastGenTimestamp] = useState<number>(0);
   const [recentGenerationsCount, setRecentGenerationsCount] = useState<number>(0);
+
+  // Cloned Voice State
+  const [clonedVoiceProfile, setClonedVoiceProfile] = useState<import('./types').ClonedVoiceProfile | null>(() => {
+    const saved = localStorage.getItem('AFRIVOICE_CLONED_VOICE');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (clonedVoiceProfile) {
+      localStorage.setItem('AFRIVOICE_CLONED_VOICE', JSON.stringify(clonedVoiceProfile));
+    } else {
+      localStorage.removeItem('AFRIVOICE_CLONED_VOICE');
+    }
+  }, [clonedVoiceProfile]);
 
   // Auth State
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
@@ -403,30 +421,46 @@ const App: React.FC = () => {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       }
 
-      // Sélection de la voix Gemini en fonction du genre
-      const selectedVoiceId = settings.gender === 'female' 
-        ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
-        : (selectedCountry.geminiVoiceMale || 'Puck');
+      // Sélection & Génération (Voix Clonée vs Gemini)
+      let result;
+      if (settings.isClonedVoice && clonedVoiceProfile) {
+        if (clonedVoiceProfile.usedSeconds >= clonedVoiceProfile.maxSeconds) {
+          setStatus((prev) => ({
+            ...prev,
+            error: isEn
+              ? 'Cloned voice quota exhausted (15 min/month max). Please recharge or use standard voices.'
+              : 'Quota de voix clonée épuisé (15 min/mois max). Veuillez recharger ou utiliser les voix standards.',
+          }));
+          addToast('warning', isEn ? 'Cloned Voice Limit Reached' : 'Quota Voix Clonée Épuisé', isEn ? 'You have used your 15 minutes of cloned voice synthesis.' : 'Vous avez utilisé vos 15 minutes de voix clonée ce mois.');
+          return;
+        }
 
-      const result = await generateVoiceOver(script, selectedVoiceId, {
-        countryId: selectedCountry.id,
-        countryName: selectedCountry.name,
-        accentDescription: selectedCountry.accentDescription,
-        gender: settings.gender,
-        voiceVariant: settings.voiceVariant || 'voice1',
-        isClonedVoice: settings.isClonedVoice,
-        age: settings.age,
-        emotion: settings.emotion,
-        style: settings.style,
-        useLocalExpressions: settings.useLocalExpressions,
-        phoneticHumanizer: settings.phoneticHumanizer,
-        speed: settings.speed,
-        pitch: settings.pitch,
-        accentLevel: settings.accentLevel,
-        contentStyle: settings.contentStyle,
-        personality: settings.personality,
-        vocalObjective: settings.vocalObjective,
-      });
+        result = await generateClonedVoiceOver(script, clonedVoiceProfile.elevenLabsVoiceId);
+      } else {
+        const selectedVoiceId = settings.gender === 'female' 
+          ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
+          : (selectedCountry.geminiVoiceMale || 'Puck');
+
+        result = await generateVoiceOver(script, selectedVoiceId, {
+          countryId: selectedCountry.id,
+          countryName: selectedCountry.name,
+          accentDescription: selectedCountry.accentDescription,
+          gender: settings.gender,
+          voiceVariant: settings.voiceVariant || 'voice1',
+          isClonedVoice: settings.isClonedVoice,
+          age: settings.age,
+          emotion: settings.emotion,
+          style: settings.style,
+          useLocalExpressions: settings.useLocalExpressions,
+          phoneticHumanizer: settings.phoneticHumanizer,
+          speed: settings.speed,
+          pitch: settings.pitch,
+          accentLevel: settings.accentLevel,
+          contentStyle: settings.contentStyle,
+          personality: settings.personality,
+          vocalObjective: settings.vocalObjective,
+        });
+      }
 
       let buffer: AudioBuffer;
 
@@ -448,6 +482,10 @@ const App: React.FC = () => {
       // Account for exact audio duration inside Quota safety tracker
       const estimatedSeconds = Math.max(5, Math.round(buffer.duration || script.length / 14));
       setUsedSeconds((prev) => prev + estimatedSeconds);
+
+      if (settings.isClonedVoice && clonedVoiceProfile) {
+        setClonedVoiceProfile((prev) => prev ? { ...prev, usedSeconds: prev.usedSeconds + estimatedSeconds } : null);
+      }
 
       // Convert blob to base64 for history storage
       const reader = new FileReader();
@@ -941,7 +979,28 @@ const App: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Emotion */}
+                    {/* Voice Clone Section */}
+                    <div className="pt-2 pb-2">
+                      <VoiceClonePanel
+                        isPro={isCloningFeature}
+                        isDark={isDark}
+                        isEn={isEn}
+                        clonedVoiceProfile={clonedVoiceProfile}
+                        onSaveProfile={(prof) => setClonedVoiceProfile(prof)}
+                        onDeleteProfile={() => {
+                          setClonedVoiceProfile(null);
+                          setSettings((prev) => ({ ...prev, isClonedVoice: false }));
+                        }}
+                        onSelectClonedVoice={(active) => setSettings((prev) => ({ ...prev, isClonedVoice: active }))}
+                        isClonedVoiceActive={!!settings.isClonedVoice}
+                        addToast={addToast}
+                        onRechargeCloneQuota={() => {
+                          setShowRechargeModal(true);
+                          addToast('info', isEn ? 'Recharge Menu' : 'Recharge de Minutes', isEn ? 'Select a top-up pack to continue.' : 'Sélectionnez un pack de recharge pour votre quota.');
+                        }}
+                      />
+                    </div>
+
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
