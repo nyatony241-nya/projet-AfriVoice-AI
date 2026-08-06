@@ -1031,17 +1031,25 @@ const App: React.FC = () => {
                     </div>
 
                     {/* ── AI Voice Director: Accent Level ────────── */}
-                    <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-white/5">
-                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                          {isEn ? 'Accent Intensity' : 'Intensité de l\'Accent'}
-                        </label>
+                    <div className={`space-y-3 pt-6 border-t border-zinc-200 dark:border-white/5 transition-opacity duration-200 ${settings.isClonedVoice ? 'opacity-35 pointer-events-none' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
+                            {isEn ? 'Accent Intensity' : 'Intensité de l\'Accent'}
+                          </label>
+                          {settings.isClonedVoice && (
+                            <span className="text-[10px] font-black bg-zinc-800 text-zinc-400 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                              {isEn ? 'Fixed by Clone' : 'Fixé par le Clone'}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-2">
                           {(['light', 'medium', 'strong'] as AccentLevel[]).map((level) => (
                             <button
                               key={level}
+                              disabled={settings.isClonedVoice}
                               onClick={() => setSettings({ ...settings, accentLevel: level })}
-                              className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border ${
-                                settings.accentLevel === level
+                              className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border disabled:cursor-not-allowed ${
+                                settings.accentLevel === level && !settings.isClonedVoice
                                   ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
                                   : isDark
                                   ? 'bg-[#09090B] text-zinc-400 border-white/5 hover:border-white/20'
@@ -1166,22 +1174,29 @@ const App: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className={`space-y-3 transition-opacity duration-200 ${settings.isClonedVoice ? 'opacity-35 pointer-events-none' : ''}`}>
                         <div className="flex justify-between items-center">
                           <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
                             {isEn ? 'Apparent Voice Age' : 'Âge apparent'}
                           </label>
-                          <span className="text-sm font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
-                            {settings.age} {isEn ? 'Y.O.' : 'ANS'}
-                          </span>
+                          {settings.isClonedVoice ? (
+                            <span className="text-[10px] font-black bg-zinc-800 text-zinc-400 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                              {isEn ? 'Fixed by Clone' : 'Fixé par le Clone'}
+                            </span>
+                          ) : (
+                            <span className="text-sm font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
+                              {settings.age} {isEn ? 'Y.O.' : 'ANS'}
+                            </span>
+                          )}
                         </div>
                         <input
                           type="range"
                           min="18"
                           max="70"
                           value={settings.age}
+                          disabled={settings.isClonedVoice}
                           onChange={(e) => setSettings({ ...settings, age: parseInt(e.target.value) })}
-                          className="w-full h-3 mt-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                          className="w-full h-3 mt-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
                         />
                         <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-tight">
                           <span>{isEn ? 'Young (18)' : 'Jeune (18)'}</span>
