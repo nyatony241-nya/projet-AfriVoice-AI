@@ -182,7 +182,26 @@ export const generateVoiceOver = async (
  */
 export const generateClonedVoiceOver = async (
   script: string,
-  elevenLabsVoiceId: string
+  elevenLabsVoiceId: string,
+  options?: {
+    countryId?: string;
+    countryName?: string;
+    accentDescription?: string;
+    gender?: string;
+    voiceVariant?: string;
+    isClonedVoice?: boolean;
+    age?: number;
+    emotion?: string;
+    style?: string;
+    useLocalExpressions?: boolean;
+    phoneticHumanizer?: boolean;
+    speed?: number;
+    pitch?: number;
+    accentLevel?: AccentLevel;
+    contentStyle?: ContentStyle;
+    personality?: VocalPersonality;
+    vocalObjective?: VocalObjective;
+  }
 ): Promise<GeminiAudioResult> => {
   const isDev = import.meta.env.DEV;
   let backendUrl = '/api/generate-cloned';
@@ -205,7 +224,7 @@ export const generateClonedVoiceOver = async (
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ script, voiceId: elevenLabsVoiceId }),
+    body: JSON.stringify({ script, voiceId: elevenLabsVoiceId, speed: options?.speed, options }),
   });
 
   const rawText = await response.text();

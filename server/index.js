@@ -403,9 +403,18 @@ app.post('/api/generate-cloned', async (req, res) => {
       });
     }
 
-    const { voiceId, script } = req.body;
+    const { voiceId, script, speed, options } = req.body;
     if (!voiceId || !script) {
       return res.status(400).json({ error: "voiceId et script sont requis." });
+    }
+
+    const countryId = options?.countryId || 'CI';
+    let finalText = script;
+    if (options?.phoneticHumanizer !== false) {
+      finalText = humanizeScript(script, countryId, {
+        contentStyle: options?.contentStyle,
+        emotion: options?.emotion,
+      });
     }
 
     const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -416,12 +425,15 @@ app.post('/api/generate-cloned', async (req, res) => {
         'Accept': 'audio/mpeg',
       },
       body: JSON.stringify({
-        text: script,
+        text: finalText,
         model_id: 'eleven_multilingual_v2',
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+          similarity_boost: 0.82,
+          stability: 0.40,
+          style: 0.35,
+          use_speaker_boost: true,
         },
+        ...(speed && speed !== 1.0 ? { speed } : {}),
       }),
     });
 

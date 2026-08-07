@@ -435,7 +435,25 @@ const App: React.FC = () => {
           return;
         }
 
-        result = await generateClonedVoiceOver(script, clonedVoiceProfile.elevenLabsVoiceId);
+        result = await generateClonedVoiceOver(script, clonedVoiceProfile.elevenLabsVoiceId, {
+          countryId: selectedCountry.id,
+          countryName: selectedCountry.name,
+          accentDescription: selectedCountry.accentDescription,
+          gender: settings.gender,
+          voiceVariant: settings.voiceVariant || 'voice1',
+          isClonedVoice: settings.isClonedVoice,
+          age: settings.age,
+          emotion: settings.emotion,
+          style: settings.style,
+          useLocalExpressions: settings.useLocalExpressions,
+          phoneticHumanizer: settings.phoneticHumanizer,
+          speed: settings.speed,
+          pitch: settings.pitch,
+          accentLevel: settings.accentLevel,
+          contentStyle: settings.contentStyle,
+          personality: settings.personality,
+          vocalObjective: settings.vocalObjective,
+        });
       } else {
         const selectedVoiceId = settings.gender === 'female' 
           ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
@@ -1031,14 +1049,14 @@ const App: React.FC = () => {
                     </div>
 
                     {/* ── AI Voice Director: Accent Level ────────── */}
-                    <div className={`space-y-3 pt-6 border-t border-zinc-200 dark:border-white/5 transition-opacity duration-200 ${settings.isClonedVoice ? 'opacity-35 pointer-events-none' : ''}`}>
+                    <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-white/5">
                         <div className="flex items-center justify-between">
                           <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
                             {isEn ? 'Accent Intensity' : 'Intensité de l\'Accent'}
                           </label>
                           {settings.isClonedVoice && (
-                            <span className="text-[10px] font-black bg-zinc-800 text-zinc-400 dark:bg-white/10 px-2 py-0.5 rounded-full">
-                              {isEn ? 'Fixed by Clone' : 'Fixé par le Clone'}
+                            <span className="text-[10px] font-black bg-[#D4FF00] text-black px-2.5 py-0.5 rounded-full">
+                              {isEn ? '🧬 Applied to Clone' : '🧬 Appliqué au Clone'}
                             </span>
                           )}
                         </div>
@@ -1046,10 +1064,9 @@ const App: React.FC = () => {
                           {(['light', 'medium', 'strong'] as AccentLevel[]).map((level) => (
                             <button
                               key={level}
-                              disabled={settings.isClonedVoice}
                               onClick={() => setSettings({ ...settings, accentLevel: level })}
-                              className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border disabled:cursor-not-allowed ${
-                                settings.accentLevel === level && !settings.isClonedVoice
+                              className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border ${
+                                settings.accentLevel === level
                                   ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
                                   : isDark
                                   ? 'bg-[#09090B] text-zinc-400 border-white/5 hover:border-white/20'
