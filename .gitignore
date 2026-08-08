@@ -26,3 +26,7 @@ dist-ssr
 *.sw?
 *.mp4
 remotion/publicite-afrivoice.mp4
+
+# Generated Logos
+public/logo_afrivoice*
+

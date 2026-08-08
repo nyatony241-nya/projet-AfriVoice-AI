@@ -3,8 +3,8 @@ import { PricingPlan, Language } from '../types';
 import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
-  activeTab: 'studio' | 'mastering' | 'history' | 'pricing';
-  onTabChange: (tab: 'studio' | 'mastering' | 'history' | 'pricing') => void;
+  activeTab: 'studio' | 'history' | 'pricing';
+  onTabChange: (tab: 'studio' | 'history' | 'pricing') => void;
   currentPlan: PricingPlan;
   isDark: boolean;
   historyCount: number;
@@ -35,16 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'mastering' as const,
-      label: 'Console Mastering',
-      badge: currentPlan.id === 'pro' ? 'HD' : 'PRO',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
         </svg>
       ),
     },
@@ -82,16 +72,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       ),
     },
     {
-      id: 'mastering' as const,
-      label: 'Mastering Console',
-      badge: currentPlan.id === 'pro' ? 'HD' : 'PRO',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-        </svg>
-      ),
-    },
-    {
       id: 'history' as const,
       label: 'Audio Library & History',
       badge: historyCount > 0 ? `${historyCount}` : undefined,
@@ -121,22 +101,21 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div>
           {/* Unified Logo */}
           <div className="flex items-center gap-2.5 sm:gap-3 mb-8 pl-1 group cursor-pointer" onClick={() => onTabChange('studio')}>
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shrink-0 border relative overflow-hidden group ${
-              isDark
-                ? 'bg-gradient-to-br from-[#D4FF00] to-[#84CC16] text-black shadow-[#D4FF00]/20 border-[#D4FF00]/50'
-                : 'bg-gradient-to-br from-[#D4FF00] to-[#A3E635] text-black shadow-[#D4FF00]/30 border-[#D4FF00]/60'
-            }`}>
-              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <img src="/logo.png" alt="AfriVoice" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#09090B] border-2 border-[#D4FF00] flex items-center justify-center shadow-lg shadow-[#D4FF00]/15 shrink-0 relative overflow-hidden group">
+              <svg viewBox="0 0 100 100" className="w-5 h-5 sm:w-6 sm:h-6 text-[#D4FF00] group-hover:scale-110 transition-transform duration-300">
+                <path d="M25 28 L50 82 L75 28" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M50 20 V52" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+                <circle cx="50" cy="20" r="6" fill="currentColor" />
+                <path d="M40 38 C40 48 60 48 60 38" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                <path d="M50 52 V62" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+              </svg>
             </div>
             <div className="flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
                 <span className={`text-base sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
                   AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
                 </span>
-                <span className={`text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shadow-xs ${
-                  'bg-[#D4FF00] text-black'
-                }`}>
+                <span className="text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shadow-xs bg-[#D4FF00] text-black">
                   {currentPlan.id.toUpperCase()}
                 </span>
               </div>

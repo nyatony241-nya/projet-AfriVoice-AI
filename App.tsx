@@ -23,14 +23,42 @@ const MAX_HISTORY_ITEMS = 5;
 
 const App: React.FC = () => {
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<'studio' | 'mastering' | 'history' | 'pricing'>('studio');
+  const [activeTab, setActiveTab] = useState<'studio' | 'history' | 'pricing'>('studio');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isOpenMobileSidebar, setIsOpenMobileSidebar] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('AFRIVOICE_LANG') as Language) || 'fr');
   const isEn = language === 'en';
+
+  // Listen for PWA beforeinstallprompt event
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleTriggerPWAInstall = async () => {
+    if (deferredInstallPrompt) {
+      try {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice.outcome === 'accepted') {
+          addToast('success', isEn ? 'App Installed!' : 'Application Installée !', isEn ? 'AfriVoice AI is now installed on your device.' : 'AfriVoice AI est maintenant installée sur votre appareil.');
+          setDeferredInstallPrompt(null);
+        }
+      } catch (err) {
+        setIsInstallModalOpen(true);
+      }
+    } else {
+      setIsInstallModalOpen(true);
+    }
+  };
 
   // Core Application & Pricing Plan States
   const [currentPlan, setCurrentPlan] = useState<PricingPlan>(() => {
@@ -592,7 +620,13 @@ const App: React.FC = () => {
       <audio ref={previewAudioRef} preload="auto" hidden />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} isDark={isDark} />
       <AuditModal isOpen={isAuditModalOpen} onClose={() => setIsAuditModalOpen(false)} isDark={isDark} />
-      <InstallAppModal isOpen={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} isDark={isDark} />
+      <InstallAppModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        isDark={isDark}
+        language={language}
+        onInstallPWA={deferredInstallPrompt ? handleTriggerPWAInstall : undefined}
+      />
 
       {/* Recharge Modal */}
       {showRechargeModal && (
@@ -682,7 +716,7 @@ const App: React.FC = () => {
         onCloseMobile={() => setIsOpenMobileSidebar(false)}
         language={language}
         onOpenAuditModal={() => setIsAuditModalOpen(true)}
-        onOpenInstallModal={() => setIsInstallModalOpen(true)}
+        onOpenInstallModal={handleTriggerPWAInstall}
       />
 
       {/* Main Content Area */}
@@ -1183,7 +1217,7 @@ const App: React.FC = () => {
                       ))}
                     </div>
                     <p className="text-[10px] text-center font-mono text-zinc-500 uppercase tracking-widest">
-                      {isEn ? 'AI Generation in progress • Gemini TTS HD Model' : 'Génération IA en cours • Modèle Gemini TTS HD'}
+                      {isEn ? 'Voice generation in progress...' : 'Génération de la voix en cours...'}
                     </p>
                   </div>
                 )}
@@ -1293,141 +1327,6 @@ const App: React.FC = () => {
                   </div>
                 )}
               </section>
-            </div>
-          )}
-
-          {/* TAB 2: CONSOLE DE MASTERING HD (Mixing Voice + Background Music) */}
-          {activeTab === 'mastering' && (
-            <div className="max-w-4xl mx-auto animate-in fade-in duration-300 space-y-8">
-              <div
-                className={`p-8 sm:p-10 rounded-[40px] border ${
-                  isDark
-                    ? 'bg-[#14151C] border-white/10 shadow-2xl'
-                    : 'bg-white border-[#E4E4E7] shadow-xl shadow-[#D4FF00]/5'
-                }`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-zinc-200 dark:border-white/10">
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-[#D4FF00]">
-                      HD Mixing Engine
-                    </span>
-                    <h2 className="text-2xl font-black tracking-tight mt-1">{isEn ? 'Studio Mastering Console' : 'Console de Mastering Studio'}</h2>
-                    <p className="text-xs text-zinc-500 font-medium mt-1">
-                      {isEn ? 'Adjust and amplify the final vocal track volume.' : 'Ajustez et amplifiez le volume final de la piste vocale.'}
-                    </p>
-                  </div>
-                  {status.audioUrl && (
-                    <button
-                      onClick={() => {
-                        const a = document.createElement('a');
-                        a.href = status.audioUrl!;
-                        a.download = `afrivoice_mastered_${selectedCountry.id}.wav`;
-                        a.click();
-                      }}
-                      className="px-6 py-3 rounded-2xl bg-[#D4FF00] text-black font-black text-xs uppercase tracking-wider hover:scale-105 transition-transform shrink-0 shadow-lg"
-                    >
-                      {isEn ? 'Export Mastered Mix' : 'Exporter le Mix Masterisé'}
-                    </button>
-                  )}
-                </div>
-
-                {!status.audioUrl ? (
-                  <div className="py-16 text-center space-y-4">
-                    <div className="w-16 h-16 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-3xl">
-                      🎧
-                    </div>
-                    <h3 className="text-lg font-extrabold">{isEn ? 'No active vocal file in console' : 'Aucun fichier vocal actif dans la console'}</h3>
-                    <p className="text-xs text-zinc-500 max-w-md mx-auto">
-                      {isEn ? (
-                        <>First generate a voice in the <strong>Synthesis Studio</strong> or load audio from your <strong>Library</strong>.</>
-                      ) : (
-                        <>Générez d&apos;abord une voix dans l&apos;onglet <strong>Studio de Synthèse</strong> ou chargez un audio depuis votre <strong>Bibliothèque</strong>.</>
-                      )}
-                    </p>
-                    <button
-                      onClick={() => setActiveTab('studio')}
-                      className="mt-4 px-6 py-3 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-black font-black text-xs uppercase tracking-wider"
-                    >
-                      {isEn ? 'Go to Studio →' : 'Aller au Studio →'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    {/* Active Waveform Preview */}
-                    <WaveformPlayer
-                      audioUrl={status.audioUrl}
-                      onDownload={() => {
-                        const a = document.createElement('a');
-                        a.href = status.audioUrl!;
-                        a.download = `afrivoice_${selectedCountry.id}.wav`;
-                        a.click();
-                      }}
-                      isDark={isDark}
-                      countryFlag={selectedCountry.flag}
-                      countryName={selectedCountry.name}
-                    />
-
-                    {/* Mixing Sliders & Controls */}
-                    <div className="grid grid-cols-1 gap-8 p-6 sm:p-8 rounded-3xl bg-zinc-50 dark:bg-[#09090B] border border-zinc-200 dark:border-white/5">
-                      {/* Voice Volume */}
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
-                            {isEn ? 'AI Voice Volume' : 'Volume de la Voix IA'}
-                          </label>
-                          <span className="text-xs font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
-                            {mixer.voiceVolume}%
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="150"
-                          value={mixer.voiceVolume}
-                          onChange={(e) => setMixer({ ...mixer, voiceVolume: parseInt(e.target.value) })}
-                          className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                        />
-                        <p className="text-[10px] text-zinc-400 font-medium">{isEn ? 'Amplification or attenuation of the primary vocal track.' : 'Amplification ou atténuation de la piste vocale principale.'}</p>
-                      </div>
-                    </div>
-
-                    {/* Apply Mix Action Button */}
-                    <button
-                      onClick={() => {
-                        if (!isPremiumFeature) {
-                          addToast('warning', isEn ? '🔒 Plan Upgrade Required' : '🔒 Forfait Supérieur Requis', isEn ? 'Upgrade to PRO plan to apply HD mastering console mixes.' : 'Passez au forfait PRO pour appliquer le mastering console HD.');
-                          setActiveTab('pricing');
-                          return;
-                        }
-                        handleApplyMix();
-                      }}
-                      disabled={isApplyingMix}
-                      className={`w-full py-5 rounded-[24px] font-black text-base uppercase tracking-wider transition-all active:scale-98 shadow-xl flex items-center justify-center gap-2 ${
-                        isApplyingMix || !isPremiumFeature
-                          ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-2 border-dashed border-amber-500/50 shadow-none'
-                          : isDark
-                          ? 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/20'
-                          : 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/25'
-                      }`}
-                    >
-                      {!isPremiumFeature && <span>🔒</span>}
-                      <span>
-                        {isApplyingMix
-                          ? (isEn ? 'PROCESSING HD MASTERING...' : 'TRAITEMENT DU MASTERING EN COURS...')
-                          : !isPremiumFeature
-                          ? (isEn ? 'APPLY HD MASTERING (PRO ONLY)' : 'APPLIQUER LE MASTERING HD (PRO ONLY)')
-                          : (isEn ? 'APPLY HD MASTERING' : 'APPLIQUER LE MASTERING HD')}
-                      </span>
-                    </button>
-                    {!isPremiumFeature && (
-                      <p className="text-xs text-center font-extrabold text-amber-500 dark:text-amber-400 uppercase tracking-tight flex items-center justify-center gap-1">
-                        <span>🔒</span>
-                        <span>{isEn ? 'Multi-track mixing is reserved for CREATOR & PRO subscribers.' : 'L\'option de mixage sur piste est réservée aux abonnés CREATOR & PRO.'}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
           )}
 

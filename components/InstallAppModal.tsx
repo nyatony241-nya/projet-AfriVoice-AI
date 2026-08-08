@@ -5,9 +5,10 @@ interface InstallAppModalProps {
   onClose: () => void;
   isDark: boolean;
   language?: 'fr' | 'en';
+  onInstallPWA?: () => void;
 }
 
-const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClose, isDark, language = 'fr' }) => {
+const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClose, isDark, language = 'fr', onInstallPWA }) => {
   if (!isOpen) return null;
   const isEn = language === 'en';
 
@@ -32,8 +33,14 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClose, isDa
         </button>
 
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl overflow-hidden shadow-lg border border-[#D4FF00]/30">
-            <img src="/logo192.png" alt="AfriVoice App" className="w-full h-full object-cover" />
+          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl overflow-hidden shadow-lg border border-[#D4FF00]/30 bg-[#09090B] flex items-center justify-center">
+            <svg viewBox="0 0 100 100" className="w-12 h-12 text-[#D4FF00]">
+              <path d="M25 28 L50 82 L75 28" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M50 20 V52" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+              <circle cx="50" cy="20" r="6" fill="currentColor" />
+              <path d="M40 38 C40 48 60 48 60 38" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              <path d="M50 52 V62" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+            </svg>
           </div>
           <h2 className="text-2xl font-black tracking-tight mb-2">
             {isEn ? 'Install AfriVoice App' : 'Installer l\'application AfriVoice'}
@@ -41,6 +48,22 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClose, isDa
           <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
             {isEn ? 'Add the studio to your home screen for a full-screen, native experience without needing to open your browser.' : 'Ajoutez le studio à votre écran d\'accueil pour une expérience native plein écran sans ouvrir votre navigateur.'}
           </p>
+
+          {/* 1-Click PWA Trigger Button if supported */}
+          {onInstallPWA && (
+            <button
+              onClick={() => {
+                onInstallPWA();
+                onClose();
+              }}
+              className="mt-5 w-full py-4 rounded-2xl bg-[#D4FF00] text-black font-black text-sm uppercase tracking-wider shadow-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-2.5"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>{isEn ? '⚡ Install App in 1-Click' : '⚡ Installer l\'Application en 1-Clic'}</span>
+            </button>
+          )}
         </div>
 
         <div className="space-y-6">

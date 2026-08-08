@@ -6,8 +6,8 @@ interface HeaderProps {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onOpenKeyPicker: () => void;
-  activeTab: 'studio' | 'mastering' | 'history' | 'pricing';
-  onTabChange: (tab: 'studio' | 'mastering' | 'history' | 'pricing') => void;
+  activeTab: 'studio' | 'history' | 'pricing';
+  onTabChange: (tab: 'studio' | 'history' | 'pricing') => void;
   language?: Language;
   onToggleLanguage?: () => void;
   onOpenAuditModal?: () => void;
@@ -30,14 +30,12 @@ const Header: React.FC<HeaderProps> = ({
 
   const tabNamesFr: Record<string, string> = {
     studio: 'Studio de Synthèse',
-    mastering: 'Console de Mastering HD',
     history: 'Bibliothèque & Historique',
     pricing: 'Forfaits & Abonnement',
   };
 
   const tabNamesEn: Record<string, string> = {
     studio: 'AI Synthesis Studio',
-    mastering: 'HD Mastering Console',
     history: 'Audio Library & History',
     pricing: 'Plans & Subscription',
   };
@@ -53,21 +51,16 @@ const Header: React.FC<HeaderProps> = ({
       }`}
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-1.5 sm:gap-4">
-        {/* Left: Unified Logo & Title (Responsive across Web & Mobile) */}
+        {/* Left: Unified Logo & Title */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 cursor-pointer" onClick={() => onTabChange('studio')}>
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shrink-0 border relative overflow-hidden group ${
-              isDark
-                ? 'bg-gradient-to-br from-[#D4FF00] to-[#84CC16] text-black shadow-[#D4FF00]/20 border-[#D4FF00]/50'
-                : 'bg-gradient-to-br from-[#D4FF00] to-[#A3E635] text-black shadow-[#D4FF00]/30 border-[#D4FF00]/60'
-            }`}>
-              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 font-black drop-shadow-sm group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="22" strokeWidth={2.5} />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M22 9v4" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M2 9v4" />
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 cursor-pointer" onClick={() => onTabChange('studio')}>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#09090B] border-2 border-[#D4FF00] flex items-center justify-center shadow-lg shadow-[#D4FF00]/15 shrink-0 relative overflow-hidden group">
+              <svg viewBox="0 0 100 100" className="w-5 h-5 sm:w-6 sm:h-6 text-[#D4FF00] group-hover:scale-110 transition-transform duration-300">
+                <path d="M25 28 L50 82 L75 28" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M50 20 V52" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+                <circle cx="50" cy="20" r="6" fill="currentColor" />
+                <path d="M40 38 C40 48 60 48 60 38" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                <path d="M50 52 V62" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
               </svg>
             </div>
             <div className="flex flex-col justify-center min-w-0">
@@ -75,9 +68,7 @@ const Header: React.FC<HeaderProps> = ({
                 <span className={`text-sm sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
                   AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
                 </span>
-                <span className={`text-[7px] sm:text-[9px] font-black uppercase px-1 py-0.5 sm:px-1.5 rounded tracking-wider shadow-xs ${
-                  'bg-[#D4FF00] text-black'
-                }`}>
+                <span className="text-[7px] sm:text-[9px] font-black uppercase px-1 py-0.5 sm:px-1.5 rounded tracking-wider shadow-xs bg-[#D4FF00] text-black">
                   {currentPlan.id.toUpperCase()}
                 </span>
               </div>
