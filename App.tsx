@@ -508,19 +508,18 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error('Erreur lors de la génération vocale:', err?.message || 'Erreur inconnue');
       const isQuotaError = err?.message?.includes('429') || err?.message?.includes('quota') || err?.status === 429;
-      const isKeyNotFoundError = err?.message?.includes('Requested entity was not found.');
 
-      if (isKeyNotFoundError || isQuotaError) {
+      if (isQuotaError) {
         setShowQuotaError(true);
-        setStatus({ isGenerating: false, error: 'Cadence de génération trop rapide (Limite API gratuite).', audioUrl: null });
-        addToast('warning', 'Trop de requêtes', 'L\'API Google gratuite limite à 15 générations par minute. Veuillez patienter 60 secondes avant de réessayer.');
+        setStatus({ isGenerating: false, error: 'Cadence de génération élevée.', audioUrl: null });
+        addToast('warning', 'Cadence de génération élevée', 'Veuillez patienter quelques secondes avant de relancer une nouvelle génération.');
       } else {
         setStatus({
           isGenerating: false,
-          error: 'Erreur de génération. Vérifiez votre connexion ou réessayez.',
+          error: 'Génération temporairement indisponible. Réessayez dans un instant.',
           audioUrl: null,
         });
-        addToast('error', 'Échec de la synthèse', err?.message || 'Erreur lors de la communication avec le moteur audio.');
+        addToast('error', 'Génération interrompue', err?.message || 'Erreur lors de la communication avec le moteur audio.');
       }
     }
   };
@@ -781,9 +780,9 @@ const App: React.FC = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-black tracking-tight">Limite de cadence API atteinte</h3>
+                    <h3 className="text-lg font-black tracking-tight">Cadence de génération élevée</h3>
                     <p className="text-xs sm:text-sm font-medium opacity-80 mt-0.5">
-                      Vous avez généré trop de voix à la suite. La clé API Google gratuite est protégée par un système anti-spam limitant à 15 requêtes par minute. Veuillez patienter 60 secondes avant de cliquer à nouveau.
+                      Vous générez des voix à un rythme très rapide. Pour garantir une qualité audio optimale, veuillez patienter quelques secondes avant votre prochaine création.
                     </p>
                   </div>
                 </div>

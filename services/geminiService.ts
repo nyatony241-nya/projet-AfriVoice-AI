@@ -147,14 +147,18 @@ export const generateVoiceOver = async (
   try {
     data = JSON.parse(rawText);
   } catch {
-    // La réponse n'est pas du JSON valide (probablement une page HTML d'erreur Vercel)
-    throw new Error(
-      `Erreur serveur (${response.status}). Le serveur a renvoyé une réponse non-JSON. Vérifiez que GEMINI_API_KEY et les variables Supabase sont configurées dans Vercel.`
-    );
+    if (response.status === 504) {
+      throw new Error("Le serveur audio prend plus de temps que prévu. Veuillez réinterroger le studio dans un instant.");
+    }
+    throw new Error("Le service audio est temporairement indisponible. Veuillez réessayer dans quelques instants.");
   }
 
   if (!response.ok) {
-    throw new Error(data.error || `Erreur serveur ${response.status}.`);
+    const rawError = data.error || `Erreur ${response.status}`;
+    if (rawError.includes('API_KEY') || rawError.includes('GEMINI_API_KEY') || rawError.includes('Supabase')) {
+      throw new Error("Le service de synthèse vocale est momentanément indisponible. Veuillez réessayer dans un instant.");
+    }
+    throw new Error(rawError);
   }
 
   if (!data.base64Audio) {
