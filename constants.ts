@@ -52,7 +52,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Qualité audio standard MP3',
       'Utilisation personnelle uniquement',
       '❌ Pas d’Expressions Locales ni d’Humanisation IA',
-      '❌ Pas de Mastering ni de Clonage Vocal'
+      '❌ Pas de Mastering Avancé'
     ]
   },
   {
@@ -80,7 +80,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     color: 'indigo',
     features: [
       '60 minutes / mois sécurisées',
-      '🧬 Clonage Vocal Instantané (1 Voix)',
+      '⚡ Accès illimité aux 20 pays & accents',
       'Qualité Studio HD 24kHz PCM',
       'Expressions locales & Humanisation IA',
       'Console de Mastering HD + Beats Afrobeat',
@@ -104,7 +104,7 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
       'Standard MP3 audio quality',
       'Personal use only',
       '❌ No Local Expressions or AI Humanization',
-      '❌ No Mastering or Voice Cloning'
+      '❌ No Advanced Mastering'
     ]
   },
   {
@@ -132,7 +132,7 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     color: 'indigo',
     features: [
       '60 minutes / month secured',
-      '🧬 Instant Voice Cloning (1 Voice)',
+      '⚡ Unlimited access to 20 countries & accents',
       'HD Studio Quality 24kHz PCM',
       'Local expressions & AI Humanization',
       'HD Mastering Console + Afrobeat Beats',

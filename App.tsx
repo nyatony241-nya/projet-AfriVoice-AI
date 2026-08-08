@@ -151,7 +151,6 @@ const App: React.FC = () => {
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const isPremiumFeature = currentPlan.id === 'pro';
-  const isCloningFeature = currentPlan.id === 'pro';
   const isDark = theme === 'dark';
 
   // Toast Helpers
@@ -767,548 +766,365 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 1: STUDIO DE SYNTHESE (Accents, Parameters & Script) */}
+          {/* TAB 1: STUDIO DE SYNTHESE (MVP 3 ÉTAPES SIMPLIFIÉ) */}
           {activeTab === 'studio' && (
-            <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 sm:gap-10 animate-in fade-in duration-300">
-              {/* Left Column: Accents & Settings */}
-              <div className="contents lg:block lg:col-span-7 space-y-10">
-                {/* Countries / Accents Selector */}
-                <section className="order-1 lg:order-none">
-                  <div className="flex items-center justify-between mb-6">
+            <div className="space-y-10 animate-in fade-in duration-300">
+              
+              {/* ÉTAPE 1: TYPE DE CONTENU (QUE VEUX-TU CRÉER ?) */}
+              <section
+                className={`rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
+                  isDark
+                    ? 'bg-[#14151C] border-white/10 shadow-2xl'
+                    : 'bg-white border-[#E4E4E7] shadow-lg'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-[#D4FF00] text-black font-black text-xs flex items-center justify-center shadow-md">
+                      1
+                    </span>
                     <div>
-                      <h2 className="text-xl font-black tracking-tight flex items-center gap-2.5">
-                        <span className="w-1.5 h-6 bg-[#D4FF00] rounded-full" />
-                        <span>{isEn ? 'African Accent Selection' : 'Sélection de l\'Accent Africain'}</span>
+                      <h2 className="text-lg font-black tracking-tight">
+                        {isEn ? 'What are you creating?' : 'Que veux-tu créer ?'}
                       </h2>
-                      <p className="text-xs text-zinc-500 font-bold mt-1">
-                        {currentPlan.id === 'free'
-                          ? isEn ? '5 countries unlocked (Free Plan) • Upgrade to CREATOR plan for 20 countries' : '5 pays débloqués (Plan Free) • Passez au plan CREATOR pour 20 pays'
-                          : isEn ? 'All 20 countries and authentic accents are available' : 'Tous les 20 pays et accents authentiques sont disponibles'}
+                      <p className="text-xs text-zinc-500 font-medium">
+                        {isEn
+                          ? 'Select your project format — AI auto-tunes tone, pacing, and expressiveness'
+                          : 'Choisis ton format — L\'IA règle automatiquement le ton, le débit et l\'expressivité'}
                       </p>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                      {currentPlan.id === 'free' ? `5 / ${COUNTRIES.length} ${isEn ? 'Countries' : 'Pays'} 🔒` : `${COUNTRIES.length} ${isEn ? 'Countries' : 'Pays'}`}
+                  </div>
+                  {settings.contentStyle && (
+                    <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-[#D4FF00]/10 text-[#D4FF00] border border-[#D4FF00]/20 hidden sm:inline-block">
+                      ✨ Auto-Tuned
                     </span>
-                  </div>
+                  )}
+                </div>
 
-                  <div className="grid grid-cols-5 gap-1.5 sm:gap-3">
-                    {COUNTRIES.map((country, index) => {
-                      const isCountryLocked = currentPlan.id === 'free' && index >= 5;
-                      return (
-                        <CountryCard
-                          key={country.id}
-                          country={country}
-                          isSelected={selectedCountry.id === country.id}
-                          onSelect={setSelectedCountry}
-                          language={language}
-                          isLocked={isCountryLocked}
-                          onLockedClick={() => {
-                            addToast(
-                              'warning',
-                              isEn ? '🔒 Plan Upgrade Required' : '🔒 Forfait CREATOR ou PRO Requis',
-                              isEn
-                                ? `Upgrade to CREATOR or PRO plan to unlock the ${country.name} accent.`
-                                : `Passez au forfait CREATOR ou PRO pour débloquer l'accent ${country.name}.`
-                            );
-                            setActiveTab('pricing');
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-
-                {/* Synthesis Parameters Section */}
-                <section
-                  className={`order-2 lg:order-none rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
-                    isDark
-                      ? 'bg-[#14151C] border-white/10 shadow-2xl'
-                      : 'bg-white border-[#E4E4E7] shadow-lg shadow-[#D4FF00]/5'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-200 dark:border-white/5">
-                    <h2 className="text-lg font-black tracking-tight flex items-center gap-2.5">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-[#D4FF00]"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {[
+                    { id: 'tiktok', icon: '📱', label: 'TikTok & Reels', desc: isEn ? 'Dynamic & Fast' : 'Dynamique & Rapide', speed: 1.2, emotion: 'energetic' },
+                    { id: 'advertisement', icon: '📢', label: isEn ? 'Ad & Commercial' : 'Publicité & Spot', desc: isEn ? 'Punchy & Selling' : 'Punchy & Vendeur', speed: 1.1, emotion: 'energetic' },
+                    { id: 'podcast', icon: '🎙️', label: 'Podcast & Radio', desc: isEn ? 'Natural & Clear' : 'Naturel & Posé', speed: 1.0, emotion: 'neutral' },
+                    { id: 'storytelling', icon: '📖', label: 'Storytelling', desc: isEn ? 'Warm & Soft' : 'Immersif & Doux', speed: 0.9, emotion: 'soft' },
+                    { id: 'commercial', icon: '💼', label: 'Corporate', desc: isEn ? 'Serious & Pro' : 'Sérieux & Crédible', speed: 1.0, emotion: 'serious' },
+                    { id: 'training', icon: '🎓', label: 'E-learning', desc: isEn ? 'Clear & Measured' : 'Pédagogique', speed: 0.9, emotion: 'neutral' },
+                  ].map((item) => {
+                    const isSelected = settings.contentStyle === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setSettings((prev) => ({
+                            ...prev,
+                            contentStyle: item.id as ContentStyle,
+                            speed: item.speed,
+                            emotion: item.emotion as any,
+                            personality: (item.id === 'tiktok' ? 'tiktok_creator' : item.id === 'advertisement' ? 'salesperson' : item.id === 'podcast' ? 'radio_host' : item.id === 'storytelling' ? 'narrator' : item.id === 'commercial' ? 'ceo' : 'professor') as VocalPersonality,
+                            vocalObjective: (item.id === 'tiktok' ? 'entertain' : item.id === 'advertisement' ? 'sell' : item.id === 'podcast' ? 'inform' : item.id === 'storytelling' ? 'tell_story' : item.id === 'commercial' ? 'convince' : 'educate') as VocalObjective,
+                          }));
+                        }}
+                        className={`p-4 rounded-2xl border text-left transition-all relative overflow-hidden group ${
+                          isSelected
+                            ? 'bg-[#D4FF00] border-transparent text-black shadow-lg shadow-[#D4FF00]/20 scale-[1.02]'
+                            : isDark
+                            ? 'bg-[#09090B] border-white/5 text-zinc-300 hover:border-white/20 hover:bg-white/5'
+                            : 'bg-zinc-50 border-zinc-200 text-zinc-800 hover:border-zinc-300 hover:bg-zinc-100'
+                        }`}
                       >
-                        <path
-                          fillRule="evenodd"
-                          d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>{isEn ? 'Voice Parameters & Nuances' : 'Paramètres Vocaux & Nuances'}</span>
+                        <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">{item.icon}</div>
+                        <p className={`text-xs font-black tracking-tight ${isSelected ? 'text-black' : isDark ? 'text-white' : 'text-zinc-900'}`}>
+                          {item.label}
+                        </p>
+                        <p className={`text-[10px] mt-0.5 font-medium ${isSelected ? 'text-black/70' : 'text-zinc-500'}`}>
+                          {item.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* ÉTAPE 2: CHOISIR LA VOIX & PAYS */}
+              <section
+                className={`rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
+                  isDark
+                    ? 'bg-[#14151C] border-white/10 shadow-2xl'
+                    : 'bg-white border-[#E4E4E7] shadow-lg'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="w-8 h-8 rounded-xl bg-[#D4FF00] text-black font-black text-xs flex items-center justify-center shadow-md">
+                    2
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-black tracking-tight">
+                      {isEn ? 'Choose Voice & African Accent' : 'Choisis la Voix & l\'Accent Africain'}
                     </h2>
-                    <span className="text-xs font-mono text-zinc-500 font-bold hidden sm:inline">
-                      {settings.gender === 'female' ? (isEn ? 'Aoede (Female)' : 'Aoede (Femme)') : (isEn ? 'Puck (Male)' : 'Puck (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
-                    </span>
+                    <p className="text-xs text-zinc-500 font-medium">
+                      {isEn ? 'Select gender, country, and accent intensity' : 'Sélectionne le genre, le pays et l\'intensité de l\'accent'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Genre */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-zinc-500">
+                      {isEn ? 'Voice Gender' : 'Genre de la Voix'}
+                    </label>
+                    <div className="flex gap-2">
+                      {['female', 'male'].map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setSettings({ ...settings, gender: g as any })}
+                          className={`flex-1 py-3.5 px-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+                            settings.gender === g
+                              ? 'bg-[#D4FF00] text-black shadow-md'
+                              : isDark
+                              ? 'bg-[#09090B] text-zinc-400 border border-white/5 hover:border-white/20'
+                              : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
+                          }`}
+                        >
+                          {g === 'female' ? (isEn ? '👩 Female' : '👩 Femme') : (isEn ? '👨 Male' : '👨 Homme')}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="space-y-8">
-                    {/* Gender Selection */}
-                    <div>
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                        {['female', 'male'].map((g) => (
-                          <button
-                            key={g}
-                            onClick={() => setSettings({ ...settings, gender: g as any, voiceVariant: 'voice1' })}
-                            className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 ${
-                              settings.gender === g
-                                ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/25'
-                                : isDark
-                                ? 'bg-[#09090B] text-zinc-400 border border-white/5 hover:border-white/20'
-                                : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
-                            }`}
-                          >
-                            {g === 'female' ? (isEn ? '👩 Female' : '👩 Femme') : (isEn ? '👨 Male' : '👨 Homme')}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Voice Variant Selection (Animated Drawer) */}
-                      <div className="flex flex-col sm:flex-row gap-2 mt-3 animate-in slide-in-from-top-2 fade-in duration-300">
-                          {settings.gender === 'female' ? (
-                            <>
-                              <button
-                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice1' })}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                  (!settings.voiceVariant || settings.voiceVariant === 'voice1')
-                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
-                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
-                                }`}
-                              >
-                                {isEn ? 'Voice 1: Soft' : 'Voix 1 : Douce'}
-                              </button>
-                              <button
-                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice2' })}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                  settings.voiceVariant === 'voice2'
-                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
-                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
-                                }`}
-                              >
-                                {isEn ? 'Voice 2: Dynamic' : 'Voix 2 : Dynamique'}
-                              </button>
-                              <button
-                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice3' })}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                  settings.voiceVariant === 'voice3'
-                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
-                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
-                                }`}
-                              >
-                                {isEn ? 'Voice 3: Mature' : 'Voix 3 : Mature'}
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice1' })}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                  (!settings.voiceVariant || settings.voiceVariant === 'voice1')
-                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
-                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
-                                }`}
-                              >
-                                {isEn ? 'Voice 1: Deep' : 'Voix 1 : Grave'}
-                              </button>
-                              <button
-                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice2' })}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                  settings.voiceVariant === 'voice2'
-                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
-                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
-                                }`}
-                              >
-                                {isEn ? 'Voice 2: Warm' : 'Voix 2 : Chaleureux'}
-                              </button>
-                              <button
-                                onClick={() => setSettings({ ...settings, voiceVariant: 'voice3' })}
-                                className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                  settings.voiceVariant === 'voice3'
-                                    ? 'bg-zinc-800 text-white dark:bg-white dark:text-black shadow-md'
-                                    : 'bg-transparent border border-zinc-200 dark:border-white/10 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'
-                                }`}
-                              >
-                                {isEn ? 'Voice 3: Energetic' : 'Voix 3 : Énergique'}
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                            {isEn ? 'Emotion & Intonation' : 'Émotion & Intonation'}
-                          </label>
-                          {!isPremiumFeature && (
-                            <span className="text-[10px] bg-[#D4FF00] text-black px-2 py-0.5 rounded font-black">
-                              PRO
-                            </span>
-                          )}
-                        </div>
-                        <select
-                          disabled={!isPremiumFeature}
-                          value={settings.emotion}
-                          onChange={(e) => setSettings({ ...settings, emotion: e.target.value as any })}
-                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
-                            isDark
-                              ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
-                              : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
-                          } ${!isPremiumFeature ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        >
-                          <option value="neutral">{isEn ? 'Neutral / Narrative and Clear' : 'Neutre / Narratif et Clair'}</option>
-                          <option value="happy">{isEn ? 'Happy / Sunny Vibe' : 'Joyeux / Ambiance Ensoleillée'}</option>
-                          <option value="serious">{isEn ? 'Serious / Radio Journalism' : 'Sérieux / Journalisme Radio'}</option>
-                          <option value="energetic">{isEn ? 'Energetic / Punchy Ad' : 'Énergique / Publicité Punchy'}</option>
-                          <option value="soft">{isEn ? 'Soft / Soothing Storytelling' : 'Doux / Storytelling Apaisant'}</option>
-                        </select>
+                  {/* Pays & Accent (Dropdown élégant) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-widest text-zinc-500">
+                        {isEn ? 'African Country / Accent' : 'Pays / Accent Africain'}
+                      </label>
+                      <span className="text-[10px] font-mono text-zinc-400 font-bold">
+                        {currentPlan.id === 'free' ? '5/20 🔒' : '20/20'}
+                      </span>
                     </div>
+                    <select
+                      value={selectedCountry.id}
+                      onChange={(e) => {
+                        const targetId = e.target.value;
+                        const idx = COUNTRIES.findIndex((c) => c.id === targetId);
+                        if (currentPlan.id === 'free' && idx >= 5) {
+                          addToast(
+                            'warning',
+                            isEn ? '🔒 Plan Upgrade Required' : '🔒 Forfait CREATOR Requis',
+                            isEn ? 'Upgrade to CREATOR to unlock all 20 countries.' : 'Passez au forfait CREATOR pour débloquer les 20 pays.'
+                          );
+                          setActiveTab('pricing');
+                          return;
+                        }
+                        const country = COUNTRIES.find((c) => c.id === targetId);
+                        if (country) setSelectedCountry(country);
+                      }}
+                      className={`w-full border rounded-2xl px-4 py-3.5 text-sm font-bold outline-none transition-colors cursor-pointer ${
+                        isDark
+                          ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
+                          : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
+                      }`}
+                    >
+                      {COUNTRIES.map((c, idx) => {
+                        const isLocked = currentPlan.id === 'free' && idx >= 5;
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.flag} {c.name} ({c.primaryLanguage}) {isLocked ? '🔒' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
 
-                    {/* ── AI Voice Director: Accent Level ────────── */}
-                    <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-white/5">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                            {isEn ? 'Accent Intensity' : 'Intensité de l\'Accent'}
-                          </label>
-                        </div>
-                        <div className="flex gap-2">
-                          {(['light', 'medium', 'strong'] as AccentLevel[]).map((level) => (
-                            <button
-                              key={level}
-                              onClick={() => setSettings({ ...settings, accentLevel: level })}
-                              className={`flex-1 py-3 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border ${
-                                settings.accentLevel === level
-                                  ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
-                                  : isDark
-                                  ? 'bg-[#09090B] text-zinc-400 border-white/5 hover:border-white/20'
-                                  : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'
-                              }`}
-                            >
-                              {level === 'light' ? (isEn ? 'Light' : 'Léger') : level === 'medium' ? (isEn ? 'Medium' : 'Moyen') : (isEn ? 'Strong' : 'Fort')}
-                            </button>
-                          ))}
-                        </div>
-                    </div>
-
-                    {/* ── AI Voice Director: Content Style ────────── */}
-                    <div className="space-y-3">
-                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                          {isEn ? 'Content Style' : 'Style de Contenu'}
-                        </label>
-                        <select
-                          value={settings.contentStyle || ''}
-                          onChange={(e) => setSettings({ ...settings, contentStyle: (e.target.value || undefined) as any })}
-                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
-                            isDark
-                              ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
-                              : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
+                  {/* Intensité d'accent */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-zinc-500">
+                      {isEn ? 'Accent Intensity' : 'Intensité de l\'Accent'}
+                    </label>
+                    <div className="flex gap-2">
+                      {(['light', 'medium', 'strong'] as AccentLevel[]).map((level) => (
+                        <button
+                          key={level}
+                          onClick={() => setSettings({ ...settings, accentLevel: level })}
+                          className={`flex-1 py-3.5 px-2 rounded-2xl text-xs font-black uppercase transition-all truncate border ${
+                            settings.accentLevel === level
+                              ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
+                              : isDark
+                              ? 'bg-[#09090B] text-zinc-400 border-white/5 hover:border-white/20'
+                              : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'
                           }`}
                         >
-                          <option value="">{isEn ? '🤖 Auto-detect (AI)' : '🤖 Détection auto (IA)'}</option>
-                          <option value="tiktok">📱 TikTok / Reels</option>
-                          <option value="advertisement">{isEn ? '📢 Advertisement' : '📢 Publicité'}</option>
-                          <option value="storytelling">📖 Storytelling</option>
-                          <option value="podcast">🎙️ Podcast</option>
-                          <option value="news">{isEn ? '📰 TV / Radio News' : '📰 Journal TV / Radio'}</option>
-                          <option value="radio">📻 Radio</option>
-                          <option value="documentary">{isEn ? '🎬 Documentary' : '🎬 Documentaire'}</option>
-                          <option value="narration">{isEn ? '🎭 Narration' : '🎭 Narration'}</option>
-                          <option value="motivation">🔥 Motivation</option>
-                          <option value="training">{isEn ? '📚 Training / E-learning' : '📚 Formation'}</option>
-                          <option value="commercial">{isEn ? '💼 Commercial' : '💼 Présentation Commerciale'}</option>
-                          <option value="youtube">▶️ YouTube</option>
-                        </select>
+                          {level === 'light' ? (isEn ? 'Light' : 'Léger') : level === 'medium' ? (isEn ? 'Medium' : 'Moyen') : (isEn ? 'Strong' : 'Fort')}
+                        </button>
+                      ))}
                     </div>
+                  </div>
+                </div>
 
-                    {/* ── AI Voice Director: Personality ────────── */}
-                    <div className="space-y-3">
-                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                          {isEn ? 'Voice Personality' : 'Personnalité'}
-                        </label>
-                        <select
-                          value={settings.personality || ''}
-                          onChange={(e) => setSettings({ ...settings, personality: (e.target.value || undefined) as any })}
-                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
-                            isDark
-                              ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
-                              : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
-                          }`}
-                        >
-                          <option value="">{isEn ? '🎯 Automatic' : '🎯 Automatique'}</option>
-                          <option value="entrepreneur">🚀 Entrepreneur</option>
-                          <option value="professor">{isEn ? '🎓 Professor' : '🎓 Professeur'}</option>
-                          <option value="student">{isEn ? '📝 Student' : '📝 Étudiant'}</option>
-                          <option value="journalist">{isEn ? '📡 Journalist' : '📡 Journaliste'}</option>
-                          <option value="narrator">{isEn ? '🎭 Narrator' : '🎭 Narrateur'}</option>
-                          <option value="salesperson">{isEn ? '🤝 Salesperson' : '🤝 Commercial'}</option>
-                          <option value="tiktok_creator">{isEn ? '📱 TikTok Creator' : '📱 Créateur TikTok'}</option>
-                          <option value="influencer">⭐ Influenceur</option>
-                          <option value="ceo">{isEn ? '👔 CEO' : '👔 Chef d\'entreprise'}</option>
-                          <option value="coach">💪 Coach</option>
-                          <option value="radio_host">{isEn ? '🎤 Radio Host' : '🎤 Animateur Radio'}</option>
-                        </select>
-                    </div>
+                {/* Accent description badge */}
+                <div className={`mt-4 p-3.5 rounded-2xl border flex items-center gap-3 text-xs font-medium ${
+                  isDark ? 'bg-[#09090B] border-white/5 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
+                }`}>
+                  <span className="text-lg">{selectedCountry.flag}</span>
+                  <span className="italic">{selectedCountry.accentDescription}</span>
+                </div>
 
-                    {/* ── AI Voice Director: Vocal Objective ────────── */}
-                    <div className="space-y-3">
-                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                          {isEn ? 'Vocal Objective' : 'Objectif Vocal'}
-                        </label>
-                        <select
-                          value={settings.vocalObjective || ''}
-                          onChange={(e) => setSettings({ ...settings, vocalObjective: (e.target.value || undefined) as any })}
-                          className={`w-full border rounded-2xl px-4 py-4 text-sm font-bold outline-none transition-colors cursor-pointer ${
-                            isDark
-                              ? 'bg-[#09090B] text-white border-white/10 hover:border-white/20'
-                              : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
-                          }`}
-                        >
-                          <option value="">{isEn ? '🎯 Automatic' : '🎯 Automatique'}</option>
-                          <option value="inform">{isEn ? '📋 Inform' : '📋 Informer'}</option>
-                          <option value="convince">{isEn ? '💡 Convince' : '💡 Convaincre'}</option>
-                          <option value="inspire">{isEn ? '✨ Inspire' : '✨ Inspirer'}</option>
-                          <option value="educate">{isEn ? '📚 Educate' : '📚 Éduquer'}</option>
-                          <option value="entertain">{isEn ? '🎉 Entertain' : '🎉 Divertir'}</option>
-                          <option value="sell">{isEn ? '💰 Sell' : '💰 Vendre'}</option>
-                          <option value="tell_story">{isEn ? '📖 Tell a Story' : '📖 Raconter'}</option>
-                          <option value="motivate">{isEn ? '🔥 Motivate' : '🔥 Motiver'}</option>
-                        </select>
-                    </div>
-
-
-
-                    {/* Speed & Age */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t border-zinc-200 dark:border-white/5">
-                      <div className="space-y-3">
-                        <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                          {isEn ? 'Speaking Rate' : 'Débit de parole'}
-                        </label>
-                        <div className="flex gap-2">
-                          {[0.8, 1.0, 1.2].map((speed) => (
-                            <button
-                              key={speed}
-                              onClick={() => setSettings({ ...settings, speed })}
-                              className={`flex-1 py-4 px-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all truncate border ${
-                                settings.speed === speed
-                                  ? 'bg-[#D4FF00] text-black border-transparent shadow-md'
-                                  : isDark
-                                  ? 'bg-[#09090B] text-zinc-400 border-white/5 hover:border-white/20'
-                                  : 'bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200'
-                              }`}
-                            >
-                              {speed === 1.0 ? 'NORMAL' : speed < 1.0 ? (isEn ? 'SLOW' : 'LENT') : (isEn ? 'FAST' : 'RAPIDE')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
-                            {isEn ? 'Apparent Voice Age' : 'Âge apparent'}
-                          </label>
-                          <span className="text-sm font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
-                            {settings.age} {isEn ? 'Y.O.' : 'ANS'}
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="18"
-                          max="70"
-                          value={settings.age}
-                          onChange={(e) => setSettings({ ...settings, age: parseInt(e.target.value) })}
-                          className="w-full h-3 mt-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                        />
-                        <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-tight">
-                          <span>{isEn ? 'Young (18)' : 'Jeune (18)'}</span>
-                          <span>{isEn ? 'Mature (70)' : 'Mature (70)'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Local Expressions Toggle */}
-                    <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+                {/* Options Avancées Toggles */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-zinc-200 dark:border-white/5">
+                  {/* Expressions Locales */}
+                  <div
+                    onClick={() => {
+                      if (currentPlan.id === 'free') {
+                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au forfait Creator ou Pro.');
+                        return;
+                      }
+                      setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions });
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
                       currentPlan.id === 'free'
-                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#09090B]/50'
+                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5'
                         : settings.useLocalExpressions
                         ? isDark ? 'bg-[#D4FF00]/10 border-[#D4FF00]/30' : 'bg-[#D4FF00]/10 border-[#D4FF00]/40'
                         : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
                     }`}
-                      onClick={() => {
-                        if (currentPlan.id === 'free') {
-                          addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan to unlock local African expressions.' : 'Veuillez passer au forfait Creator ou Pro pour débloquer les expressions locales.');
-                          return;
-                        }
-                        setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions });
-                      }}
-                    >
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className={`text-xs font-black uppercase tracking-widest ${settings.useLocalExpressions ? (isDark ? 'text-[#D4FF00]' : 'text-zinc-900') : 'text-zinc-500'}`}>
-                            {isEn ? '🌍 Local African Expressions' : '🌍 Expressions Locales Africaines'}
-                          </p>
-                          {currentPlan.id === 'free' && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-500 font-bold uppercase tracking-wider">
-                              🔒 PRO
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
-                          {isEn ? 'Injects authentic local idioms and cultural phrases' : 'Injecte des expressions et idiomes locaux authentiques'}
-                        </p>
-                      </div>
-                      <div className={`w-11 h-6 rounded-full transition-all duration-300 relative shrink-0 ${
-                        settings.useLocalExpressions ? 'bg-[#D4FF00]' : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
-                      }`}>
-                        <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
-                          settings.useLocalExpressions ? 'translate-x-5' : 'translate-x-0.5'
-                        }`} />
-                      </div>
+                  >
+                    <div>
+                      <p className={`text-xs font-black uppercase tracking-widest ${settings.useLocalExpressions ? (isDark ? 'text-[#D4FF00]' : 'text-zinc-900') : 'text-zinc-500'}`}>
+                        🌍 {isEn ? 'Local Expressions' : 'Expressions Locales'}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
+                        {isEn ? 'Injects authentic local idioms' : 'Injecte des expressions locales authentiques'}
+                      </p>
                     </div>
+                    <div className={`w-10 h-5 rounded-full transition-all relative shrink-0 ${
+                      settings.useLocalExpressions ? 'bg-[#D4FF00]' : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all ${
+                        settings.useLocalExpressions ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                  </div>
 
-                    {/* IA Phonetic Humanizer Toggle */}
-                    <div className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
+                  {/* Humanisation Phonétique */}
+                  <div
+                    onClick={() => {
+                      if (currentPlan.id === 'free') {
+                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au forfait Creator ou Pro.');
+                        return;
+                      }
+                      setSettings({ ...settings, phoneticHumanizer: !settings.phoneticHumanizer });
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
                       currentPlan.id === 'free'
-                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-[#09090B]/50'
+                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5'
                         : settings.phoneticHumanizer
                         ? isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-500/10 border-amber-500/40'
                         : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
                     }`}
-                      onClick={() => {
-                        if (currentPlan.id === 'free') {
-                          addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan to unlock AI Humanization.' : 'Veuillez passer au forfait Creator ou Pro pour débloquer l\'humanisation phonétique IA.');
-                          return;
-                        }
-                        setSettings({ ...settings, phoneticHumanizer: !settings.phoneticHumanizer });
-                      }}
-                    >
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <p className={`text-xs font-black uppercase tracking-widest ${settings.phoneticHumanizer ? 'text-amber-500' : 'text-zinc-500'}`}>
-                            {isEn ? '✨ AI Phonetic Humanization' : '✨ Humanisation Phonétique IA'}
-                          </p>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-bold uppercase tracking-wider">
-                            {currentPlan.id === 'free' ? '🔒 PRO' : (isEn ? 'New' : 'Nouveau')}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
-                          {isEn ? 'Adds natural vowel extensions, breathing breaks & audio acting tags' : 'Ajoute des allongements de voyelles, pauses et expressions vocales'}
-                        </p>
-                      </div>
-                      <div className={`w-11 h-6 rounded-full transition-all duration-300 relative shrink-0 ${
-                        settings.phoneticHumanizer ? 'bg-amber-500' : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
-                      }`}>
-                        <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${
-                          settings.phoneticHumanizer ? 'translate-x-5' : 'translate-x-0.5'
-                        }`} />
-                      </div>
-                    </div>
-
-                  </div>
-                </section>
-              </div>
-
-              {/* Right Column: Script Workspace & Player */}
-              <div className="contents lg:block lg:col-span-5 space-y-8">
-                {/* Script Studio Box */}
-                <div
-                  className={`order-3 lg:order-none rounded-[36px] p-6 sm:p-8 border sticky top-24 transition-all duration-300 ${
-                    isDark
-                      ? 'bg-[#14151C] border-white/10 shadow-2xl'
-                      : 'bg-white border-[#E4E4E7] shadow-xl shadow-[#D4FF00]/5'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-black tracking-tight flex items-center gap-2.5">
-                      <span>{isEn ? 'Studio Script Editor' : 'Éditeur de Script Studio'}</span>
-                      <div className="flex gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-                        <span className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-                      </div>
-                    </h2>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-mono font-bold ${
-                        script.length > quota.maxCharsPerScript ? 'text-red-500 font-black' :
-                        script.length > quota.maxCharsPerScript * 0.8 ? 'text-amber-400 font-black' :
-                        'text-zinc-400'
-                      }`}>
-                        {script.length} / {quota.maxCharsPerScript} {isEn ? 'char.' : 'car.'} • ~{Math.ceil(script.length / 14)} sec
-                      </span>
-                      {script.trim() && (
-                        <button
-                          onClick={() => setScript('')}
-                          title={isEn ? 'Clear script' : 'Effacer le script'}
-                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg transition-colors ${
-                            isDark ? 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10' : 'text-zinc-400 hover:text-red-500 hover:bg-red-50'
-                          }`}
-                        >
-                          ✕ {isEn ? 'Clear' : 'Effacer'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {/* Selected country badge */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                      isDark ? 'bg-[#D4FF00]/10 border-[#D4FF00]/20 text-[#D4FF00]' : 'bg-[#D4FF00]/10 border-[#D4FF00]/30 text-zinc-900'
-                    }`}>
-                      <span>{selectedCountry.flag}</span>
-                      <span>{selectedCountry.name}</span>
-                      <span className="opacity-50">•</span>
-                      <span className="opacity-70">{settings.gender === 'female' ? (isEn ? 'Female' : 'Femme') : (isEn ? 'Male' : 'Homme')}</span>
-                      <span className="opacity-50">•</span>
-                      <span className="opacity-70">{settings.accentLevel === 'light' ? (isEn ? 'Light' : 'Léger') : settings.accentLevel === 'strong' ? (isEn ? 'Strong' : 'Fort') : (isEn ? 'Medium' : 'Moyen')}</span>
-                    </span>
-                  </div>
-
-                  <div className="relative mb-6">
-                    <textarea
-                      value={script}
-                      onChange={(e) => setScript(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                          e.preventDefault();
-                          if (script.trim() && !status.isGenerating && script.length <= quota.maxCharsPerScript && usedSeconds < quota.maxSeconds) {
-                            handleGenerate();
-                          }
-                        }
-                      }}
-                      placeholder={isEn ? `Type or paste your script... (Secured limit: Max ${quota.maxCharsPerScript} characters for ${currentPlan.name} plan)` : `Écrivez ou collez votre script... (Plafond sécurisé : Max ${quota.maxCharsPerScript} caractères pour le forfait ${currentPlan.name})`}
-                      className={`w-full min-h-[260px] sm:min-h-[300px] p-6 sm:p-7 rounded-[28px] border outline-none resize-none text-base sm:text-lg font-medium transition-all custom-scrollbar ${
-                        (status.error && !script.trim()) || script.length > quota.maxCharsPerScript
-                          ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
-                          : script.length > quota.maxCharsPerScript * 0.8
-                          ? isDark ? 'bg-[#09090B] border-amber-400/40 text-white placeholder-zinc-600 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10'
-                                   : 'bg-zinc-50 border-amber-400/50 text-zinc-800 placeholder-zinc-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10'
-                          : isDark
-                          ? 'bg-[#09090B] border-white/10 text-white placeholder-zinc-600 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
-                          : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
-                      }`}
-                    />
-                    {(status.error || script.length > quota.maxCharsPerScript) && (
-                      <p className="text-xs text-red-500 font-bold mt-2.5 flex items-center gap-1.5">
-                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span>
-                          {script.length > quota.maxCharsPerScript
-                            ? (isEn ? `Limit: Your text exceeds the ${quota.maxCharsPerScript} character limit per request for ${currentPlan.name} plan.` : `Plafond : Votre texte dépasse la limite de ${quota.maxCharsPerScript} caractères autorisée par requête pour le forfait ${currentPlan.name}.`)
-                            : status.error}
-                        </span>
+                  >
+                    <div>
+                      <p className={`text-xs font-black uppercase tracking-widest ${settings.phoneticHumanizer ? 'text-amber-500' : 'text-zinc-500'}`}>
+                        ✨ {isEn ? 'AI Humanization' : 'Humanisation IA'}
                       </p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">
+                        {isEn ? 'Adds natural breaks & vocal cadence' : 'Ajoute intonations et cadences naturelles'}
+                      </p>
+                    </div>
+                    <div className={`w-10 h-5 rounded-full transition-all relative shrink-0 ${
+                      settings.phoneticHumanizer ? 'bg-amber-500' : isDark ? 'bg-zinc-700' : 'bg-zinc-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-all ${
+                        settings.phoneticHumanizer ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* ÉTAPE 3: ÉCRIRE LE SCRIPT & GÉNÉRER */}
+              <section
+                className={`rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
+                  isDark
+                    ? 'bg-[#14151C] border-white/10 shadow-2xl'
+                    : 'bg-white border-[#E4E4E7] shadow-lg'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-[#D4FF00] text-black font-black text-xs flex items-center justify-center shadow-md">
+                      3
+                    </span>
+                    <div>
+                      <h2 className="text-lg font-black tracking-tight">
+                        {isEn ? 'Enter Script & Generate' : 'Écris ton Script & Génère'}
+                      </h2>
+                      <p className="text-xs text-zinc-500 font-medium">
+                        {isEn ? 'Type or paste your text to produce the final voiceover' : 'Tape ou colle ton texte pour produire la voix off'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs font-mono font-bold ${
+                      script.length > quota.maxCharsPerScript ? 'text-red-500 font-black' :
+                      script.length > quota.maxCharsPerScript * 0.8 ? 'text-amber-400 font-black' :
+                      'text-zinc-400'
+                    }`}>
+                      {script.length} / {quota.maxCharsPerScript} {isEn ? 'char.' : 'car.'} • ~{Math.ceil(script.length / 14)} sec
+                    </span>
+                    {script.trim() && (
+                      <button
+                        onClick={() => setScript('')}
+                        title={isEn ? 'Clear script' : 'Effacer le script'}
+                        className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg transition-colors ${
+                          isDark ? 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10' : 'text-zinc-400 hover:text-red-500 hover:bg-red-50'
+                        }`}
+                      >
+                        ✕ {isEn ? 'Clear' : 'Effacer'}
+                      </button>
                     )}
                   </div>
+                </div>
 
+                <div className="relative mb-6">
+                  <textarea
+                    value={script}
+                    onChange={(e) => setScript(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        if (script.trim() && !status.isGenerating && script.length <= quota.maxCharsPerScript && usedSeconds < quota.maxSeconds) {
+                          handleGenerate();
+                        }
+                      }
+                    }}
+                    placeholder={isEn ? `Type or paste your script... (Max ${quota.maxCharsPerScript} characters for ${currentPlan.name} plan)` : `Écris ou colle ton script... (Max ${quota.maxCharsPerScript} caractères pour le forfait ${currentPlan.name})`}
+                    className={`w-full min-h-[200px] p-6 sm:p-7 rounded-[28px] border outline-none resize-none text-base sm:text-lg font-medium transition-all custom-scrollbar ${
+                      (status.error && !script.trim()) || script.length > quota.maxCharsPerScript
+                        ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                        : isDark
+                        ? 'bg-[#09090B] border-white/10 text-white placeholder-zinc-600 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
+                        : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
+                    }`}
+                  />
+                  {(status.error || script.length > quota.maxCharsPerScript) && (
+                    <p className="text-xs text-red-500 font-bold mt-2.5 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span>
+                        {script.length > quota.maxCharsPerScript
+                          ? (isEn ? `Limit: Your text exceeds the ${quota.maxCharsPerScript} character limit per request for ${currentPlan.name} plan.` : `Plafond : Votre texte dépasse la limite de ${quota.maxCharsPerScript} caractères autorisée par requête pour le forfait ${currentPlan.name}.`)
+                          : status.error}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     onClick={handleGenerate}
                     disabled={status.isGenerating || !script.trim() || script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds}
-                    className={`w-full py-5 rounded-[24px] font-black text-base sm:text-lg uppercase tracking-wider transition-all active:scale-98 shadow-xl ${
+                    className={`flex-1 py-5 rounded-[24px] font-black text-base sm:text-lg uppercase tracking-wider transition-all active:scale-98 shadow-xl ${
                       status.isGenerating || !script.trim() || script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds
                         ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 cursor-not-allowed border-none shadow-none'
                         : isDark
@@ -1324,22 +1140,14 @@ const App: React.FC = () => {
                     ) : usedSeconds >= quota.maxSeconds ? (
                       isEn ? '🛑 QUOTA REACHED • TOP-UP REQUIRED' : '🛑 PLAFOND ATTEINT • RECHARGE REQUISE'
                     ) : (
-                      isEn ? 'GENERATE AFRICAN VOICE' : 'GÉNÉRER LA VOIX AFRICAINE'
+                      isEn ? '⚡ GENERATE AFRICAN VOICE' : '⚡ GÉNÉRER LA VOIX AFRICAINE'
                     )}
                   </button>
 
-                  {/* Keyboard shortcut hint */}
-                  {script.trim() && !status.isGenerating && (
-                    <p className="text-center text-[10px] text-zinc-400 font-mono mt-1.5 select-none">
-                      {isEn ? '⌨ Ctrl+Enter to generate' : '⌨ Ctrl+Entrée pour générer'}
-                    </p>
-                  )}
-
-                  {/* ── 3 Variants Button ────────── */}
                   <button
                     onClick={handleGenerateVariants}
                     disabled={isGeneratingVariants || status.isGenerating || !script.trim() || script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds}
-                    className={`w-full py-3.5 rounded-[20px] font-black text-xs sm:text-sm uppercase tracking-wider transition-all border ${
+                    className={`py-5 px-6 rounded-[24px] font-black text-xs uppercase tracking-wider transition-all border shrink-0 ${
                       isGeneratingVariants || status.isGenerating || !script.trim()
                         ? 'bg-transparent text-zinc-400 dark:text-zinc-600 cursor-not-allowed border-zinc-200 dark:border-zinc-800'
                         : isDark
@@ -1350,142 +1158,141 @@ const App: React.FC = () => {
                     {isGeneratingVariants ? (
                       <div className="flex items-center justify-center gap-2">
                         <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        <span>{isEn ? 'GENERATING 3 VARIANTS...' : 'GÉNÉRATION DE 3 VARIANTES...'}</span>
+                        <span>{isEn ? '3 VARIANTS...' : '3 VARIANTES...'}</span>
                       </div>
                     ) : (
-                      isEn ? '🔀 CREATE 3 VARIANTS (A · B · C)' : '🔀 CRÉER 3 VARIANTES (A · B · C)'
+                      isEn ? '🔀 3 VARIANTS (A · B · C)' : '🔀 3 VARIANTES (A · B · C)'
                     )}
                   </button>
-
-                  {/* Shimmer Skeleton Loading State while generating */}
-                  {status.isGenerating && (
-                    <div className="mt-8 p-6 rounded-3xl border border-dashed border-zinc-300 dark:border-white/10 animate-pulse space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="h-4 w-32 bg-zinc-300 dark:bg-zinc-800 rounded-full" />
-                        <div className="h-4 w-16 bg-zinc-300 dark:bg-zinc-800 rounded-full" />
-                      </div>
-                      <div className="flex items-center gap-1.5 h-12">
-                        {[40, 70, 25, 90, 60, 30, 85, 50, 95, 45, 75, 35, 65, 80, 55].map((h, idx) => (
-                          <div
-                            key={idx}
-                            className="flex-1 bg-[#D4FF00]/30 dark:bg-[#D4FF00]/30 rounded-full animate-bounce"
-                            style={{ height: `${h}%`, animationDelay: `${idx * 60}ms` }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-center font-mono text-zinc-500 uppercase tracking-widest">
-                        {isEn ? 'IA Generation in progress • Gemini TTS HD Model' : 'Génération IA en cours • Modèle Gemini TTS HD'}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Waveform Player and Mastering Console when ready */}
-                  {status.audioUrl && !status.isGenerating && (
-                    <div className="mt-8 pt-8 border-t border-zinc-200 dark:border-white/10 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <WaveformPlayer
-                        audioUrl={status.audioUrl}
-                        onDownload={() => {
-                          const a = document.createElement('a');
-                          a.href = status.audioUrl!;
-                          a.download = `afrivoice_${selectedCountry.id}_${Date.now()}.wav`;
-                          a.click();
-                          addToast('success', isEn ? 'File downloaded' : 'Fichier téléchargé', isEn ? `WAV export of ${selectedCountry.name} saved.` : `Export WAV de ${selectedCountry.name} enregistré.`);
-                        }}
-                        isDark={isDark}
-                        countryFlag={selectedCountry.flag}
-                        countryName={selectedCountry.name}
-                      />
-
-                      {/* ── Quality Score Gauge ────────── */}
-                      {status.qualityScore && (
-                        <div className={`mt-4 p-4 rounded-2xl border ${isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'}`}>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                              {isEn ? '🎯 Voice Quality Score' : '🎯 Score de Qualité Vocale'}
-                            </span>
-                            <span className={`text-lg font-black font-mono ${
-                              status.qualityScore.overall >= 80 ? 'text-emerald-500' :
-                              status.qualityScore.overall >= 60 ? 'text-[#D4FF00]' : 'text-orange-400'
-                            }`}>
-                              {status.qualityScore.overall}/100
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            {[
-                              { label: isEn ? 'Authenticity' : 'Authenticité', value: status.qualityScore.authenticity, color: '#D4FF00' },
-                              { label: isEn ? 'Naturalness' : 'Naturel', value: status.qualityScore.naturalness, color: '#22D3EE' },
-                              { label: isEn ? 'Expression' : 'Expressivité', value: status.qualityScore.expressiveness, color: '#F472B6' },
-                            ].map(({ label, value, color }) => (
-                              <div key={label} className="space-y-1">
-                                <div className="flex justify-between">
-                                  <span className="text-[9px] font-bold text-zinc-500 uppercase">{label}</span>
-                                  <span className="text-[9px] font-mono font-black" style={{ color }}>{value}%</span>
-                                </div>
-                                <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
-                                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: color }} />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ── 3 Variants Player Cards ────────── */}
-                      {variants.length > 0 && (
-                        <div className="mt-6 space-y-3">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                            {isEn ? '🔀 Variant Comparison' : '🔀 Comparaison des Variantes'}
-                          </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {variants.map((v, i) => (
-                              <div
-                                key={i}
-                                className={`p-3 rounded-2xl border transition-all ${
-                                  isDark ? 'bg-[#09090B] border-white/5 hover:border-[#D4FF00]/30' : 'bg-zinc-50 border-zinc-200 hover:border-zinc-400'
-                                }`}
-                              >
-                                <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: i === 0 ? '#D4FF00' : i === 1 ? '#22D3EE' : '#F472B6' }}>
-                                  {v.label}
-                                </p>
-                                {v.audioUrl ? (
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => playVariant(v.audioUrl, i)}
-                                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-                                        playingVariant === i
-                                          ? 'bg-[#D4FF00] text-black border-transparent'
-                                          : isDark ? 'border-white/10 text-zinc-300 hover:border-white/20' : 'border-zinc-300 text-zinc-700 hover:border-zinc-400'
-                                      }`}
-                                    >
-                                      {playingVariant === i ? (
-                                        <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>{isEn ? 'Pause' : 'Pause'}</>
-                                      ) : (
-                                        <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>{isEn ? 'Play' : 'Écouter'}</>
-                                      )}
-                                    </button>
-                                    <button
-                                      onClick={() => { const a = document.createElement('a'); a.href = v.audioUrl; a.download = `afrivoice_variant_${String.fromCharCode(65 + i)}_${Date.now()}.wav`; a.click(); }}
-                                      title={isEn ? 'Download' : 'Télécharger'}
-                                      className={`p-2 rounded-xl border transition-all ${
-                                        isDark ? 'border-white/10 text-zinc-400 hover:text-[#D4FF00] hover:border-[#D4FF00]/30' : 'border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:border-zinc-400'
-                                      }`}
-                                    >
-                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <p className="text-[10px] text-red-400 font-bold">{isEn ? 'Generation failed' : 'Échec de la génération'}</p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  )}
                 </div>
-              </div>
+
+                {/* Shimmer Skeleton Loading State while generating */}
+                {status.isGenerating && (
+                  <div className="mt-8 p-6 rounded-3xl border border-dashed border-zinc-300 dark:border-white/10 animate-pulse space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 w-32 bg-zinc-300 dark:bg-zinc-800 rounded-full" />
+                      <div className="h-4 w-16 bg-zinc-300 dark:bg-zinc-800 rounded-full" />
+                    </div>
+                    <div className="flex items-center gap-1.5 h-12">
+                      {[40, 70, 25, 90, 60, 30, 85, 50, 95, 45, 75, 35, 65, 80, 55].map((h, idx) => (
+                        <div
+                          key={idx}
+                          className="flex-1 bg-[#D4FF00]/30 dark:bg-[#D4FF00]/30 rounded-full animate-bounce"
+                          style={{ height: `${h}%`, animationDelay: `${idx * 60}ms` }}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-center font-mono text-zinc-500 uppercase tracking-widest">
+                      {isEn ? 'AI Generation in progress • Gemini TTS HD Model' : 'Génération IA en cours • Modèle Gemini TTS HD'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Waveform Player and Quality Score when ready */}
+                {status.audioUrl && !status.isGenerating && (
+                  <div className="mt-8 pt-8 border-t border-zinc-200 dark:border-white/10 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <WaveformPlayer
+                      audioUrl={status.audioUrl}
+                      onDownload={() => {
+                        const a = document.createElement('a');
+                        a.href = status.audioUrl!;
+                        a.download = `afrivoice_${selectedCountry.id}_${Date.now()}.wav`;
+                        a.click();
+                        addToast('success', isEn ? 'File downloaded' : 'Fichier téléchargé', isEn ? `WAV export of ${selectedCountry.name} saved.` : `Export WAV de ${selectedCountry.name} enregistré.`);
+                      }}
+                      isDark={isDark}
+                      countryFlag={selectedCountry.flag}
+                      countryName={selectedCountry.name}
+                    />
+
+                    {/* Quality Score Gauge */}
+                    {status.qualityScore && (
+                      <div className={`p-4 rounded-2xl border ${isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            {isEn ? '🎯 Voice Quality Score' : '🎯 Score de Qualité Vocale'}
+                          </span>
+                          <span className={`text-lg font-black font-mono ${
+                            status.qualityScore.overall >= 80 ? 'text-emerald-500' :
+                            status.qualityScore.overall >= 60 ? 'text-[#D4FF00]' : 'text-orange-400'
+                          }`}>
+                            {status.qualityScore.overall}/100
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { label: isEn ? 'Authenticity' : 'Authenticité', value: status.qualityScore.authenticity, color: '#D4FF00' },
+                            { label: isEn ? 'Naturalness' : 'Naturel', value: status.qualityScore.naturalness, color: '#22D3EE' },
+                            { label: isEn ? 'Expression' : 'Expressivité', value: status.qualityScore.expressiveness, color: '#F472B6' },
+                          ].map(({ label, value, color }) => (
+                            <div key={label} className="space-y-1">
+                              <div className="flex justify-between">
+                                <span className="text-[9px] font-bold text-zinc-500 uppercase">{label}</span>
+                                <span className="text-[9px] font-mono font-black" style={{ color }}>{value}%</span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3 Variants Player Cards */}
+                    {variants.length > 0 && (
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                          {isEn ? '🔀 Variant Comparison' : '🔀 Comparaison des Variantes'}
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {variants.map((v, i) => (
+                            <div
+                              key={i}
+                              className={`p-3 rounded-2xl border transition-all ${
+                                isDark ? 'bg-[#09090B] border-white/5 hover:border-[#D4FF00]/30' : 'bg-zinc-50 border-zinc-200 hover:border-zinc-400'
+                              }`}
+                            >
+                              <p className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: i === 0 ? '#D4FF00' : i === 1 ? '#22D3EE' : '#F472B6' }}>
+                                {v.label}
+                              </p>
+                              {v.audioUrl ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => playVariant(v.audioUrl, i)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+                                      playingVariant === i
+                                        ? 'bg-[#D4FF00] text-black border-transparent'
+                                        : isDark ? 'border-white/10 text-zinc-300 hover:border-white/20' : 'border-zinc-300 text-zinc-700 hover:border-zinc-400'
+                                    }`}
+                                  >
+                                    {playingVariant === i ? (
+                                      <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>{isEn ? 'Pause' : 'Pause'}</>
+                                    ) : (
+                                      <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>{isEn ? 'Play' : 'Écouter'}</>
+                                    )}
+                                  </button>
+                                  <button
+                                    onClick={() => { const a = document.createElement('a'); a.href = v.audioUrl; a.download = `afrivoice_variant_${String.fromCharCode(65 + i)}_${Date.now()}.wav`; a.click(); }}
+                                    title={isEn ? 'Download' : 'Télécharger'}
+                                    className={`p-2 rounded-xl border transition-all ${
+                                      isDark ? 'border-white/10 text-zinc-400 hover:text-[#D4FF00] hover:border-[#D4FF00]/30' : 'border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:border-zinc-400'
+                                    }`}
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                  </button>
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-red-400 font-bold">{isEn ? 'Generation failed' : 'Échec de la génération'}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
             </div>
           )}
 
