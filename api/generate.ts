@@ -106,7 +106,6 @@ export default async function handler(req: any, res: any) {
               prebuiltVoiceConfig: { voiceName: actualVoiceId },
             },
           },
-          temperature: 0,
         },
       });
     } catch (apiError: any) {
