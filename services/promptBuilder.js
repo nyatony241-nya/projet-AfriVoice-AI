@@ -110,6 +110,10 @@ export function buildDirectorPrompt(params) {
   const actualVoiceId = VOICE_MAP[voiceKey] || (gender.toLowerCase() === 'female' ? 'Aoede' : 'Puck');
   const voicePersona = gender.toLowerCase() === 'female' ? 'warm, clear, and engaging' : 'deep, resonant, and reassuring';
 
+  const personaName = gender.toLowerCase() === 'female' 
+    ? (dna.femalePersonaName || 'Aïcha') 
+    : (dna.malePersonaName || 'Paul');
+
   const sections = [];
 
   // SYSTEM HEADER FOR GEMINI TTS
@@ -118,11 +122,11 @@ export function buildDirectorPrompt(params) {
   // SECTION 1: CHARACTER & DETERMINISTIC VOICE IDENTITY
   const gw = gender.toLowerCase() === 'female' ? 'woman' : 'man';
   const charParts = [
-    `You are a ${age}-year-old ${gw} born and raised in ${countryName} (${dna.capital}).`,
+    `Your character name is ${personaName}. You are ${personaName}, a ${age}-year-old ${gw} born and raised in ${countryName} (${dna.capital}).`,
+    `Your signature voice identity as ${personaName} is 100% fixed: keep your exact pitch, timbre, vocal register, and native speech melody completely consistent on every single performance.`,
     `Your speech is natively rooted in ${dna.localLanguages.join(', ')}.`,
     `${dna.culturalContext}.`,
     `Your natural voice quality is ${voicePersona}.`,
-    `You MUST maintain strict vocal consistency: use the exact same pitch, timbre, and accent profile throughout the performance.`,
   ];
   if (personality && PERSONALITY_MAP[personality]) {
     charParts.push(PERSONALITY_MAP[personality]);
