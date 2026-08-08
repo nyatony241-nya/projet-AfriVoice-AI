@@ -45,7 +45,7 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Validation Supabase optionnelle (quota de sécurité client-side)
+    // Validation Supabase optionnelle
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
     const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
@@ -57,7 +57,7 @@ export default async function handler(req: any, res: any) {
           const token = authHeader.split(' ')[1];
           const { data, error } = await supabase.auth.getUser(token);
           if (error || !data.user) {
-            console.warn('[AfriVoice] Auth token invalid/expired — continuing (quota managed client-side):', error?.message);
+            console.warn('[AfriVoice] Auth token invalid/expired — continuing:', error?.message);
           } else {
             console.log('[AfriVoice] Auth OK — user:', data.user.email);
           }
@@ -72,8 +72,8 @@ export default async function handler(req: any, res: any) {
       ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
       : script;
 
-    // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée
-    const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
+    // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée avec seed déterministe
+    const { directorBrief: fullPrompt, actualVoiceId, voiceSeed } = buildDirectorPrompt({
       script,
       countryId: options?.countryId,
       countryName: options?.countryName || "Côte d'Ivoire",
@@ -93,7 +93,7 @@ export default async function handler(req: any, res: any) {
 
     const ai = getAiClient(apiKey);
 
-    // 3. Appel de l'API Gemini TTS avec gestion d'erreurs enrichie
+    // 3. Appel de l'API Gemini TTS avec gestion d'erreurs enrichie et configuration déterministe
     let geminiResponse;
     try {
       geminiResponse = await ai.models.generateContent({
@@ -106,12 +106,13 @@ export default async function handler(req: any, res: any) {
               prebuiltVoiceConfig: { voiceName: actualVoiceId },
             },
           },
+          temperature: 0.0,
+          seed: voiceSeed,
         },
       });
     } catch (apiError: any) {
       console.error('[AfriVoice] Gemini API call failed:', apiError);
       
-      // Détection des erreurs d'authentification (clé invalide / expirée)
       const errMessage = apiError?.message || '';
       const isAuthError = 
         apiError?.status === 401 || 

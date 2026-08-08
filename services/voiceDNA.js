@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────
-// Voice DNA Database & Local Expressions (20 African Countries)
+// Voice DNA Database & Local Expressions (19 African Countries)
 // Unified Source of Truth for Server, Serverless, and Client
 // ──────────────────────────────────────────────────────────────
 
@@ -60,15 +60,15 @@ export const VOICE_DNA = {
     defaultConfidence: 7,
     defaultEnergy: 6
   },
-  CD: {
-    countryId: 'CD',
+  CG: {
+    countryId: 'CG',
     region: 'Central Africa',
-    capital: 'Kinshasa',
-    localLanguages: ['Lingala', 'Swahili', 'Tshiluba', 'Kikongo'],
+    capital: 'Brazzaville / Kinshasa',
+    localLanguages: ['Lingala', 'Kikongo', 'Tshiluba', 'Swahili'],
     speechMelody: 'Vibrant, highly melodious, and singing intonation. Pitch moves in graceful tonal arches shaped by Lingala musicality, with prolonged high tones on key vowels.',
     consonantStyle: 'Soft, rounded consonants with open, bright, sustained vowels and smooth vocalic resonance. Diphthongs are fully and clearly articulated.',
-    rhythmPattern: 'Lively, dance-like, syncopated cadence with rhythmic pauses, expressive vocal warmth, and high theatrical energy.',
-    culturalContext: 'Flamboyant, artistic, warm, and captivating. Reflects Kinshasa\'s legendary music, Sapeur elegance, and cultural energy.',
+    rhythmPattern: 'Lively, dance-like, syncopated cadence with rhythmic pauses, expressive vocal warmth, and high musical energy.',
+    culturalContext: 'Flamboyant, artistic, warm, and captivating. Reflects Congolese legendary music, Sapeur elegance, and vibrant cultural energy.',
     antiPatterns: ['Parisian French', 'Belgian French', 'Flat monotone delivery', 'Dull robotic speech'],
     defaultWarmth: 8,
     defaultConfidence: 8,
@@ -200,20 +200,6 @@ export const VOICE_DNA = {
     defaultConfidence: 7,
     defaultEnergy: 8
   },
-  CG: {
-    countryId: 'CG',
-    region: 'Central Africa',
-    capital: 'Brazzaville',
-    localLanguages: ['Kikongo', 'Lingala'],
-    speechMelody: 'Sophisticated, stylized, and velvety smooth. Lingala musicality fused with elegant, softer phrasing.',
-    consonantStyle: 'Soft, rounded, impeccably stylized French pronunciation with Central African warmth. Softer than Kinshasa.',
-    rhythmPattern: 'Graceful, continuous cadence without harsh stops, moving with quiet pride and Sapeur elegance.',
-    culturalContext: 'Inspired by La Sape culture — impeccably polished, elegant, proud, and distinguished.',
-    antiPatterns: ['Parisian French', 'Standard European French', 'Unrefined delivery'],
-    defaultWarmth: 7,
-    defaultConfidence: 9,
-    defaultEnergy: 7
-  },
   TN: {
     countryId: 'TN',
     region: 'North Africa',
@@ -307,10 +293,10 @@ export const LOCAL_EXPRESSIONS = {
     greetings: ['Salaam aleekum', 'Na nga def?'],
     emphasis: ['Yalla!', 'Inchallah!', 'Machallah!'],
   },
-  CD: {
-    fillers: ['pona nini', 'yo', 'eloko', 'pesa'],
+  CG: {
+    fillers: ['pona nini', 'yo', 'eloko', 'pesa', 'lokola'],
     greetings: ['Mbote na yo!', 'Oza bien?'],
-    emphasis: ['Tozali!', 'Eh eh!', 'Mawa!'],
+    emphasis: ['Tozali!', 'Eh eh!', 'Mawa!', 'C\'est fort!'],
   },
   GH: {
     fillers: ['chale', 'as for me', 'you see', 'charley'],
@@ -356,11 +342,6 @@ export const LOCAL_EXPRESSIONS = {
     fillers: ['éfè', 'bon', 'n\'est-ce pas', 'fo'],
     greetings: ['Efoa?', 'Ndi!'],
     emphasis: ['Yoo!', 'Ah!', 'Ah bon!'],
-  },
-  CG: {
-    fillers: ['mundele', 'eh bien', 'c\'est ça', 'lokola'],
-    greetings: ['Mbote!', 'Yo nzala?'],
-    emphasis: ['Lokola!', 'C\'est fort!', 'Vraiment!'],
   },
   TN: {
     fillers: ['barcha', 'ya3ni', 'voilà', 'ey'],

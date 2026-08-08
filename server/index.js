@@ -57,7 +57,7 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     keyConfigured: !!(process.env.GEMINI_API_KEY),
-    engine: 'VoicePromptEngine v3 — AI Voice Director'
+    engine: 'VoicePromptEngine v3 — AI Voice Director (Deterministic)'
   });
 });
 
@@ -83,7 +83,7 @@ const verifyAuthToken = async (req, res, next) => {
 };
 
 // ══════════════════════════════════════════════════════════════
-// API ENDPOINT — Voice Generation
+// API ENDPOINT — Voice Generation (Deterministic)
 // ══════════════════════════════════════════════════════════════
 
 app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => {
@@ -107,8 +107,8 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
       : script;
 
-    // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée
-    const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
+    // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée avec seed déterministe
+    const { directorBrief: fullPrompt, actualVoiceId, voiceSeed } = buildDirectorPrompt({
       script,
       voiceId,
       countryId: options?.countryId || '',
@@ -128,7 +128,7 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
     });
 
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`✅ [AI Director v3] Pays: ${options?.countryId || 'auto'} | Style: ${options?.contentStyle || 'auto'} | Voix: ${actualVoiceId}`);
+      console.log(`✅ [AI Director v3] Pays: ${options?.countryId || 'auto'} | Style: ${options?.contentStyle || 'auto'} | Voix: ${actualVoiceId} | Seed: ${voiceSeed}`);
     }
 
     if (!global.aiClientCache) {
@@ -153,12 +153,13 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
               },
             },
           },
+          temperature: 0.0,
+          seed: voiceSeed,
         },
       });
     } catch (apiError) {
       console.error("❌ Erreur API Gemini:", apiError);
 
-      // Détection des erreurs d'authentification (clé invalide / expirée)
       const errMessage = apiError?.message || '';
       const isAuthError = 
         apiError?.status === 401 || 
@@ -202,6 +203,6 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
 
 app.listen(PORT, () => {
   console.log(`🚀 AfriVoice AI Voice Director v3 — port ${PORT}`);
-  console.log(`🎯 Moteur: Narrative-Driven Director → Voice DNA (20 pays) → Scene-Based Prompts`);
+  console.log(`🎯 Moteur: Narrative-Driven Director → Voice DNA (19 pays) → Scene-Based Prompts (Déterministe)`);
   console.log(`🔑 Gemini: ${process.env.GEMINI_API_KEY ? '✅ Configurée' : '❌ NON CONFIGURÉE!'}`);
 });

@@ -1,6 +1,6 @@
 // ──────────────────────────────────────────────────────────────
 // PhoneticHumanizer — Country Speech Profiles
-// 20 African countries × linguistic fingerprints (pure JS)
+// 19 African countries × linguistic fingerprints (pure JS)
 // ──────────────────────────────────────────────────────────────
 
 /**
@@ -81,7 +81,7 @@ const PROFILES = {
     language: 'fr',
     vowelStretchTargets: {
       'attention': 'attentioon',
-      'vraiment': 'vra Meeent',
+      'vraiment': 'vraimeeent',
       'important': 'importaant',
       'absolument': 'absolumeeent',
       'cameroun': 'camerouun',
@@ -194,14 +194,15 @@ const PROFILES = {
     preferredEmotionTags: ['[warm smile]', '[chuckle]'],
   },
 
-  CD: {
-    countryId: 'CD',
+  CG: {
+    countryId: 'CG',
     language: 'fr',
     vowelStretchTargets: {
       'vraiment': 'vraaiiment',
       'merci': 'meerci',
       'formidable': 'formidaable',
       'kinshasa': 'kinshaasa',
+      'brazzaville': 'brazzaviille',
       'musique': 'musiique',
       'magnifique': 'magnifiique',
       'incroyable': 'incrooyable',
@@ -216,33 +217,10 @@ const PROFILES = {
     maxStretchesPerSentence: 3,
     rhythmStyle: 'syncopated',
     pauseWeight: 4,
-    interjections: ['yo', 'eh eh', 'mbote', 'tozali', 'mawa'],
+    interjections: ['yo', 'eh eh', 'mbote', 'tozali', 'mawa', 'c\'est fort'],
     openers: ['Eh eh...', 'Ah...', 'Bon...', 'Yo...'],
     emotionBias: 'energetic',
     preferredEmotionTags: ['[laughs softly]', '[warm smile]', '[excited]', '[chuckle]'],
-  },
-
-  CG: {
-    countryId: 'CG',
-    language: 'fr',
-    vowelStretchTargets: {
-      'vraiment': 'vraaiiment',
-      'merci': 'meerci',
-      'formidable': 'formidaable',
-      'brazzaville': 'brazzaviille',
-      'magnifique': 'magnifiique',
-      'ensemble': 'enseeemble',
-      'élégant': 'éléegant',
-      'extraordinaire': 'extraordinaiire',
-    },
-    stretchIntensity: 2,
-    maxStretchesPerSentence: 2,
-    rhythmStyle: 'flowing',
-    pauseWeight: 2,
-    interjections: ['eh bien', 'c\'est ça', 'mbote', 'lokola'],
-    openers: ['Eh bien...', 'Voilà...', 'Bon...'],
-    emotionBias: 'calm',
-    preferredEmotionTags: ['[warm smile]', '[sighs contentedly]'],
   },
 
   GA: {
@@ -505,7 +483,8 @@ const PROFILES = {
  */
 export function getProfile(countryId, detectedLanguage) {
   if (!countryId) return null;
-  const id = countryId.toUpperCase();
+  let id = countryId.toUpperCase();
+  if (id === 'CD') id = 'CG'; // Fallback for legacy CD -> CG
   if (PROFILES[id]) return PROFILES[id];
 
   if (detectedLanguage === 'en') return PROFILES['NG'];

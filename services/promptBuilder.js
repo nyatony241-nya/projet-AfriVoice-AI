@@ -91,6 +91,8 @@ export function buildDirectorPrompt(params) {
 
   // Resolve Country ID
   let countryId = (reqCountryId || '').toUpperCase();
+  if (countryId === 'CD') countryId = 'CG'; // Legacy alias
+
   if (!countryId || !VOICE_DNA[countryId]) {
     const match = Object.keys(VOICE_DNA).find(id => {
       const dna = VOICE_DNA[id];
@@ -113,13 +115,14 @@ export function buildDirectorPrompt(params) {
   // SYSTEM HEADER FOR GEMINI TTS
   sections.push(`[DIRECTOR BRIEF - INTERNAL PERFORMANCE GUIDANCE ONLY - DO NOT READ ALOUD]`);
 
-  // SECTION 1: CHARACTER
+  // SECTION 1: CHARACTER & DETERMINISTIC VOICE IDENTITY
   const gw = gender.toLowerCase() === 'female' ? 'woman' : 'man';
   const charParts = [
     `You are a ${age}-year-old ${gw} born and raised in ${countryName} (${dna.capital}).`,
     `Your speech is natively rooted in ${dna.localLanguages.join(', ')}.`,
     `${dna.culturalContext}.`,
     `Your natural voice quality is ${voicePersona}.`,
+    `You MUST maintain strict vocal consistency: use the exact same pitch, timbre, and accent profile throughout the performance.`,
   ];
   if (personality && PERSONALITY_MAP[personality]) {
     charParts.push(PERSONALITY_MAP[personality]);
@@ -194,8 +197,18 @@ export function buildDirectorPrompt(params) {
   const finalTranscript = phoneticScript || script;
   sections.push(`[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${finalTranscript.trim()}\n</transcript>`);
 
+  // Derive a deterministic seed based on voice characteristics to stabilize voice identity
+  const seedString = `${gender}-${voiceVariant}-${age}-${countryId}-${personality || 'default'}-${vocalObjective || 'default'}-${contentStyle || 'default'}`;
+  let hash = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    hash = (hash << 5) - hash + seedString.charCodeAt(i);
+    hash |= 0;
+  }
+  const voiceSeed = Math.abs(hash) % 1000000;
+
   return {
     directorBrief: sections.join('\n\n'),
     actualVoiceId,
+    voiceSeed,
   };
 }
