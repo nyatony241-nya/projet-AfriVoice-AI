@@ -153,6 +153,7 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
               },
             },
           },
+          temperature: 0,
         },
       });
     } catch (apiError) {

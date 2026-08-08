@@ -110,21 +110,17 @@ export function buildDirectorPrompt(params) {
   const actualVoiceId = VOICE_MAP[voiceKey] || (gender.toLowerCase() === 'female' ? 'Aoede' : 'Puck');
   const voicePersona = gender.toLowerCase() === 'female' ? 'warm, clear, and engaging' : 'deep, resonant, and reassuring';
 
-  const personaName = gender.toLowerCase() === 'female' 
-    ? (dna.femalePersonaName || 'Aïcha') 
-    : (dna.malePersonaName || 'Paul');
-
   const sections = [];
 
   // SYSTEM HEADER FOR GEMINI TTS
   sections.push(`[DIRECTOR BRIEF - INTERNAL PERFORMANCE GUIDANCE ONLY - DO NOT READ ALOUD]`);
 
-  // SECTION 1: CHARACTER & DETERMINISTIC VOICE IDENTITY
+  // SECTION 1: CHARACTER
   const gw = gender.toLowerCase() === 'female' ? 'woman' : 'man';
   const charParts = [
-    `Your character name is ${personaName}. You are ${personaName}, a ${age}-year-old ${gw} born and raised in ${countryName} (${dna.capital}).`,
-    `Your signature voice identity as ${personaName} is 100% fixed: keep your exact pitch, timbre, vocal register, and native speech melody completely consistent on every single performance.`,
-    `Your speech is natively rooted in ${dna.localLanguages.join(', ')}.`,
+    `You are a ${age}-year-old ${gw} who was BORN AND RAISED in ${countryName} (${dna.capital}). You have NEVER lived outside ${countryName}.`,
+    `You grew up speaking ${dna.localLanguages[0]} at home before learning any other language. ${dna.localLanguages[0]} is the foundation of how you think, breathe, and speak.`,
+    `Your speech is deeply, natively rooted in ${dna.localLanguages.join(', ')}.`,
     `${dna.culturalContext}.`,
     `Your natural voice quality is ${voicePersona}.`,
   ];
