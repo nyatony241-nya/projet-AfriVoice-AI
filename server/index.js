@@ -153,7 +153,7 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
               },
             },
           },
-          temperature: 0.5,
+          temperature: undefined,
           seed: voiceSeed,
         },
       });
