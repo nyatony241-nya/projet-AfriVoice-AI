@@ -10,8 +10,7 @@ import WaveformPlayer from './components/WaveformPlayer';
 import QuotaBar from './components/QuotaBar';
 import ToastContainer, { Toast } from './components/ToastContainer';
 import AuditModal from './components/AuditModal';
-import VoiceClonePanel from './components/VoiceClonePanel';
-import { generateVoiceOver, generateClonedVoiceOver } from './services/geminiService';
+import { generateVoiceOver } from './services/geminiService';
 import { mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './services/audioUtils';
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
@@ -49,22 +48,7 @@ const App: React.FC = () => {
   const [lastGenTimestamp, setLastGenTimestamp] = useState<number>(0);
   const [recentGenerationsCount, setRecentGenerationsCount] = useState<number>(0);
 
-  // Cloned Voice State
-  const [clonedVoiceProfile, setClonedVoiceProfile] = useState<import('./types').ClonedVoiceProfile | null>(() => {
-    const saved = localStorage.getItem('AFRIVOICE_CLONED_VOICE');
-    if (saved) {
-      try { return JSON.parse(saved); } catch {}
-    }
-    return null;
-  });
 
-  useEffect(() => {
-    if (clonedVoiceProfile) {
-      localStorage.setItem('AFRIVOICE_CLONED_VOICE', JSON.stringify(clonedVoiceProfile));
-    } else {
-      localStorage.removeItem('AFRIVOICE_CLONED_VOICE');
-    }
-  }, [clonedVoiceProfile]);
 
   // Auth State
   const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
@@ -337,7 +321,6 @@ const App: React.FC = () => {
           accentDescription: selectedCountry.accentDescription,
           gender: settings.gender,
           voiceVariant: settings.voiceVariant || 'voice1',
-          isClonedVoice: settings.isClonedVoice,
           age: settings.age,
           emotion: variant.emotion,
           style: settings.style,
@@ -421,64 +404,28 @@ const App: React.FC = () => {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       }
 
-      // Sélection & Génération (Voix Clonée vs Gemini)
-      let result;
-      if (settings.isClonedVoice && clonedVoiceProfile) {
-        if (clonedVoiceProfile.usedSeconds >= clonedVoiceProfile.maxSeconds) {
-          setStatus((prev) => ({
-            ...prev,
-            error: isEn
-              ? 'Cloned voice quota exhausted (15 min/month max). Please recharge or use standard voices.'
-              : 'Quota de voix clonée épuisé (15 min/mois max). Veuillez recharger ou utiliser les voix standards.',
-          }));
-          addToast('warning', isEn ? 'Cloned Voice Limit Reached' : 'Quota Voix Clonée Épuisé', isEn ? 'You have used your 15 minutes of cloned voice synthesis.' : 'Vous avez utilisé vos 15 minutes de voix clonée ce mois.');
-          return;
-        }
+      const selectedVoiceId = settings.gender === 'female' 
+        ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
+        : (selectedCountry.geminiVoiceMale || 'Puck');
 
-        result = await generateClonedVoiceOver(script, clonedVoiceProfile.elevenLabsVoiceId, {
-          countryId: selectedCountry.id,
-          countryName: selectedCountry.name,
-          accentDescription: selectedCountry.accentDescription,
-          gender: settings.gender,
-          voiceVariant: settings.voiceVariant || 'voice1',
-          isClonedVoice: settings.isClonedVoice,
-          age: settings.age,
-          emotion: settings.emotion,
-          style: settings.style,
-          useLocalExpressions: settings.useLocalExpressions,
-          phoneticHumanizer: settings.phoneticHumanizer,
-          speed: settings.speed,
-          pitch: settings.pitch,
-          accentLevel: settings.accentLevel,
-          contentStyle: settings.contentStyle,
-          personality: settings.personality,
-          vocalObjective: settings.vocalObjective,
-        });
-      } else {
-        const selectedVoiceId = settings.gender === 'female' 
-          ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
-          : (selectedCountry.geminiVoiceMale || 'Puck');
-
-        result = await generateVoiceOver(script, selectedVoiceId, {
-          countryId: selectedCountry.id,
-          countryName: selectedCountry.name,
-          accentDescription: selectedCountry.accentDescription,
-          gender: settings.gender,
-          voiceVariant: settings.voiceVariant || 'voice1',
-          isClonedVoice: settings.isClonedVoice,
-          age: settings.age,
-          emotion: settings.emotion,
-          style: settings.style,
-          useLocalExpressions: settings.useLocalExpressions,
-          phoneticHumanizer: settings.phoneticHumanizer,
-          speed: settings.speed,
-          pitch: settings.pitch,
-          accentLevel: settings.accentLevel,
-          contentStyle: settings.contentStyle,
-          personality: settings.personality,
-          vocalObjective: settings.vocalObjective,
-        });
-      }
+      const result = await generateVoiceOver(script, selectedVoiceId, {
+        countryId: selectedCountry.id,
+        countryName: selectedCountry.name,
+        accentDescription: selectedCountry.accentDescription,
+        gender: settings.gender,
+        voiceVariant: settings.voiceVariant || 'voice1',
+        age: settings.age,
+        emotion: settings.emotion,
+        style: settings.style,
+        useLocalExpressions: settings.useLocalExpressions,
+        phoneticHumanizer: settings.phoneticHumanizer,
+        speed: settings.speed,
+        pitch: settings.pitch,
+        accentLevel: settings.accentLevel,
+        contentStyle: settings.contentStyle,
+        personality: settings.personality,
+        vocalObjective: settings.vocalObjective,
+      });
 
       let buffer: AudioBuffer;
 
@@ -501,9 +448,7 @@ const App: React.FC = () => {
       const estimatedSeconds = Math.max(5, Math.round(buffer.duration || script.length / 14));
       setUsedSeconds((prev) => prev + estimatedSeconds);
 
-      if (settings.isClonedVoice && clonedVoiceProfile) {
-        setClonedVoiceProfile((prev) => prev ? { ...prev, usedSeconds: prev.usedSeconds + estimatedSeconds } : null);
-      }
+
 
       // Convert blob to base64 for history storage
       const reader = new FileReader();
@@ -898,7 +843,7 @@ const App: React.FC = () => {
                       <span>{isEn ? 'Voice Parameters & Nuances' : 'Paramètres Vocaux & Nuances'}</span>
                     </h2>
                     <span className="text-xs font-mono text-zinc-500 font-bold hidden sm:inline">
-                      {settings.isClonedVoice ? (isEn ? '🎤 Cloned Voice HD (Authentic Imprint)' : '🎤 Voix Clonée HD (Empreinte Locale)') : settings.gender === 'female' ? (isEn ? 'Aoede (Female)' : 'Aoede (Femme)') : (isEn ? 'Puck (Male)' : 'Puck (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
+                      {settings.gender === 'female' ? (isEn ? 'Aoede (Female)' : 'Aoede (Femme)') : (isEn ? 'Puck (Male)' : 'Puck (Homme)')} • {settings.age} {isEn ? 'y.o.' : 'ans'}
                     </span>
                   </div>
 
@@ -909,9 +854,9 @@ const App: React.FC = () => {
                         {['female', 'male'].map((g) => (
                           <button
                             key={g}
-                            onClick={() => setSettings({ ...settings, gender: g as any, voiceVariant: 'voice1', isClonedVoice: false })}
+                            onClick={() => setSettings({ ...settings, gender: g as any, voiceVariant: 'voice1' })}
                             className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-98 ${
-                              settings.gender === g && !settings.isClonedVoice
+                              settings.gender === g
                                 ? 'bg-[#D4FF00] text-black shadow-lg shadow-[#D4FF00]/25'
                                 : isDark
                                 ? 'bg-[#09090B] text-zinc-400 border border-white/5 hover:border-white/20'
@@ -924,8 +869,7 @@ const App: React.FC = () => {
                       </div>
 
                       {/* Voice Variant Selection (Animated Drawer) */}
-                      {!settings.isClonedVoice && (
-                        <div className="flex flex-col sm:flex-row gap-2 mt-3 animate-in slide-in-from-top-2 fade-in duration-300">
+                      <div className="flex flex-col sm:flex-row gap-2 mt-3 animate-in slide-in-from-top-2 fade-in duration-300">
                           {settings.gender === 'female' ? (
                             <>
                               <button
@@ -994,30 +938,7 @@ const App: React.FC = () => {
                             </>
                           )}
                         </div>
-                      )}
-                    </div>
-
-                    {/* Voice Clone Section */}
-                    <div className="pt-2 pb-2">
-                      <VoiceClonePanel
-                        isPro={isCloningFeature}
-                        isDark={isDark}
-                        isEn={isEn}
-                        clonedVoiceProfile={clonedVoiceProfile}
-                        onSaveProfile={(prof) => setClonedVoiceProfile(prof)}
-                        onDeleteProfile={() => {
-                          setClonedVoiceProfile(null);
-                          setSettings((prev) => ({ ...prev, isClonedVoice: false }));
-                        }}
-                        onSelectClonedVoice={(active) => setSettings((prev) => ({ ...prev, isClonedVoice: active }))}
-                        isClonedVoiceActive={!!settings.isClonedVoice}
-                        addToast={addToast}
-                        onRechargeCloneQuota={() => {
-                          setShowRechargeModal(true);
-                          addToast('info', isEn ? 'Recharge Menu' : 'Recharge de Minutes', isEn ? 'Select a top-up pack to continue.' : 'Sélectionnez un pack de recharge pour votre quota.');
-                        }}
-                      />
-                    </div>
+                      </div>
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
@@ -1054,11 +975,6 @@ const App: React.FC = () => {
                           <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
                             {isEn ? 'Accent Intensity' : 'Intensité de l\'Accent'}
                           </label>
-                          {settings.isClonedVoice && (
-                            <span className="text-[10px] font-black bg-[#D4FF00] text-black px-2.5 py-0.5 rounded-full">
-                              {isEn ? '🧬 Applied to Clone' : '🧬 Appliqué au Clone'}
-                            </span>
-                          )}
                         </div>
                         <div className="flex gap-2">
                           {(['light', 'medium', 'strong'] as AccentLevel[]).map((level) => (
@@ -1191,29 +1107,22 @@ const App: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className={`space-y-3 transition-opacity duration-200 ${settings.isClonedVoice ? 'opacity-35 pointer-events-none' : ''}`}>
+                      <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="text-xs sm:text-sm font-black uppercase tracking-widest text-zinc-500">
                             {isEn ? 'Apparent Voice Age' : 'Âge apparent'}
                           </label>
-                          {settings.isClonedVoice ? (
-                            <span className="text-[10px] font-black bg-zinc-800 text-zinc-400 dark:bg-white/10 px-2 py-0.5 rounded-full">
-                              {isEn ? 'Fixed by Clone' : 'Fixé par le Clone'}
-                            </span>
-                          ) : (
-                            <span className="text-sm font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
-                              {settings.age} {isEn ? 'Y.O.' : 'ANS'}
-                            </span>
-                          )}
+                          <span className="text-sm font-mono font-black text-zinc-900 dark:text-[#D4FF00]">
+                            {settings.age} {isEn ? 'Y.O.' : 'ANS'}
+                          </span>
                         </div>
                         <input
                           type="range"
                           min="18"
                           max="70"
                           value={settings.age}
-                          disabled={settings.isClonedVoice}
                           onChange={(e) => setSettings({ ...settings, age: parseInt(e.target.value) })}
-                          className="w-full h-3 mt-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
+                          className="w-full h-3 mt-2 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
                         />
                         <div className="flex justify-between text-xs font-bold text-zinc-400 uppercase tracking-tight">
                           <span>{isEn ? 'Young (18)' : 'Jeune (18)'}</span>

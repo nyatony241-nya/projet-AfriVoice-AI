@@ -38,8 +38,6 @@ export interface VoiceSettings {
   speed: number;
   emotion?: 'neutral' | 'happy' | 'serious' | 'energetic' | 'soft';
   useLocalExpressions?: boolean;
-  isClonedVoice?: boolean;
-  clonedVoiceName?: string;
   phoneticHumanizer?: boolean;
   // AI Voice Director Engine additions
   accentLevel?: AccentLevel;
@@ -145,10 +143,3 @@ export interface QuotaUsage {
   remainingGenerationsToday?: number;
 }
 
-export interface ClonedVoiceProfile {
-  elevenLabsVoiceId: string;
-  name: string;
-  createdAt: number;
-  usedSeconds: number;     // quota cloné utilisé ce mois
-  maxSeconds: number;      // 15 * 60 = 900 secondes
-}

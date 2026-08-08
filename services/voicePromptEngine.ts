@@ -41,7 +41,6 @@ export function buildOptimizedPrompt(params: {
   countryName: string;
   gender: string;
   voiceVariant?: string;
-  isClonedVoice?: boolean;
   age: number;
   emotion?: string;
   speed: number;
@@ -58,8 +57,7 @@ export function buildOptimizedPrompt(params: {
   let actualVoiceId = params.voiceId;
   let voicePersona = '';
 
-  if (!params.isClonedVoice) {
-    const VOICE_VARIANTS: Record<string, { id: string; persona: string }> = {
+  const VOICE_VARIANTS: Record<string, { id: string; persona: string }> = {
       'female-voice1': { id: 'Aoede', persona: 'soft, warm, and elegant' },
       'female-voice2': { id: 'Kore', persona: 'bright, dynamic, and youthful' },
       'female-voice3': { id: 'Leda', persona: 'mature, authoritative, and wise' },
@@ -82,7 +80,6 @@ export function buildOptimizedPrompt(params: {
       actualVoiceId = fallback.id;
       voicePersona = fallback.persona;
     }
-  }
 
   // ── STEP 2: AI Voice Director ─────────────────────
   // Analyzes the script text to determine optimal delivery parameters
