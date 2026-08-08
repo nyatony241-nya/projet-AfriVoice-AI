@@ -73,7 +73,7 @@ export default async function handler(req: any, res: any) {
       : script;
 
     // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée
-    const { directorBrief: fullPrompt, actualVoiceId, voiceSeed } = buildDirectorPrompt({
+    const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
       script,
       countryId: options?.countryId,
       countryName: options?.countryName || "Côte d'Ivoire",
@@ -93,7 +93,7 @@ export default async function handler(req: any, res: any) {
 
     const ai = getAiClient(apiKey);
 
-    // 3. Appel de l'API Gemini TTS avec gestion d'erreurs enrichie et configuration déterministe
+    // 3. Appel de l'API Gemini TTS avec gestion d'erreurs enrichie
     let geminiResponse;
     try {
       geminiResponse = await ai.models.generateContent({
@@ -106,8 +106,6 @@ export default async function handler(req: any, res: any) {
               prebuiltVoiceConfig: { voiceName: actualVoiceId },
             },
           },
-          temperature: undefined,
-          seed: voiceSeed,
         },
       });
     } catch (apiError: any) {

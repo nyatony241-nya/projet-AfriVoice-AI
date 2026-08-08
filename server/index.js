@@ -108,7 +108,7 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       : script;
 
     // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée
-    const { directorBrief: fullPrompt, actualVoiceId, voiceSeed } = buildDirectorPrompt({
+    const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
       script,
       voiceId,
       countryId: options?.countryId || '',
@@ -153,8 +153,6 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
               },
             },
           },
-          temperature: undefined,
-          seed: voiceSeed,
         },
       });
     } catch (apiError) {

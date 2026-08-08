@@ -194,18 +194,8 @@ export function buildDirectorPrompt(params) {
   const finalTranscript = phoneticScript || script;
   sections.push(`[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${finalTranscript.trim()}\n</transcript>`);
 
-  // Derive a deterministic seed based on voice characteristics to stabilize voice identity
-  const seedString = `${gender}-${voiceVariant}-${age}-${countryId}-${personality || 'default'}`;
-  let hash = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    hash = (hash << 5) - hash + seedString.charCodeAt(i);
-    hash |= 0; // Convert to 32bit integer
-  }
-  const voiceSeed = Math.abs(hash) % 1000000;
-
   return {
     directorBrief: sections.join('\n\n'),
     actualVoiceId,
-    voiceSeed,
   };
 }
