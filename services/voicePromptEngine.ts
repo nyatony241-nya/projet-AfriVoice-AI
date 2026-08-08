@@ -24,7 +24,7 @@ export function buildOptimizedPrompt(params: {
   vocalObjective?: VocalObjective;
   useLocalExpressions?: boolean;
   phoneticScript?: string;
-}): { prompt: string; actualVoiceId: string; voiceSeed?: number } {
+}): { prompt: string; actualVoiceId: string } {
   const result = buildDirectorPrompt({
     script: params.script,
     voiceId: params.voiceId,
@@ -46,7 +46,6 @@ export function buildOptimizedPrompt(params: {
 
   return {
     prompt: result.directorBrief,
-    actualVoiceId: result.actualVoiceId,
-    voiceSeed: result.voiceSeed
+    actualVoiceId: result.actualVoiceId
   };
 }

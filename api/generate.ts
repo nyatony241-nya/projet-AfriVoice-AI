@@ -73,7 +73,7 @@ export default async function handler(req: any, res: any) {
       : script;
 
     // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée avec seed déterministe
-    const { directorBrief: fullPrompt, actualVoiceId, voiceSeed } = buildDirectorPrompt({
+    const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
       script,
       countryId: options?.countryId,
       countryName: options?.countryName || "Côte d'Ivoire",
@@ -106,8 +106,6 @@ export default async function handler(req: any, res: any) {
               prebuiltVoiceConfig: { voiceName: actualVoiceId },
             },
           },
-          temperature: 0.0,
-          seed: voiceSeed,
         },
       });
     } catch (apiError: any) {
