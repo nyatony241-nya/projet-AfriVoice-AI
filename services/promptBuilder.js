@@ -192,7 +192,8 @@ export function buildDirectorPrompt(params) {
 2. Do NOT read any section headers, directives, or bracketed instructions aloud.
 3. Perform bracketed audio tags like [sighs], [laughs], or [pause] as acoustic effects, not spoken words.
 4. Sound like a real native person from ${countryName}, never synthetic or European.
-5. Pour chaque pays parmi les 19 déjà définis, respecte l’identité culturelle spécifique. Le rendu doit reproduire l’accent distinct de chaque pays (par exemple, accent sénégalais pour le Sénégal, accent ivoirien pour la Côte d'Ivoire). À chaque génération, avec les mêmes paramètres, la voix doit être identique et reproduire fidèlement l’accent propre à chaque pays. Utilise un seed unique par pays pour assurer cette constance.`);
+5. Pour chaque pays parmi les 19 déjà définis, respecte l’identité culturelle spécifique. Le rendu doit reproduire l’accent distinct de chaque pays (par exemple, accent sénégalais pour le Sénégal, accent ivoirien pour la Côte d'Ivoire). À chaque génération, avec les mêmes paramètres, la voix doit être identique et reproduire fidèlement l’accent propre à chaque pays. Utilise un seed unique par pays pour assurer cette constance.
+6. Chaque génération de voix doit être parfaitement identique, sans aucune variation, même si le texte change. Fixe un identifiant unique par pays et par configuration, et utilise ce seed pour stabiliser la voix. Même si le texte varie, la prosodie, le timbre et l’accent doivent rester exactement les mêmes. Aucun bruit aléatoire ne doit être introduit, et chaque sortie doit reproduire fidèlement la même qualité de voix.`);
 
   // SECTION 7: TRANSCRIPT (ALWAYS placed last, per Gemini best practices)
   const finalTranscript = phoneticScript || script;
