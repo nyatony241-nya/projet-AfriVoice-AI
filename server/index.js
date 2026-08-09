@@ -8,6 +8,8 @@ import { createClient } from '@supabase/supabase-js';
 import multer from 'multer';
 import { humanizeScript } from '../services/phonetic-humanizer/index.js';
 import { buildDirectorPrompt } from '../services/promptBuilder.js';
+import { VOICE_PROFILES } from '../services/voiceProfiles.js';
+import { synthesizeWithGoogleVoiceClone } from '../services/googleTtsService.js';
 
 dotenv.config();
 if (fs.existsSync('.env.local')) {
@@ -87,10 +89,10 @@ const verifyAuthToken = async (req, res, next) => {
 // ══════════════════════════════════════════════════════════════
 
 app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => {
-  const { script, voiceId, customApiKey, options } = req.body;
+  const { script, voiceId, customApiKey, options, voiceProfileId } = req.body;
 
-  if (!script || !voiceId) {
-    return res.status(400).json({ error: "Les paramètres 'script' et 'voiceId' sont requis." });
+  if (!script) {
+    return res.status(400).json({ error: "Le paramètre 'script' est requis." });
   }
 
   const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
@@ -107,41 +109,76 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
       : script;
 
-    // 2. Construction chirurgicale du prompt à partir de la source de vérité partagée avec seed déterministe
-    const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
-      script,
-      voiceId,
-      countryId: options?.countryId || '',
-      countryName: options?.countryName || 'Africa',
-      gender: options?.gender || 'female',
-      voiceVariant: options?.voiceVariant,
-      age: options?.age || 30,
-      accentLevel: options?.accentLevel || 'medium',
-      useLocalExpressions: options?.useLocalExpressions,
-      emotion: options?.emotion || 'neutral',
-      contentStyle: options?.contentStyle,
-      personality: options?.personality,
-      vocalObjective: options?.vocalObjective,
-      speed: options?.speed || 1.0,
-      pitch: options?.pitch || 1.0,
-      phoneticScript: finalScript,
-    });
+    // 2. Vérification des profils vocaux persistants
+    const targetProfileId = voiceProfileId || options?.voiceProfileId;
+    let voiceCloningKey = '';
+    let isReplicationAttempted = false;
+    let replicationStatus = 'VOICE_REPLICATION_UNAVAILABLE';
+    let profileData = null;
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`✅ [AI Director v3] Pays: ${options?.countryId || 'auto'} | Style: ${options?.contentStyle || 'auto'} | Voix: ${actualVoiceId} | Seed: ${voiceSeed}`);
+    if (targetProfileId && VOICE_PROFILES[targetProfileId]) {
+      profileData = VOICE_PROFILES[targetProfileId];
+      if (process.env.ENABLE_VOICE_REPLICATION === 'true' && profileData.provider === 'google' && profileData.voiceCloningKey) {
+        voiceCloningKey = profileData.voiceCloningKey;
+        isReplicationAttempted = true;
+      }
     }
 
-    if (!global.aiClientCache) {
-      global.aiClientCache = new Map();
-    }
-    if (!global.aiClientCache.has(apiKey)) {
-      global.aiClientCache.set(apiKey, new GoogleGenAI({ apiKey }));
-    }
-    const ai = global.aiClientCache.get(apiKey);
+    let audioData;
+    let mimeType = 'audio/L16;rate=24000';
 
-    let response;
-    try {
-      response = await ai.models.generateContent({
+    if (isReplicationAttempted && voiceCloningKey) {
+      try {
+        console.log(`🎙️ [AfriVoice] Tentative de réplication vocale Google Cloud TTS pour le profil : ${targetProfileId}`);
+        const base64Wav = await synthesizeWithGoogleVoiceClone({
+          text: script,
+          voiceCloningKey,
+          languageCode: 'fr-FR',
+          speakingRate: profileData.basePace || 1.0
+        });
+        audioData = base64Wav;
+        mimeType = 'audio/wav';
+        replicationStatus = 'VOICE_REPLICATION_SUCCESS';
+      } catch (replicationError) {
+        console.error(`❌ [AfriVoice] Erreur de réplication vocale Google Cloud TTS :`, replicationError?.message || replicationError);
+        replicationStatus = 'VOICE_REPLICATION_ERROR';
+      }
+    }
+
+    // Fallback vers le moteur Gemini classique si aucun audio n'a été produit par la réplication
+    if (!audioData) {
+      if (isReplicationAttempted) {
+        replicationStatus = 'VOICE_FALLBACK_USED';
+      }
+
+      // 3. Construction chirurgicale du prompt à partir de la source de vérité partagée
+      const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
+        script,
+        countryId: options?.countryId || (profileData ? 'SN' : undefined),
+        countryName: options?.countryName || (profileData ? 'Senegal' : "Côte d'Ivoire"),
+        gender: options?.gender || profileData?.gender || 'female',
+        age: options?.age || 30,
+        voiceVariant: options?.voiceVariant || voiceId || profileData?.voiceVariant || 'voice1',
+        accentLevel: options?.accentLevel || 'strong',
+        useLocalExpressions: options?.useLocalExpressions,
+        emotion: options?.emotion,
+        contentStyle: options?.contentStyle || profileData?.persona?.toLowerCase(),
+        personality: options?.personality,
+        vocalObjective: options?.vocalObjective,
+        speed: options?.speed || profileData?.basePace,
+        pitch: options?.pitch,
+        phoneticScript: finalScript,
+      });
+
+      if (!global.aiClientCache) {
+        global.aiClientCache = new Map();
+      }
+      if (!global.aiClientCache.has(apiKey)) {
+        global.aiClientCache.set(apiKey, new GoogleGenAI({ apiKey }));
+      }
+      const ai = global.aiClientCache.get(apiKey);
+
+      let response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-preview-tts',
         contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
         config: {
@@ -155,41 +192,35 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
           },
         },
       });
-    } catch (apiError) {
-      console.error("❌ Erreur API Gemini:", apiError);
 
-      const errMessage = apiError?.message || '';
-      const isAuthError = 
-        apiError?.status === 401 || 
-        errMessage.includes('API_KEY_INVALID') || 
-        errMessage.includes('key not valid') ||
-        errMessage.includes('UNAUTHENTICATED') ||
-        errMessage.includes('invalid credentials');
-
-      if (isAuthError) {
-        return res.status(401).json({
-          error: 'Clé API Gemini invalide ou expirée. Veuillez vérifier votre clé API (GEMINI_API_KEY) dans les variables d\'environnement Vercel ou dans les paramètres du Studio.',
-          errorType: 'API_KEY_INVALID'
-        });
-      }
-      throw apiError;
+      const part = response.candidates?.[0]?.content?.parts?.[0];
+      if (!part) throw new Error("Réponse vide de Gemini");
+      audioData = part?.inlineData?.data;
+      mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
     }
-
-    const part = response.candidates?.[0]?.content?.parts?.[0];
-    if (!part) throw new Error("Réponse vide de Gemini");
-
-    const audioData = part?.inlineData?.data;
-    const mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
 
     if (!audioData) {
-      console.error('Structure réponse:', JSON.stringify(response.candidates?.[0]?.content, null, 2));
-      throw new Error("Aucune donnée audio dans la réponse Gemini");
+      throw new Error("Aucune donnée audio générée");
     }
+
+    const generationId = 'gen_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    const metadata = profileData ? {
+      generationId,
+      voiceProfileId: profileData.voiceProfileId,
+      voiceProfileVersion: profileData.version,
+      provider: replicationStatus === 'VOICE_REPLICATION_SUCCESS' ? 'google_replication' : 'gemini_legacy',
+      model: replicationStatus === 'VOICE_REPLICATION_SUCCESS' ? 'chirp-3' : 'gemini-2.5-flash',
+      language: profileData.language,
+      country: profileData.country,
+      pace: profileData.basePace,
+      createdAt: new Date().toISOString(),
+      status: replicationStatus
+    } : undefined;
 
     if (process.env.NODE_ENV !== 'production') {
       console.log(`✅ Audio généré — mimeType: ${mimeType}, taille: ${audioData.length} chars`);
     }
-    return res.json({ base64Audio: audioData, mimeType });
+    return res.json({ base64Audio: audioData, mimeType, metadata });
 
   } catch (error) {
     console.error("❌ Erreur de génération:", error.message || 'Erreur interne');

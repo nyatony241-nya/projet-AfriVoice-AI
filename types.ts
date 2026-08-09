@@ -143,3 +143,34 @@ export interface QuotaUsage {
   remainingGenerationsToday?: number;
 }
 
+export interface VoiceProfile {
+  voiceProfileId: string;
+  version: string;
+  country: string;
+  language: string;
+  gender: 'male' | 'female';
+  persona: string;
+  masterVoiceSample: string;
+  consentAudio?: string;
+  consentStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  voiceCloningKey?: string;
+  accentProfile: string;
+  styleProfile: string;
+  basePace: number;
+  provider: 'google' | 'gemini_legacy';
+  providerModel: string;
+}
+
+export interface VoiceGenerationMetadata {
+  generationId: string;
+  voiceProfileId: string;
+  voiceProfileVersion: string;
+  provider: string;
+  model: string;
+  language: string;
+  country: string;
+  pace: number;
+  createdAt: string;
+  status: 'VOICE_REPLICATION_SUCCESS' | 'VOICE_REPLICATION_UNAVAILABLE' | 'VOICE_REPLICATION_ERROR' | 'VOICE_FALLBACK_USED';
+}
+
