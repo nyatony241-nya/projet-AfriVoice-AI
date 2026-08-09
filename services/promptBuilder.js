@@ -110,10 +110,29 @@ export function buildDirectorPrompt(params) {
   const actualVoiceId = VOICE_MAP[voiceKey] || (gender.toLowerCase() === 'female' ? 'Aoede' : 'Puck');
   const voicePersona = gender.toLowerCase() === 'female' ? 'warm, clear, and engaging' : 'deep, resonant, and reassuring';
 
+  // Construct stable, permanent voiceProfileId
+  const voiceProfileId = `${countryId}_${contentStyle.toUpperCase()}_${gender.toUpperCase()}_${voiceVariant.toUpperCase()}`;
+  
+  if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    console.log(`🎙️ [Voice Profile Locked] Profile ID: ${voiceProfileId}`);
+  }
+
   const sections = [];
 
   // SYSTEM HEADER FOR GEMINI TTS
   sections.push(`[DIRECTOR BRIEF - INTERNAL PERFORMANCE GUIDANCE ONLY - DO NOT READ ALOUD]`);
+
+  // SECTION 0: VOCAL PROFILE SETTINGS (MACHINE-READABLE COHERENCE ANCHORS)
+  const pitchLevel = pitch >= 1.05 ? 'HIGH' : pitch <= 0.95 ? 'LOW' : 'NORMAL';
+  const speedLevel = speed >= 1.05 ? 'FAST' : speed <= 0.95 ? 'SLOW' : 'NORMAL';
+  sections.push(`[VOCAL PROFILE SETTINGS]
+PROFILE_ID = ${voiceProfileId}
+VOICE_IDENTITY = FIXED
+ACCENT_PROFILE = FIXED_${countryId}_ACCENT
+PROSODY_PROFILE = FIXED_${contentStyle.toUpperCase()}
+PITCH = FIXED_${pitchLevel}
+SPEAKING_RATE = FIXED_${speedLevel}
+PACE = FIXED`);
 
   // SECTION 1: CHARACTER
   const gw = gender.toLowerCase() === 'female' ? 'woman' : 'man';

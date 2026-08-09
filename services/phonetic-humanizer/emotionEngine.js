@@ -134,9 +134,10 @@ function maybeAddOpener(text, profile) {
 
   if (text.trim().startsWith('[')) return text;
 
-  const seed = text.length % 2;
+  const key = profile.countryId.charCodeAt(0) + (profile.countryId.charCodeAt(1) || 0);
+  const seed = key % 2;
   if (seed === 0 && profile.openers.length > 0) {
-    const opener = profile.openers[text.length % profile.openers.length];
+    const opener = profile.openers[key % profile.openers.length];
     return `${opener} ${text.trim()}`;
   }
 
