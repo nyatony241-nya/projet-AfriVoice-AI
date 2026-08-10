@@ -80,7 +80,6 @@ export const PRICING_PLANS: PricingPlan[] = [
       '⚡ Accès illimité aux 19 pays & accents',
       'Qualité Studio HD 24kHz PCM',
       'Expressions locales & Humanisation IA',
-      'Intégration musique de fond illimitée',
       'Support prioritaire par e-mail 24/7'
     ]
   }
@@ -129,7 +128,6 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
       '⚡ Unlimited access to 19 countries & accents',
       'HD Studio Quality 24kHz PCM',
       'Local expressions & AI Humanization',
-      'Unlimited background music integration',
       'Priority email support 24/7'
     ]
   }

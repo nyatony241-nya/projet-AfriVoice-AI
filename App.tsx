@@ -15,6 +15,7 @@ import { mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './servic
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
 import InstallAppModal from './components/InstallAppModal';
+import RechargeModal, { QuotaPack } from './components/RechargeModal';
 import { triggerCelebration } from './components/ConfettiHelper';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
@@ -301,10 +302,22 @@ const App: React.FC = () => {
     }
   };
 
-  // Recharge (+50 minutes added to max quota)
+  // Recharge : Ouvre la modal des 3 catégories de quota au choix de l'utilisateur
   const handleTopUpQuota = () => {
-    setBonusSeconds((prev) => prev + 3000);
-    addToast('success', isEn ? '50 Min Top-Up Validated' : 'Recharge 50 Min Validée', isEn ? 'Your voice synthesis quota has increased by +50 minutes (+3,000 sec).' : 'Votre quota de synthèse vocale a été augmenté de +50 minutes (+3 000 sec).');
+    setShowRechargeModal(true);
+  };
+
+  const handleSelectQuotaPack = (pack: QuotaPack) => {
+    setBonusSeconds((prev) => prev + pack.seconds);
+    setShowRechargeModal(false);
+    triggerCelebration();
+    addToast(
+      'success',
+      isEn ? `${pack.minutes} Min Top-Up Validated!` : `Recharge ${pack.minutes} Min Validée !`,
+      isEn
+        ? `Added +${pack.minutes} minutes (+${pack.seconds.toLocaleString()} sec) with the ${pack.nameEn}.`
+        : `Votre quota de synthèse vocale a été augmenté de +${pack.minutes} minutes (+${pack.seconds.toLocaleString()} sec) avec le ${pack.name}.`
+    );
   };
 
   const toggleLanguage = () => {
@@ -627,82 +640,14 @@ const App: React.FC = () => {
         onInstallPWA={deferredInstallPrompt ? handleTriggerPWAInstall : undefined}
       />
 
-      {/* Recharge Modal */}
-      {showRechargeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className={`w-full max-w-lg p-8 sm:p-10 rounded-[36px] border shadow-2xl animate-in zoom-in-95 duration-300 ${
-            isDark ? 'bg-[#14151C] border-white/10 text-white' : 'bg-white border-[#E4E4E7] text-zinc-900'
-          }`}>
-            {/* Header */}
-            <div className="flex justify-between items-start mb-6">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 bg-red-500/10 px-3 py-1 rounded-full">
-                  {isEn ? 'Quota Finished' : 'Quota Épuisé'}
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black tracking-tight mt-2">
-                  {isEn ? 'Buy Minute Recharge' : 'Recharger votre Crédit'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowRechargeModal(false)}
-                className={`p-2 rounded-xl transition-colors ${
-                  isDark ? 'hover:bg-white/5 text-zinc-400' : 'hover:bg-zinc-100 text-zinc-500'
-                }`}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <p className="text-sm text-zinc-400 font-medium mb-8 leading-relaxed">
-              {isEn
-                ? `Your plan's base quota is finished. Buy an instant recharge to continue generating voiceovers immediately. Recharges carry over and do not expire.`
-                : `Le quota de votre forfait est épuisé. Achetez une recharge immédiate pour continuer à générer vos voix off. Les recharges restent acquises et n’expirent pas.`}
-            </p>
-
-            {/* Recharge Grid */}
-            <div className="space-y-4">
-              {[
-                { seconds: 600, label: '10 min', price: '1 200 FCFA', desc: isEn ? 'Perfect for 1-2 small projects' : 'Parfait pour 1-2 petits projets' },
-                { seconds: 1800, label: '30 min', price: '2 900 FCFA', desc: isEn ? 'Great for creators' : 'Idéal pour les créateurs', popular: true },
-                { seconds: 3600, label: '60 min', price: '4 900 FCFA', desc: isEn ? 'Best value for studios' : 'Idéal pour les studios' }
-              ].map((opt) => (
-                <div
-                  key={opt.label}
-                  className={`p-5 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer relative ${
-                    opt.popular
-                      ? 'border-amber-500 bg-amber-500/5'
-                      : isDark ? 'border-white/5 bg-[#09090B] hover:border-white/20' : 'border-zinc-200 bg-zinc-50 hover:border-zinc-300'
-                  }`}
-                  onClick={() => {
-                    // Simulate purchase
-                    setBonusSeconds((prev) => prev + opt.seconds);
-                    setShowRechargeModal(false);
-                    addToast('success', isEn ? 'Recharge Successful!' : 'Recharge Réussie !', isEn ? `Added ${opt.label} to your credit.` : `Ajout de ${opt.label} à vos crédits.`);
-                  }}
-                >
-                  {opt.popular && (
-                    <span className="absolute -top-3 right-6 bg-amber-500 text-black text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">
-                      {isEn ? 'BEST VALUE' : 'RECOMMANDÉ'}
-                    </span>
-                  )}
-                  <div>
-                    <p className="font-black text-base tracking-tight">{opt.label}</p>
-                    <p className="text-[11px] text-zinc-400 mt-0.5 font-medium">{opt.desc}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono font-black text-sm text-amber-500">{opt.price}</span>
-                    <div className="px-4 py-2 rounded-xl bg-zinc-900 text-[#D4FF00] hover:scale-105 transition-transform text-xs font-black uppercase tracking-widest">
-                      {isEn ? 'Buy' : 'Acheter'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Recharge Modal with 3 Quota Categories */}
+      <RechargeModal
+        isOpen={showRechargeModal}
+        onClose={() => setShowRechargeModal(false)}
+        isDark={isDark}
+        language={language}
+        onSelectPack={handleSelectQuotaPack}
+      />
 
       {/* SaaS Sidebar Navigation */}
       <Sidebar

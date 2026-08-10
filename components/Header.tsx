@@ -65,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({
                   AfriVoice<span className={'text-[#ccff00]'}>AI</span>
                 </span>
                 <span className="text-[7px] sm:text-[9px] font-black uppercase px-1 py-0.5 sm:px-1.5 rounded tracking-wider shadow-xs bg-[#ccff00] text-black">
-                  {currentPlan.id.toUpperCase()}
+                  {currentPlan.name.toUpperCase()}
                 </span>
               </div>
               <span className="text-[7px] sm:text-[9px] font-bold text-zinc-400 uppercase tracking-[0.14em] sm:tracking-[0.16em] leading-tight block mt-0.5 truncate max-w-[125px] sm:max-w-none">
@@ -176,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({
           {
             id: 'pricing' as const,
             label: language === 'en' ? 'Forfaits' : 'Forfaits',
-            badge: currentPlan.id.toUpperCase(),
+            badge: currentPlan.name.toUpperCase(),
             icon: (
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
