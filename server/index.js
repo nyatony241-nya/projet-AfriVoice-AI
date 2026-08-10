@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import multer from 'multer';
 import { humanizeScript } from '../services/phonetic-humanizer/index.js';
 import { buildDirectorPrompt } from '../services/promptBuilder.js';
-import { VOICE_PROFILES } from '../services/voiceProfiles.js';
+import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from '../services/voiceProfiles.js';
 import { synthesizeWithGoogleVoiceClone } from '../services/googleTtsService.js';
 
 dotenv.config();
@@ -109,15 +109,17 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
       : script;
 
-    // 2. Vérification des profils vocaux persistants
+    // 2. Vérification et résolution dynamique des profils vocaux pour les 19 pays
     const targetProfileId = voiceProfileId || options?.voiceProfileId;
     let voiceCloningKey = '';
     let isReplicationAttempted = false;
     let replicationStatus = 'VOICE_REPLICATION_UNAVAILABLE';
-    let profileData = null;
+    
+    let profileData = targetProfileId && VOICE_PROFILES[targetProfileId]
+      ? VOICE_PROFILES[targetProfileId]
+      : getVoiceProfileByCountryAndGender(options?.countryId, options?.gender);
 
-    if (targetProfileId && VOICE_PROFILES[targetProfileId]) {
-      profileData = VOICE_PROFILES[targetProfileId];
+    if (profileData) {
       if (process.env.ENABLE_VOICE_REPLICATION === 'true' && profileData.provider === 'google' && profileData.voiceCloningKey) {
         voiceCloningKey = profileData.voiceCloningKey;
         isReplicationAttempted = true;

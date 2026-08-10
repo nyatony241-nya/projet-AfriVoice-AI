@@ -4,7 +4,7 @@ import { humanizeScript } from "../services/phonetic-humanizer/index.js";
 // @ts-ignore
 import { buildDirectorPrompt } from "../services/promptBuilder.js";
 // @ts-ignore
-import { VOICE_PROFILES } from "../services/voiceProfiles.js";
+import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "../services/voiceProfiles.js";
 // @ts-ignore
 import { synthesizeWithGoogleVoiceClone } from "../services/googleTtsService.js";
 
@@ -23,50 +23,40 @@ export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Méthode non autorisée. Utilisez POST.' });
+    return res.status(405).json({ error: "Méthode non autorisée" });
+  }
+
+  const { script, voiceId, customApiKey, options, voiceProfileId } = req.body;
+
+  if (!script) {
+    return res.status(400).json({ error: "Le paramètre 'script' est requis." });
+  }
+
+  const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
+    ? customApiKey.trim() 
+    : process.env.GEMINI_API_KEY;
+
+  if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
+    return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
   }
 
   try {
-    const body = req.body || {};
-    const { script, voiceId, customApiKey, options, voiceProfileId } = body;
-
-    if (!script || typeof script !== 'string' || !script.trim()) {
-      return res.status(400).json({ error: "Le paramètre 'script' est requis et ne peut pas être vide." });
-    }
-
-    const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY')
-      ? customApiKey.trim()
-      : process.env.GEMINI_API_KEY;
-
-    if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
-      return res.status(401).json({
-        error: 'Clé API Gemini manquante. Veuillez configurer la variable GEMINI_API_KEY dans vos paramètres Vercel ou la renseigner localement.',
-        diagnostic: {
-          GEMINI_API_KEY: process.env.GEMINI_API_KEY ? 'present' : 'MISSING',
-        }
-      });
-    }
-
-    // Validation Supabase optionnelle
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
-
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
     if (supabaseUrl && supabaseAnonKey) {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-          const token = authHeader.split(' ')[1];
-          const { data, error } = await supabase.auth.getUser(token);
-          if (error || !data.user) {
-            console.warn('[AfriVoice] Auth token invalid/expired — continuing:', error?.message);
-          } else {
-            console.log('[AfriVoice] Auth OK — user:', data.user.email);
-          }
-        }
-      } catch (authError: any) {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: "Token d'authentification manquant." });
+      }
+      const token = authHeader.split(' ')[1];
+      const { error: authError } = await supabase.auth.getUser(token);
+      if (authError) {
         console.warn('[AfriVoice] Supabase auth check failed (non-blocking):', authError?.message);
       }
     }
@@ -76,15 +66,17 @@ export default async function handler(req: any, res: any) {
       ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
       : script;
 
-    // 2. Vérification des profils vocaux persistants
+    // 2. Vérification et résolution dynamique des profils vocaux pour les 19 pays
     const targetProfileId = voiceProfileId || options?.voiceProfileId;
     let voiceCloningKey = '';
     let isReplicationAttempted = false;
     let replicationStatus: 'VOICE_REPLICATION_SUCCESS' | 'VOICE_REPLICATION_UNAVAILABLE' | 'VOICE_REPLICATION_ERROR' | 'VOICE_FALLBACK_USED' = 'VOICE_REPLICATION_UNAVAILABLE';
-    let profileData: any = null;
+    
+    let profileData: any = targetProfileId && VOICE_PROFILES[targetProfileId]
+      ? VOICE_PROFILES[targetProfileId]
+      : getVoiceProfileByCountryAndGender(options?.countryId, options?.gender);
 
-    if (targetProfileId && VOICE_PROFILES[targetProfileId]) {
-      profileData = VOICE_PROFILES[targetProfileId];
+    if (profileData) {
       if (process.env.ENABLE_VOICE_REPLICATION === 'true' && profileData.provider === 'google' && profileData.voiceCloningKey) {
         voiceCloningKey = profileData.voiceCloningKey;
         isReplicationAttempted = true;
