@@ -1,5 +1,6 @@
 import React from 'react';
 import { PricingPlan, Language } from '../types';
+import { LogoIcon } from './BrandLogo';
 
 interface HeaderProps {
   currentPlan: PricingPlan;
@@ -54,21 +55,15 @@ const Header: React.FC<HeaderProps> = ({
         {/* Left: Unified Logo & Title */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 cursor-pointer" onClick={() => onTabChange('studio')}>
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#09090B] border-2 border-[#D4FF00] flex items-center justify-center shadow-lg shadow-[#D4FF00]/15 shrink-0 relative overflow-hidden group">
-              <svg viewBox="0 0 100 100" className="w-5 h-5 sm:w-6 sm:h-6 text-[#D4FF00] group-hover:scale-110 transition-transform duration-300">
-                <path d="M25 28 L50 82 L75 28" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M50 20 V52" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-                <circle cx="50" cy="20" r="6" fill="currentColor" />
-                <path d="M40 38 C40 48 60 48 60 38" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                <path d="M50 52 V62" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-              </svg>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-[#ccff00]/15 shrink-0 relative overflow-hidden group">
+              <LogoIcon className="w-full h-full group-hover:scale-110 transition-transform duration-300" />
             </div>
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <span className={`text-sm sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-                  AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
+                  AfriVoice<span className={'text-[#ccff00]'}>AI</span>
                 </span>
-                <span className="text-[7px] sm:text-[9px] font-black uppercase px-1 py-0.5 sm:px-1.5 rounded tracking-wider shadow-xs bg-[#D4FF00] text-black">
+                <span className="text-[7px] sm:text-[9px] font-black uppercase px-1 py-0.5 sm:px-1.5 rounded tracking-wider shadow-xs bg-[#ccff00] text-black">
                   {currentPlan.id.toUpperCase()}
                 </span>
               </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Toast } from './ToastContainer';
 import { triggerCelebration } from './ConfettiHelper';
+import { LogoIcon } from './BrandLogo';
 
 interface AuthPageProps {
   onAuthSuccess: () => void;
@@ -62,10 +63,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
         
         {/* Branding */}
         <div className="flex flex-col items-center justify-center mb-10 text-center">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl overflow-hidden ${isDark ? 'shadow-[#D4FF00]/20' : 'shadow-[#D4FF00]/30'}`}>
-            <img src="/logo.png" alt="AfriVoice Logo" className="w-full h-full object-cover" />
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl overflow-hidden ${isDark ? 'shadow-[#ccff00]/10' : 'shadow-[#ccff00]/20'}`}>
+            <LogoIcon className="w-full h-full" />
           </div>
-          <h1 className="text-2xl font-black tracking-tighter">AfriVoice<span className="text-[#D4FF00]">.ai</span></h1>
+          <h1 className="text-2xl font-black tracking-tighter">AfriVoice<span className="text-[#ccff00]"> AI</span></h1>
           <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">
             {isEn ? 'Authentication Required' : 'Authentification Requise'}
           </p>

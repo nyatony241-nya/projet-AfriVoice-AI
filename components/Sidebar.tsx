@@ -1,6 +1,7 @@
 import React from 'react';
 import { PricingPlan, Language } from '../types';
 import { supabase } from '../services/supabaseClient';
+import { LogoIcon } from './BrandLogo';
 
 interface SidebarProps {
   activeTab: 'studio' | 'history' | 'pricing';
@@ -101,21 +102,15 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div>
           {/* Unified Logo */}
           <div className="flex items-center gap-2.5 sm:gap-3 mb-8 pl-1 group cursor-pointer" onClick={() => onTabChange('studio')}>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-[#09090B] border-2 border-[#D4FF00] flex items-center justify-center shadow-lg shadow-[#D4FF00]/15 shrink-0 relative overflow-hidden group">
-              <svg viewBox="0 0 100 100" className="w-5 h-5 sm:w-6 sm:h-6 text-[#D4FF00] group-hover:scale-110 transition-transform duration-300">
-                <path d="M25 28 L50 82 L75 28" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M50 20 V52" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-                <circle cx="50" cy="20" r="6" fill="currentColor" />
-                <path d="M40 38 C40 48 60 48 60 38" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                <path d="M50 52 V62" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-              </svg>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-[#ccff00]/15 shrink-0 relative overflow-hidden group">
+              <LogoIcon className="w-full h-full group-hover:scale-110 transition-transform duration-300" />
             </div>
             <div className="flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
                 <span className={`text-base sm:text-lg font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-zinc-900'}`}>
-                  AfriVoice<span className={'text-[#D4FF00]'}>AI</span>
+                  AfriVoice<span className={'text-[#ccff00]'}>AI</span>
                 </span>
-                <span className="text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shadow-xs bg-[#D4FF00] text-black">
+                <span className="text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shadow-xs bg-[#ccff00] text-black">
                   {currentPlan.id.toUpperCase()}
                 </span>
               </div>
@@ -197,10 +192,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="pt-6 border-t border-zinc-200 dark:border-white/10 space-y-3">
         <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDark ? 'bg-[#181D29] border-white/5' : 'bg-white border-[#E4E4E7] shadow-sm'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md overflow-hidden ${
-              'bg-[#D4FF00]'
-            }`}>
-              <img src="/logo.png" alt="AfriVoice" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 shadow-md">
+              <LogoIcon className="w-full h-full" />
             </div>
             <div>
               <p className="text-sm font-extrabold truncate">Studio Creator</p>
