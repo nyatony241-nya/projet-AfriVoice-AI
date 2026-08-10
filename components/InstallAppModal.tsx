@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogoIcon } from './BrandLogo';
 
 interface InstallAppModalProps {
   isOpen: boolean;
@@ -33,14 +34,8 @@ const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClose, isDa
         </button>
 
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl overflow-hidden shadow-lg border border-[#D4FF00]/30 bg-[#09090B] flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-12 h-12 text-[#D4FF00]">
-              <path d="M25 28 L50 82 L75 28" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M50 20 V52" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-              <circle cx="50" cy="20" r="6" fill="currentColor" />
-              <path d="M40 38 C40 48 60 48 60 38" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-              <path d="M50 52 V62" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-            </svg>
+          <div className="w-20 h-20 mx-auto mb-4 rounded-3xl overflow-hidden shadow-xl shadow-[#ccff00]/15 flex items-center justify-center">
+            <LogoIcon className="w-full h-full" />
           </div>
           <h2 className="text-2xl font-black tracking-tight mb-2">
             {isEn ? 'Install AfriVoice App' : 'Installer l\'application AfriVoice'}

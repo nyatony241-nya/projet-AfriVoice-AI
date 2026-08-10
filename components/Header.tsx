@@ -52,9 +52,10 @@ const Header: React.FC<HeaderProps> = ({
       }`}
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-1.5 sm:gap-4">
-        {/* Left: Unified Logo & Title */}
+        {/* Left: Section Title on Desktop, Logo & Title on Mobile */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 cursor-pointer" onClick={() => onTabChange('studio')}>
+          {/* Logo visible on Mobile only (Sidebar is hidden on mobile) */}
+          <div className="lg:hidden flex items-center gap-2.5 sm:gap-3 shrink-0 cursor-pointer" onClick={() => onTabChange('studio')}>
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-[#ccff00]/15 shrink-0 relative overflow-hidden group">
               <LogoIcon className="w-full h-full group-hover:scale-110 transition-transform duration-300" />
             </div>
@@ -71,6 +72,13 @@ const Header: React.FC<HeaderProps> = ({
                 {currentTabName || 'Studio de Synthèse'}
               </span>
             </div>
+          </div>
+
+          {/* Page Title & Breadcrumb visible on Desktop (Sidebar already displays logo) */}
+          <div className="hidden lg:flex items-center gap-3">
+            <h1 className={`text-lg font-black tracking-tight ${isDark ? 'text-white' : 'text-zinc-900'}`}>
+              {currentTabName}
+            </h1>
           </div>
 
           <div className="hidden md:flex items-center gap-2 ml-3 pl-3 border-l border-zinc-200 dark:border-white/10">
