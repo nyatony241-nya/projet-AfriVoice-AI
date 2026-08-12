@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { PricingPlan, Language } from '../types';
 import { COUNTRIES } from '../constants';
-import { getAvailablePaymentMethods, getMobileMoneyOperators } from '../services/paymentConfig';
-import MobileMoneySelector from './MobileMoneySelector';
+import { getMobileMoneyOperators } from '../services/paymentConfig';
+
+// ══════════════════════════════════════════════════════════════
+// URLs de checkout Chariow — Redirection directe vers la page
+// de paiement hébergée. Chariow gère carte + mobile money + 
+// tous les pays automatiquement. Aucun backend requis.
+// ══════════════════════════════════════════════════════════════
+const CHARIOW_CHECKOUT_URLS: Record<string, string> = {
+  free:    'https://kboghdly.mychariow.shop/prd_n6d89d8s',  // STARTER
+  starter: 'https://kboghdly.mychariow.shop/prd_n6d89d8s',  // STARTER (alias)
+  creator: 'https://kboghdly.mychariow.shop/prd_f639rpw2',  // CREATOR
+  pro:     'https://kboghdly.mychariow.shop/prd_pq817d6j',  // PRO – STUDIO HD
+};
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -15,17 +26,6 @@ interface PaymentModalProps {
   onPaymentSuccess: (planId: string, licenseKey?: string) => void;
 }
 
-/**
- * Construit l'URL API dynamique pour éviter les erreurs de port en développement local
- */
-const getApiUrl = (path: string) => {
-  const hostname = window.location.hostname;
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `http://${hostname}:3005${path}`;
-  }
-  return path;
-};
-
 const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,
@@ -37,11 +37,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   onPaymentSuccess,
 }) => {
   const isEn = language === 'en';
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2>(1);
   const [loadingMethods, setLoadingMethods] = useState(false);
   const [availableOperators, setAvailableOperators] = useState<string[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'momo' | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Pays actif sélectionné dans le modal (par défaut celui du studio)
@@ -56,114 +54,81 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setStep(1);
-      setPaymentMethod(null);
       setError(null);
-      fetchPaymentMethods(selectedCountryId);
+      loadOperators(selectedCountryId);
     }
   }, [isOpen, selectedCountryId]);
 
-  const fetchPaymentMethods = async (countryId: string) => {
+  const loadOperators = (countryId: string) => {
     setLoadingMethods(true);
-    try {
-      const response = await fetch(getApiUrl(`/api/payment/methods/${countryId}`));
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableOperators(data.operators || []);
-      } else {
-        const operators = getMobileMoneyOperators(countryId);
-        setAvailableOperators(operators);
-      }
-    } catch {
-      // Fallback local
-      const operators = getMobileMoneyOperators(countryId);
-      setAvailableOperators(operators);
-    } finally {
-      setLoadingMethods(false);
-    }
+    const operators = getMobileMoneyOperators(countryId);
+    setAvailableOperators(operators);
+    setLoadingMethods(false);
   };
 
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newCountryId = e.target.value;
-    setSelectedCountryId(newCountryId);
-    setPaymentMethod(null);
+    setSelectedCountryId(e.target.value);
   };
 
-  const handleProcessCardPayment = async () => {
-    await processPayment('card');
-  };
-
-  const handleProcessMoMoPayment = async (phoneNumber: string, operator: string) => {
-    await processPayment('momo', { phoneNumber, operator });
-  };
-
-  const processPayment = async (method: 'card' | 'momo', additionalData?: any) => {
-    setIsProcessing(true);
-    setError(null);
+  /**
+   * Redirige vers la page de checkout Chariow.
+   * Chariow gère automatiquement :
+   * - Carte bancaire (Visa, Mastercard)
+   * - Mobile Money (tous opérateurs selon le pays)
+   * - Crypto, Wave, etc.
+   * 
+   * L'utilisateur choisit son moyen de paiement sur la page Chariow.
+   */
+  const handleProceedToCheckout = () => {
     setStep(2);
+    setError(null);
 
-    try {
-      const payload = {
-        planId: plan.id,
-        countryId: selectedCountryId,
-        paymentMethod: method === 'momo' ? 'mobile_money' : 'card',
-        email: userEmail,
-        successUrl: window.location.origin + '?payment=success',
-        cancelUrl: window.location.origin + '?payment=cancel',
-        ...additionalData
-      };
-      
-      const response = await fetch(getApiUrl('/api/payment/checkout'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+    const checkoutBaseUrl = CHARIOW_CHECKOUT_URLS[plan.id];
 
-      let data;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        throw new Error(isEn ? 'Server is not responding. Please start the backend server.' : 'Le serveur backend ne répond pas. Assurez-vous que le serveur tourne sur le port 3005.');
-      }
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Checkout failed');
-      }
-
-      if (data.checkoutUrl) {
-        // Redirection vers la plateforme de paiement (Chariow)
-        window.location.href = data.checkoutUrl;
-      } else {
-        throw new Error(isEn ? 'No checkout URL received' : 'Aucune URL de paiement reçue');
-      }
-    } catch (err: any) {
-      setError(err.message || (isEn ? 'Payment processing failed. Please try again.' : 'Le traitement du paiement a échoué. Veuillez réessayer.'));
-      setIsProcessing(false);
+    if (!checkoutBaseUrl) {
+      setError(isEn ? 'Invalid plan selected.' : 'Forfait invalide sélectionné.');
       setStep(1);
+      return;
     }
+
+    // Construire l'URL avec les paramètres de retour
+    const successUrl = encodeURIComponent(window.location.origin + '?payment=success&plan=' + plan.id);
+    const cancelUrl = encodeURIComponent(window.location.origin + '?payment=cancel');
+    
+    // Chariow supporte les query params pour pré-remplir le checkout
+    const separator = checkoutBaseUrl.includes('?') ? '&' : '?';
+    const checkoutUrl = `${checkoutBaseUrl}${separator}success_url=${successUrl}&cancel_url=${cancelUrl}${userEmail ? '&email=' + encodeURIComponent(userEmail) : ''}`;
+    
+    // Redirection vers Chariow — l'utilisateur choisira carte ou mobile money là-bas
+    setTimeout(() => {
+      window.location.href = checkoutUrl;
+    }, 800); // Petit délai pour montrer l'animation de chargement
   };
 
   if (!isOpen) return null;
 
   const currentCountryObj = COUNTRIES.find(c => c.id === selectedCountryId) || COUNTRIES[0];
+  const hasMobileMoney = availableOperators.length > 0;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"
-        onClick={!isProcessing ? onClose : undefined}
+        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        onClick={step === 1 ? onClose : undefined}
+        style={{ animation: 'fadeIn 0.3s ease-out' }}
       />
 
       {/* Modal */}
       <div 
-        className={`relative w-full max-w-lg rounded-[32px] p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-300 overflow-hidden ${
+        className={`relative w-full max-w-lg rounded-[32px] p-8 shadow-2xl overflow-hidden ${
           isDark 
             ? 'bg-[#14151C] border border-white/10 text-white' 
             : 'bg-white border border-zinc-200 text-black'
         }`}
+        style={{ animation: 'scaleIn 0.3s ease-out' }}
       >
-        {!isProcessing && (
+        {step === 1 && (
           <button
             onClick={onClose}
             className="absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors"
@@ -181,7 +146,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 {isEn ? 'Complete Payment' : 'Finaliser le Paiement'}
               </h2>
               <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                {isEn ? 'Select your country and preferred payment method' : 'Sélectionnez votre pays et votre mode de paiement'}
+                {isEn ? 'Review your plan and proceed to secure checkout' : 'Vérifiez votre forfait et procédez au paiement sécurisé'}
               </p>
             </div>
 
@@ -215,7 +180,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             </div>
 
             {/* Plan Summary */}
-            <div className={`p-4 rounded-[24px] mb-6 flex justify-between items-center border ${
+            <div className={`p-4 rounded-[24px] mb-4 flex justify-between items-center border ${
               isDark ? 'bg-white/5 border-white/10' : 'bg-zinc-50 border-zinc-200'
             }`}>
               <div>
@@ -229,132 +194,88 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
               </div>
             </div>
 
+            {/* Moyens de paiement disponibles */}
+            <div className={`p-4 rounded-[20px] mb-6 border ${
+              isDark ? 'bg-white/3 border-white/5' : 'bg-zinc-50/50 border-zinc-100'
+            }`}>
+              <div className="text-xs font-bold uppercase text-zinc-400 mb-3">
+                {isEn ? 'Available payment methods' : 'Moyens de paiement disponibles'}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                  isDark ? 'bg-white/10 text-white' : 'bg-white text-zinc-800 shadow-sm'
+                }`}>
+                  💳 Visa / Mastercard
+                </span>
+                {hasMobileMoney && availableOperators.map((op) => (
+                  <span key={op} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                    isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-700'
+                  }`}>
+                    📱 {op}
+                  </span>
+                ))}
+                {!hasMobileMoney && (
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                    isDark ? 'bg-zinc-500/10 text-zinc-500' : 'bg-zinc-100 text-zinc-400'
+                  }`}>
+                    📱 {isEn ? 'Card payment only' : 'Paiement carte uniquement'}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {error && (
-              <div className="p-3 mb-6 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-sm font-bold">
+              <div className="p-3 mb-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-sm font-bold">
                 {error}
               </div>
             )}
 
-            {!paymentMethod ? (
-              <div className="space-y-4">
-                {/* Option 1: Carte Bancaire */}
-                <button
-                  onClick={() => setPaymentMethod('card')}
-                  className={`w-full flex items-center justify-between p-5 rounded-[24px] border-2 transition-all duration-300 hover:scale-[1.02] hover:border-[#D4FF00] ${
-                    isDark ? 'bg-[#1E1F2A] border-white/10' : 'bg-white border-zinc-200 shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-3xl">💳</div>
-                    <div className="text-left">
-                      <div className="font-black text-lg">
-                        {isEn ? 'Bank Card' : 'Carte Bancaire'}
-                      </div>
-                      <div className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                        Visa, Mastercard ({currentCountryObj.name})
-                      </div>
-                    </div>
-                  </div>
-                  <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+            {/* Bouton principal — redirige vers Chariow */}
+            <button
+              onClick={handleProceedToCheckout}
+              className="w-full py-4 rounded-[24px] font-black uppercase tracking-wider transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bg-[#D4FF00] text-black hover:bg-[#E2FF3B]"
+            >
+              {isEn ? '🔒 Proceed to Secure Checkout' : '🔒 Procéder au Paiement Sécurisé'}
+            </button>
 
-                {/* Option 2: Mobile Money */}
-                <button
-                  onClick={() => setPaymentMethod('momo')}
-                  disabled={loadingMethods || availableOperators.length === 0}
-                  className={`w-full flex items-center justify-between p-5 rounded-[24px] border-2 transition-all duration-300 ${
-                    loadingMethods || availableOperators.length === 0
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-[1.02] hover:border-[#D4FF00]'
-                  } ${
-                    isDark ? 'bg-[#1E1F2A] border-white/10' : 'bg-white border-zinc-200 shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-3xl">📱</div>
-                    <div className="text-left">
-                      <div className="font-black text-lg">Mobile Money</div>
-                      <div className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                        {loadingMethods 
-                          ? (isEn ? 'Loading...' : 'Chargement...') 
-                          : availableOperators.length > 0 
-                            ? availableOperators.join(', ')
-                            : (isEn ? 'Not available' : 'Paiement carte recommandé')}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{currentCountryObj.flag}</span>
-                    <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              </div>
-            ) : paymentMethod === 'momo' ? (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                <button 
-                  onClick={() => setPaymentMethod(null)}
-                  className="flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 mb-4 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  {isEn ? 'Back' : 'Retour'}
-                </button>
-                <MobileMoneySelector
-                  isDark={isDark}
-                  language={language}
-                  countryId={selectedCountryId}
-                  operators={availableOperators}
-                  onSubmit={handleProcessMoMoPayment}
-                />
-              </div>
-            ) : (
-              <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                <button 
-                  onClick={() => setPaymentMethod(null)}
-                  className="flex items-center gap-2 text-sm font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 mb-4 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  {isEn ? 'Back' : 'Retour'}
-                </button>
-                <div className="text-center py-6">
-                  <p className="font-bold mb-6">
-                    {isEn ? 'You will be redirected to our secure payment gateway.' : 'Vous allez être redirigé vers notre plateforme de paiement sécurisée.'}
-                  </p>
-                  <button
-                    onClick={handleProcessCardPayment}
-                    className={`w-full py-4 rounded-[24px] font-black uppercase tracking-wider transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bg-[#D4FF00] text-black hover:bg-[#E2FF3B]`}
-                  >
-                    {isEn ? 'Proceed to Payment' : 'Procéder au Paiement'}
-                  </button>
-                </div>
-              </div>
-            )}
+            <p className={`text-center text-xs mt-3 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+              {isEn 
+                ? 'You will be redirected to Chariow\'s secure payment page' 
+                : 'Vous serez redirigé vers la page de paiement sécurisée Chariow'}
+            </p>
           </div>
         )}
 
         {step === 2 && (
-          <div className="py-12 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
+          <div className="py-12 flex flex-col items-center justify-center text-center">
             {/* Loading Spinner */}
             <div className="w-20 h-20 mb-8 relative">
               <div className={`absolute inset-0 rounded-full border-4 ${isDark ? 'border-white/10' : 'border-zinc-200'}`}></div>
               <div className="absolute inset-0 rounded-full border-4 border-[#D4FF00] border-t-transparent animate-spin"></div>
             </div>
             <h3 className="text-2xl font-black mb-2">
-              {isEn ? 'Processing Payment...' : 'Redirection vers la page de paiement...'}
+              {isEn ? 'Redirecting to Chariow...' : 'Redirection vers Chariow...'}
             </h3>
             <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-              {isEn ? 'Please wait while we secure your transaction.' : 'Veuillez patienter pendant que nous préparons votre session de paiement sécurisée.'}
+              {isEn 
+                ? 'You will choose your payment method (card or mobile money) on the next page.' 
+                : 'Vous choisirez votre moyen de paiement (carte ou mobile money) sur la page suivante.'}
             </p>
           </div>
         )}
       </div>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 };
