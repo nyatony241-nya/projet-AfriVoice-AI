@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PricingPlan, Language } from '../types';
+import { COUNTRIES } from '../constants';
 import { getAvailablePaymentMethods, getMobileMoneyOperators } from '../services/paymentConfig';
 import MobileMoneySelector from './MobileMoneySelector';
 
@@ -13,6 +14,17 @@ interface PaymentModalProps {
   userCountryId: string;
   onPaymentSuccess: (planId: string, licenseKey?: string) => void;
 }
+
+/**
+ * Construit l'URL API dynamique pour éviter les erreurs de port en développement local
+ */
+const getApiUrl = (path: string) => {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `http://${hostname}:3005${path}`;
+  }
+  return path;
+};
 
 const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
@@ -31,35 +43,49 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'momo' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pays actif sélectionné dans le modal (par défaut celui du studio)
+  const [selectedCountryId, setSelectedCountryId] = useState<string>(userCountryId || 'CI');
+
+  useEffect(() => {
+    if (userCountryId) {
+      setSelectedCountryId(userCountryId);
+    }
+  }, [userCountryId]);
 
   useEffect(() => {
     if (isOpen) {
       setStep(1);
       setPaymentMethod(null);
       setError(null);
-      fetchPaymentMethods();
+      fetchPaymentMethods(selectedCountryId);
     }
-  }, [isOpen, userCountryId]);
+  }, [isOpen, selectedCountryId]);
 
-  const fetchPaymentMethods = async () => {
+  const fetchPaymentMethods = async (countryId: string) => {
     setLoadingMethods(true);
     try {
-      const response = await fetch(`/api/payment/methods/${userCountryId}`);
+      const response = await fetch(getApiUrl(`/api/payment/methods/${countryId}`));
       if (response.ok) {
         const data = await response.json();
         setAvailableOperators(data.operators || []);
       } else {
-        // Fallback côté client si l'API est inaccessible
-        const operators = getMobileMoneyOperators(userCountryId);
+        const operators = getMobileMoneyOperators(countryId);
         setAvailableOperators(operators);
       }
-    } catch (err) {
+    } catch {
       // Fallback local
-      const operators = getMobileMoneyOperators(userCountryId);
+      const operators = getMobileMoneyOperators(countryId);
       setAvailableOperators(operators);
     } finally {
       setLoadingMethods(false);
     }
+  };
+
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCountryId = e.target.value;
+    setSelectedCountryId(newCountryId);
+    setPaymentMethod(null);
   };
 
   const handleProcessCardPayment = async () => {
@@ -78,27 +104,34 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
     try {
       const payload = {
         planId: plan.id,
-        countryId: userCountryId,
+        countryId: selectedCountryId,
         paymentMethod: method === 'momo' ? 'mobile_money' : 'card',
+        email: userEmail,
         successUrl: window.location.origin + '?payment=success',
         cancelUrl: window.location.origin + '?payment=cancel',
         ...additionalData
       };
       
-      const response = await fetch('/api/payment/checkout', {
+      const response = await fetch(getApiUrl('/api/payment/checkout'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        throw new Error(isEn ? 'Server is not responding. Please start the backend server.' : 'Le serveur backend ne répond pas. Assurez-vous que le serveur tourne sur le port 3005.');
+      }
       
       if (!response.ok) {
         throw new Error(data.error || 'Checkout failed');
       }
 
       if (data.checkoutUrl) {
-        // Redirect vers la page de paiement hébergée (Chariow, Paystack, etc.)
+        // Redirection vers la plateforme de paiement (Chariow)
         window.location.href = data.checkoutUrl;
       } else {
         throw new Error(isEn ? 'No checkout URL received' : 'Aucune URL de paiement reçue');
@@ -111,6 +144,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  const currentCountryObj = COUNTRIES.find(c => c.id === selectedCountryId) || COUNTRIES[0];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -141,13 +176,42 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {step === 1 && (
           <div>
-            <div className="mb-6">
+            <div className="mb-4">
               <h2 className="text-2xl font-black mb-1">
                 {isEn ? 'Complete Payment' : 'Finaliser le Paiement'}
               </h2>
               <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                {isEn ? 'Select your preferred payment method' : 'Sélectionnez votre mode de paiement'}
+                {isEn ? 'Select your country and preferred payment method' : 'Sélectionnez votre pays et votre mode de paiement'}
               </p>
+            </div>
+
+            {/* Selector de pays */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold uppercase text-zinc-400 mb-1.5">
+                🌍 {isEn ? 'Your Country' : 'Votre Pays'}
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedCountryId}
+                  onChange={handleCountryChange}
+                  className={`w-full appearance-none p-3.5 pl-4 pr-10 rounded-[18px] font-bold text-sm border outline-none transition-all cursor-pointer ${
+                    isDark
+                      ? 'bg-[#1E1F2A] border-white/10 text-white focus:border-[#D4FF00]'
+                      : 'bg-zinc-100 border-zinc-200 text-black focus:border-[#D4FF00]'
+                  }`}
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c.id} value={c.id} className={isDark ? 'bg-[#14151C] text-white' : 'bg-white text-black'}>
+                      {c.flag} {c.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             {/* Plan Summary */}
@@ -173,7 +237,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
             {!paymentMethod ? (
               <div className="space-y-4">
-                {/* Payment Methods */}
+                {/* Option 1: Carte Bancaire */}
                 <button
                   onClick={() => setPaymentMethod('card')}
                   className={`w-full flex items-center justify-between p-5 rounded-[24px] border-2 transition-all duration-300 hover:scale-[1.02] hover:border-[#D4FF00] ${
@@ -187,7 +251,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                         {isEn ? 'Bank Card' : 'Carte Bancaire'}
                       </div>
                       <div className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                        Visa, Mastercard
+                        Visa, Mastercard ({currentCountryObj.name})
                       </div>
                     </div>
                   </div>
@@ -196,6 +260,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                   </svg>
                 </button>
 
+                {/* Option 2: Mobile Money */}
                 <button
                   onClick={() => setPaymentMethod('momo')}
                   disabled={loadingMethods || availableOperators.length === 0}
@@ -216,14 +281,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                           ? (isEn ? 'Loading...' : 'Chargement...') 
                           : availableOperators.length > 0 
                             ? availableOperators.join(', ')
-                            : (isEn ? 'Not available' : 'Non disponible')}
+                            : (isEn ? 'Not available' : 'Paiement carte recommandé')}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">
-                      {/* Flag logic can go here based on countryId */}
-                    </span>
+                    <span className="text-xl">{currentCountryObj.flag}</span>
                     <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
@@ -244,7 +307,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 <MobileMoneySelector
                   isDark={isDark}
                   language={language}
-                  countryId={userCountryId}
+                  countryId={selectedCountryId}
                   operators={availableOperators}
                   onSubmit={handleProcessMoMoPayment}
                 />
@@ -278,22 +341,17 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {step === 2 && (
           <div className="py-12 flex flex-col items-center justify-center text-center animate-in fade-in duration-300">
-            {/* Skeleton Loading Animation */}
+            {/* Loading Spinner */}
             <div className="w-20 h-20 mb-8 relative">
               <div className={`absolute inset-0 rounded-full border-4 ${isDark ? 'border-white/10' : 'border-zinc-200'}`}></div>
               <div className="absolute inset-0 rounded-full border-4 border-[#D4FF00] border-t-transparent animate-spin"></div>
             </div>
             <h3 className="text-2xl font-black mb-2">
-              {isEn ? 'Processing Payment...' : 'Traitement du Paiement...'}
+              {isEn ? 'Processing Payment...' : 'Redirection vers la page de paiement...'}
             </h3>
             <p className={`text-sm ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
-              {isEn ? 'Please wait while we secure your transaction.' : 'Veuillez patienter pendant que nous sécurisons votre transaction.'}
+              {isEn ? 'Please wait while we secure your transaction.' : 'Veuillez patienter pendant que nous préparons votre session de paiement sécurisée.'}
             </p>
-            
-            <div className="w-full max-w-xs mt-8 space-y-3">
-              <div className={`h-4 rounded-full w-full animate-pulse ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`}></div>
-              <div className={`h-4 rounded-full w-4/5 mx-auto animate-pulse ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`}></div>
-            </div>
           </div>
         )}
       </div>
