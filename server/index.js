@@ -10,6 +10,11 @@ import { humanizeScript } from '../services/phonetic-humanizer/index.js';
 import { buildDirectorPrompt } from '../services/promptBuilder.js';
 import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from '../services/voiceProfiles.js';
 import { synthesizeWithGoogleVoiceClone } from '../services/googleTtsService.js';
+import { getAvailablePaymentMethods } from '../services/paymentConfig.js';
+import { routePayment } from '../services/paymentRouter.js';
+import { validateUserLicense, getQuotaForPlan } from '../services/licenseManager.js';
+import * as paystackProvider from '../services/providers/paystackProvider.js';
+import * as chariowProvider from '../services/providers/chariowProvider.js';
 
 dotenv.config();
 if (fs.existsSync('.env.local')) {
@@ -230,6 +235,82 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       error: `Impossible de générer l'audio. (${error.message || 'Erreur API'}).`
     });
   }
+});
+
+// ══════════════════════════════════════════════════════════════
+// API ENDPOINTS — Payment System
+// ══════════════════════════════════════════════════════════════
+
+app.get('/api/payment/methods/:countryId', (req, res) => {
+  const { countryId } = req.params;
+  const methods = getAvailablePaymentMethods(countryId);
+  res.json({ methods });
+});
+
+app.post('/api/payment/checkout', verifyAuthToken, async (req, res) => {
+  const { planId, countryId, paymentMethod, successUrl, cancelUrl } = req.body;
+  const user = req.user;
+
+  try {
+    const result = await routePayment(
+      countryId,
+      planId,
+      user.email,
+      paymentMethod,
+      successUrl,
+      cancelUrl
+    );
+    res.json(result);
+  } catch (error) {
+    console.error('Checkout error:', error);
+    res.status(500).json({ error: error.message || 'Payment routing failed.' });
+  }
+});
+
+app.post('/api/payment/verify', verifyAuthToken, async (req, res) => {
+  const { provider, reference } = req.body;
+  try {
+    // Basic implementation for Paystack. Expand based on provider
+    if (provider === 'paystack') {
+      const result = await paystackProvider.verifyPayment(reference);
+      res.json(result);
+    } else {
+      res.status(400).json({ error: `Verification not fully implemented for ${provider}` });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to verify payment.' });
+  }
+});
+
+app.post('/api/license/validate', verifyAuthToken, async (req, res) => {
+  const { licenseKey } = req.body;
+  try {
+    const license = await validateUserLicense(licenseKey);
+    const quota = getQuotaForPlan(license.planId);
+    res.json({ license, quota });
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid or expired license.' });
+  }
+});
+
+// Webhooks
+app.post('/api/webhooks/chariow', express.raw({ type: 'application/json' }), (req, res) => {
+  const signature = req.headers['x-chariow-signature'];
+  const isValid = chariowProvider.verifyWebhookSignature(req.body, signature, process.env.CHARIOW_WEBHOOK_SECRET);
+  if (!isValid) return res.status(401).send('Invalid signature');
+  
+  // Process webhook
+  res.status(200).send('OK');
+});
+
+app.post('/api/webhooks/paystack', express.raw({ type: 'application/json' }), (req, res) => {
+  // Process Paystack webhook
+  res.status(200).send('OK');
+});
+
+app.post('/api/webhooks/pawapay', express.raw({ type: 'application/json' }), (req, res) => {
+  // Process PawaPay webhook
+  res.status(200).send('OK');
 });
 
 app.listen(PORT, () => {

@@ -17,6 +17,7 @@ import AuthPage from './components/AuthPage';
 import InstallAppModal from './components/InstallAppModal';
 import RechargeModal, { QuotaPack } from './components/RechargeModal';
 import { triggerCelebration } from './components/ConfettiHelper';
+import PaymentModal from './components/PaymentModal';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
 const QUOTA_STORAGE_KEY = 'afrivoice_quota_v1';
@@ -33,6 +34,23 @@ const App: React.FC = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('AFRIVOICE_LANG') as Language) || 'fr');
   const isEn = language === 'en';
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<PricingPlan | null>(null);
+
+  // Handle payment return
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    if (paymentStatus === 'success') {
+      addToast('success', isEn ? 'Payment Confirmed!' : 'Paiement Confirmé !', isEn ? 'Your plan has been activated.' : 'Votre forfait a été activé.');
+      triggerCelebration();
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (paymentStatus === 'cancel') {
+      addToast('info', isEn ? 'Payment Cancelled' : 'Paiement Annulé', isEn ? 'You can try again anytime.' : 'Vous pouvez réessayer à tout moment.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   // Listen for PWA beforeinstallprompt event
   useEffect(() => {
@@ -603,16 +621,15 @@ const App: React.FC = () => {
   const handleSelectPlan = (plan: PricingPlan) => {
     if (currentPlan.id === plan.id) {
       if (usedSeconds >= quota.maxSeconds) {
-        setUsedSeconds(0);
-        addToast('success', isEn ? 'Plan Renewed' : 'Abonnement Renouvelé', isEn ? 'Your monthly quota has been reset.' : 'Votre quota mensuel a été réinitialisé.');
+        setSelectedPlanForPayment(plan);
+        setIsPaymentModalOpen(true);
       } else {
         addToast('info', isEn ? 'Already Active' : 'Déjà Actif', isEn ? 'You are already subscribed to this plan.' : 'Vous êtes déjà abonné à ce forfait.');
       }
       return;
     }
-    setCurrentPlan(plan);
-    setUsedSeconds(0);
-    addToast('success', `Forfait ${plan.name} Actif`, `Vous bénéficiez désormais des minutes et fonctionnalités du plan ${plan.name}.`);
+    setSelectedPlanForPayment(plan);
+    setIsPaymentModalOpen(true);
   };
 
   if (loadingAuth) {
@@ -648,6 +665,26 @@ const App: React.FC = () => {
         language={language}
         onSelectPack={handleSelectQuotaPack}
       />
+
+      {selectedPlanForPayment && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => { setIsPaymentModalOpen(false); setSelectedPlanForPayment(null); }}
+          isDark={isDark}
+          language={language}
+          plan={selectedPlanForPayment}
+          userEmail={session?.user?.email || ''}
+          userCountryId={selectedCountry?.id || 'CI'}
+          onPaymentSuccess={(planId, licenseKey) => {
+            const newPlan = PRICING_PLANS.find(p => p.id === planId) || PRICING_PLANS[0];
+            setCurrentPlan(newPlan);
+            setUsedSeconds(0);
+            setIsPaymentModalOpen(false);
+            setSelectedPlanForPayment(null);
+            addToast('success', isEn ? 'Payment Successful!' : 'Paiement Réussi !', isEn ? `Your ${newPlan.name} plan is now active.` : `Votre forfait ${newPlan.name} est maintenant actif.`);
+          }}
+        />
+      )}
 
       {/* SaaS Sidebar Navigation */}
       <Sidebar

@@ -174,3 +174,53 @@ export interface VoiceGenerationMetadata {
   status: 'VOICE_REPLICATION_SUCCESS' | 'VOICE_REPLICATION_UNAVAILABLE' | 'VOICE_REPLICATION_ERROR' | 'VOICE_FALLBACK_USED';
 }
 
+// ── Payment System Types ─────────────────────────────────────
+
+export type PaymentMethod = 'card' | 'mobile_money';
+export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'expired';
+export type PaymentProvider = 'chariow' | 'paystack' | 'pawapay' | 'paytech' | 'flutterwave';
+
+export interface PaymentTransaction {
+  id: string;
+  userId: string;
+  planId: 'free' | 'creator' | 'pro';
+  amount: number;
+  currency: string;
+  provider: PaymentProvider;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  providerRef: string;       // Provider's transaction reference
+  checkoutUrl?: string;      // URL to redirect user for payment
+  licenseKey?: string;       // Chariow license key after payment
+  createdAt: string;
+  completedAt?: string;
+  metadata?: Record<string, string>;
+}
+
+export interface LicenseInfo {
+  key: string;
+  isActive: boolean;
+  isExpired: boolean;
+  expiresAt: string | null;
+  planId: 'free' | 'creator' | 'pro';
+  status: string;
+  activationsRemaining?: number;
+}
+
+export interface MobileMoneyOperator {
+  id: string;
+  name: string;
+  logo: string;              // Emoji or icon identifier
+  countryIds: string[];      // Country codes where available
+}
+
+export interface CountryPaymentConfig {
+  countryId: string;
+  primaryProvider: PaymentProvider;
+  fallbackProvider?: PaymentProvider;
+  cardAvailable: boolean;
+  mobileMoneyAvailable: boolean;
+  mobileMoneyOperators: string[];  // Operator names
+  currency: string;
+  currencySymbol: string;
+}
