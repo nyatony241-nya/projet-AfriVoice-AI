@@ -15,9 +15,10 @@ import { mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './servic
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
 import InstallAppModal from './components/InstallAppModal';
-import RechargeModal, { QuotaPack } from './components/RechargeModal';
+import RechargeModal, { QuotaPack, QUOTA_PACKS } from './components/RechargeModal';
 import { triggerCelebration } from './components/ConfettiHelper';
 import PaymentModal from './components/PaymentModal';
+import { redirectToChariowCheckout } from './services/chariowService';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
 const QUOTA_STORAGE_KEY = 'afrivoice_quota_v1';
@@ -37,17 +38,60 @@ const App: React.FC = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<PricingPlan | null>(null);
 
-  // Handle payment return
+  // Handle payment return from Chariow
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
+    const itemId = urlParams.get('item') || urlParams.get('plan') || urlParams.get('pack');
+
     if (paymentStatus === 'success') {
-      addToast('success', isEn ? 'Payment Confirmed!' : 'Paiement Confirmé !', isEn ? 'Your plan has been activated.' : 'Votre forfait a été activé.');
+      if (itemId) {
+        // Détecter si c'est un forfait
+        const foundPlan = PRICING_PLANS.find((p) => p.id === itemId);
+        if (foundPlan) {
+          setCurrentPlan(foundPlan);
+          setUsedSeconds(0);
+          addToast(
+            'success',
+            isEn ? 'Plan Activated!' : 'Forfait Activé !',
+            isEn ? `Your ${foundPlan.name} plan is now active.` : `Votre forfait ${foundPlan.name} est maintenant actif sur votre compte.`
+          );
+        } else {
+          // Détecter si c'est un pack de recharge
+          const foundPack = QUOTA_PACKS.find((p) => p.id === itemId);
+          if (foundPack) {
+            setBonusSeconds((prev) => prev + foundPack.seconds);
+            addToast(
+              'success',
+              isEn ? `${foundPack.minutes} Min Top-Up Validated!` : `Recharge +${foundPack.minutes} Min Validée !`,
+              isEn
+                ? `Added +${foundPack.minutes} minutes (+${foundPack.seconds.toLocaleString()} sec) to your balance.`
+                : `Votre quota de synthèse vocal a été augmenté de +${foundPack.minutes} minutes (+${foundPack.seconds.toLocaleString()} sec).`
+            );
+          } else {
+            addToast(
+              'success',
+              isEn ? 'Payment Confirmed!' : 'Paiement Confirmé !',
+              isEn ? 'Your Chariow purchase was validated.' : 'Votre achat via Chariow a été validé avec succès.'
+            );
+          }
+        }
+      } else {
+        addToast(
+          'success',
+          isEn ? 'Payment Confirmed!' : 'Paiement Confirmé !',
+          isEn ? 'Your Chariow payment was successful.' : 'Votre paiement via Chariow a été validé avec succès.'
+        );
+      }
       triggerCelebration();
-      // Clean URL
+      // Nettoyage propre des paramètres de l'URL
       window.history.replaceState({}, '', window.location.pathname);
     } else if (paymentStatus === 'cancel') {
-      addToast('info', isEn ? 'Payment Cancelled' : 'Paiement Annulé', isEn ? 'You can try again anytime.' : 'Vous pouvez réessayer à tout moment.');
+      addToast(
+        'info',
+        isEn ? 'Payment Cancelled' : 'Paiement Annulé',
+        isEn ? 'You can finalize your payment anytime.' : 'Vous pouvez finaliser votre paiement à tout moment.'
+      );
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -326,16 +370,15 @@ const App: React.FC = () => {
   };
 
   const handleSelectQuotaPack = (pack: QuotaPack) => {
-    setBonusSeconds((prev) => prev + pack.seconds);
     setShowRechargeModal(false);
-    triggerCelebration();
     addToast(
-      'success',
-      isEn ? `${pack.minutes} Min Top-Up Validated!` : `Recharge ${pack.minutes} Min Validée !`,
-      isEn
-        ? `Added +${pack.minutes} minutes (+${pack.seconds.toLocaleString()} sec) with the ${pack.nameEn}.`
-        : `Votre quota de synthèse vocale a été augmenté de +${pack.minutes} minutes (+${pack.seconds.toLocaleString()} sec) avec le ${pack.name}.`
+      'info',
+      isEn ? 'Redirecting to Chariow...' : 'Redirection vers Chariow...',
+      isEn ? 'Opening secure checkout for mobile money & card payment...' : 'Ouverture du paiement sécurisé par Mobile Money & Carte...'
     );
+    setTimeout(() => {
+      redirectToChariowCheckout(pack.id, session?.user?.email || '');
+    }, 400);
   };
 
   const toggleLanguage = () => {
