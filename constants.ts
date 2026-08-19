@@ -20,6 +20,7 @@ export const COUNTRIES: Country[] = [
   { id: 'EG', name: 'Égypte', flag: '🇪🇬', primaryLanguage: 'Arabic', accentDescription: 'Egyptian English accent. Distinctive Arabic phonetic influence, heavy emphasis on consonants, warm and expressive.', geminiVoiceMale: 'Puck', geminiVoiceFemale: 'Aoede' },
   { id: 'UG', name: 'Ouganda', flag: '🇺🇬', primaryLanguage: 'English', accentDescription: 'Ugandan English accent. Luganda influence, extremely rhythmic, deliberate pacing, unique East African vowel sounds.', geminiVoiceMale: 'Puck', geminiVoiceFemale: 'Aoede' },
   { id: 'TZ', name: 'Tanzanie', flag: '🇹🇿', primaryLanguage: 'English', accentDescription: 'Tanzanian English accent. Strong Swahili melodic influence, polite and measured delivery, soft consonants.', geminiVoiceMale: 'Puck', geminiVoiceFemale: 'Aoede' },
+  { id: 'RW', name: 'Rwanda', flag: '🇷🇼', primaryLanguage: 'French', accentDescription: 'Rwandan French accent. Kinyarwanda influence, precise and elegant diction, gentle East African rhythm, soft vowels.', geminiVoiceMale: 'Puck', geminiVoiceFemale: 'Aoede' },
 ];
 
 export const VOICE_OPTIONS: VoiceOption[] = [
@@ -47,7 +48,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     features: [
       '10 minutes / mois sécurisées',
       '5 pays d’Afrique débloqués',
-      'Voix standards de base',
+      '5 voix Naturelles',
       'Qualité audio standard MP3',
       'Utilisation personnelle uniquement',
       '❌ Pas d’Expressions Locales ni d’Humanisation IA',
@@ -62,7 +63,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     isPopular: true,
     features: [
       '30 minutes / mois sécurisées',
-      '19 pays & tous les accents débloqués',
+      '10 pays & 20 voix débloquées',
+      'Voix Naturelles + Dynamiques',
       'Expressions Locales Africaines incluses',
       '✨ Humanisation Phonétique IA incluse',
       'Qualité audio Haute Définition MP3 + WAV',
@@ -77,7 +79,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     color: 'indigo',
     features: [
       '60 minutes / mois sécurisées',
-      '⚡ Accès illimité aux 19 pays & accents',
+      '⚡ 20 pays & 60 voix — Bibliothèque complète',
+      'Voix Naturelles + Dynamiques + Premium',
       'Qualité Studio HD 24kHz PCM',
       'Expressions locales & Humanisation IA',
       'Support prioritaire par e-mail 24/7'
@@ -95,7 +98,7 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     features: [
       '10 minutes / month secured',
       '5 unlocked African countries',
-      'Standard basic voices',
+      '5 Natural voices',
       'Standard MP3 audio quality',
       'Personal use only',
       '❌ No Local Expressions or AI Humanization',
@@ -110,7 +113,8 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     isPopular: true,
     features: [
       '30 minutes / month secured',
-      '19 countries & all accents unlocked',
+      '10 countries & 20 voices unlocked',
+      'Natural + Dynamic voices',
       'Local African Expressions included',
       '✨ AI Phonetic Humanization included',
       'High Definition MP3 + WAV exports',
@@ -125,7 +129,8 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     color: 'indigo',
     features: [
       '60 minutes / month secured',
-      '⚡ Unlimited access to 19 countries & accents',
+      '⚡ 20 countries & 60 voices — Full library',
+      'Natural + Dynamic + Premium voices',
       'HD Studio Quality 24kHz PCM',
       'Local expressions & AI Humanization',
       'Priority email support 24/7'

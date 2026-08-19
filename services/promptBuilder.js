@@ -73,6 +73,7 @@ export function buildDirectorPrompt(params) {
   const {
     script,
     voiceId,
+    voiceIdentity,     // VoiceIdentity from registry (optional, takes precedence)
     countryId: reqCountryId,
     countryName,
     gender = 'female',
@@ -105,16 +106,16 @@ export function buildDirectorPrompt(params) {
 
   const dna = VOICE_DNA[countryId];
 
-  // Map voice variant to actual prebuilt Gemini voice name
+  // FIXED VOICE IDENTITY: Registry takes precedence over dynamic lookup
   const voiceKey = `${gender.toLowerCase()}-${voiceVariant}`;
-  const actualVoiceId = VOICE_MAP[voiceKey] || (gender.toLowerCase() === 'female' ? 'Aoede' : 'Puck');
+  const actualVoiceId = voiceIdentity?.providerVoiceId || VOICE_MAP[voiceKey] || (gender.toLowerCase() === 'female' ? 'Aoede' : 'Puck');
   const voicePersona = gender.toLowerCase() === 'female' ? 'warm, clear, and engaging' : 'deep, resonant, and reassuring';
 
-  // Construct stable, permanent voiceProfileId
-  const voiceProfileId = `${countryId}_${contentStyle.toUpperCase()}_${gender.toUpperCase()}_${voiceVariant.toUpperCase()}`;
+  // Construct stable, permanent voiceProfileId — use registry ID if available
+  const voiceProfileId = voiceIdentity?.voiceId || `${countryId}_${contentStyle.toUpperCase()}_${gender.toUpperCase()}_${voiceVariant.toUpperCase()}`;
   
   if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
-    console.log(`🎙️ [Voice Profile Locked] Profile ID: ${voiceProfileId}`);
+    console.log(`🎙️ [Voice Profile Locked] Profile ID: ${voiceProfileId} | Provider Voice: ${actualVoiceId}`);
   }
 
   const sections = [];

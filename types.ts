@@ -1,11 +1,49 @@
 
+// ── Voice Identity System (Voice Registry) ───────────────────────
+
+export type VoiceTier = 'natural' | 'dynamic' | 'premium';
+
+export interface VoiceIdentity {
+  /** Identifiant unique et IMMUABLE. Ex: 'SN_FATOU_01' */
+  voiceId: string;
+  /** Nom du persona. Ex: 'Fatou' */
+  persona: string;
+  /** Code pays ISO 2 lettres. Ex: 'SN' */
+  countryId: string;
+  /** Nom complet du pays. Ex: 'Sénégal' */
+  countryName: string;
+  /** Emoji drapeau */
+  flag: string;
+  gender: 'male' | 'female';
+  /** Tier d'accès : natural (Starter+), dynamic (Creator+), premium (Pro) */
+  tier: VoiceTier;
+  /** Description FR courte du persona */
+  description_fr: string;
+  /** Description EN courte du persona */
+  description_en: string;
+  /** Voix Gemini sous-jacente — FIXE et IMMUABLE. Ex: 'Aoede' */
+  providerVoiceId: 'Aoede' | 'Kore' | 'Leda' | 'Puck' | 'Charon' | 'Fenrir';
+  /** Variant de voix — FIXE. Ex: 'voice1' */
+  voiceVariant: 'voice1' | 'voice2' | 'voice3';
+  /** Personnalité par défaut verrouillée */
+  defaultPersonality: VocalPersonality;
+  /** Style de contenu par défaut */
+  defaultContentStyle: ContentStyle;
+  /** Émotion par défaut */
+  defaultEmotion: 'neutral' | 'happy' | 'serious' | 'energetic' | 'soft';
+  /** Plan minimum requis pour accéder à cette voix */
+  requiredPlan: 'free' | 'creator' | 'pro';
+}
+
 export interface Country {
   id: string;
   name: string;
   flag: string;
   primaryLanguage: 'French' | 'English' | 'Arabic';
   accentDescription: string;
+  /** @deprecated Use VoiceRegistry instead */
   geminiVoiceMale?: string;
+  /** @deprecated Use VoiceRegistry instead */
   geminiVoiceFemale?: string;
 }
 
@@ -32,6 +70,8 @@ export type VocalObjective =
 export interface VoiceSettings {
   gender: 'male' | 'female';
   voiceVariant?: 'voice1' | 'voice2' | 'voice3';
+  /** Voice Registry ID — persiste entre sessions. Ex: 'SN_FATOU_01' */
+  selectedVoiceId?: string;
   age: number;
   style: string;
   pitch: number;
@@ -134,6 +174,8 @@ export interface HistoryItem {
   script: string;
   settings: VoiceSettings;
   audioData: string; // Base64 encoded WAV/Audio
+  /** Voice Registry ID utilisé pour cette génération */
+  voiceId?: string;
 }
 
 export interface QuotaUsage {

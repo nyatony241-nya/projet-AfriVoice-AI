@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { COUNTRIES, VOICE_OPTIONS, PRICING_PLANS, PRICING_PLANS_EN, BG_MUSIC_TRACKS } from './constants';
-import { Country, GenerationState, VoiceSettings, PricingPlan, MixerSettings, HistoryItem, QuotaUsage, Language, AccentLevel, ContentStyle, VocalPersonality, VocalObjective, QualityScore } from './types';
+import { Country, VoiceIdentity, GenerationState, VoiceSettings, PricingPlan, MixerSettings, HistoryItem, QuotaUsage, Language, AccentLevel, ContentStyle, VocalPersonality, VocalObjective, QualityScore } from './types';
 import { analyzeQuality } from './services/qualityAnalyzer';
 import CountryCard from './components/CountryCard';
+import VoiceCard from './components/VoiceCard';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import StatCounters from './components/StatCounters';
@@ -19,6 +20,7 @@ import RechargeModal, { QuotaPack, QUOTA_PACKS } from './components/RechargeModa
 import { triggerCelebration } from './components/ConfettiHelper';
 import PaymentModal from './components/PaymentModal';
 import { redirectToChariowCheckout } from './services/chariowService';
+import { getVoiceById, getVoicesForCountry, getAccessibleVoices, getAccessibleCountryIds, migrateToVoiceId } from './services/voiceRegistry';
 
 const STORAGE_KEY = 'afrivoice_history_v1';
 const QUOTA_STORAGE_KEY = 'afrivoice_quota_v1';
@@ -146,8 +148,8 @@ const App: React.FC = () => {
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const availableCountries = useMemo(() => {
-    if (currentPlan.id === 'free') return COUNTRIES.slice(0, 5);
-    return COUNTRIES;
+    const accessibleIds = getAccessibleCountryIds(currentPlan.id as 'free' | 'creator' | 'pro');
+    return COUNTRIES.filter(c => accessibleIds.includes(c.id));
   }, [currentPlan]);
 
   // Dynamic Quota limits by plan (Safety Rail #1 & #3) + Recharge bonus
@@ -178,6 +180,7 @@ const App: React.FC = () => {
     const defaults: VoiceSettings = {
       gender: 'female',
       voiceVariant: 'voice1',
+      selectedVoiceId: undefined,
       age: 28,
       style: 'pro',
       pitch: 1.0,
@@ -194,6 +197,27 @@ const App: React.FC = () => {
     if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* ignore */ } }
     return defaults;
   });
+
+  // Voice Registry: resolve the currently selected voice identity
+  const selectedIdentity = useMemo<VoiceIdentity | undefined>(() => {
+    if (settings.selectedVoiceId) {
+      return getVoiceById(settings.selectedVoiceId);
+    }
+    // Auto-select first available voice for the selected country
+    const voices = getVoicesForCountry(selectedCountry.id);
+    const accessible = voices.filter(v => {
+      if (currentPlan.id === 'free') return v.tier === 'natural';
+      if (currentPlan.id === 'creator') return v.tier === 'natural' || v.tier === 'dynamic';
+      return true;
+    });
+    return accessible[0];
+  }, [settings.selectedVoiceId, selectedCountry.id, currentPlan.id]);
+
+  // Available voices for the currently selected country (filtered by plan)
+  const availableVoicesForCountry = useMemo(() => {
+    const voices = getVoicesForCountry(selectedCountry.id);
+    return voices; // Show all but lock inaccessible ones in UI
+  }, [selectedCountry.id]);
 
   // Save user preferences (Memory feature)
   useEffect(() => {
@@ -408,9 +432,8 @@ const App: React.FC = () => {
       { label: 'Version C', emotion: 'energetic' as const, description: isEn ? 'Dynamic & Punchy' : 'Dynamique' },
     ];
 
-    const selectedVoiceId = settings.gender === 'female'
-      ? (selectedCountry.geminiVoiceFemale || 'Aoede')
-      : (selectedCountry.geminiVoiceMale || 'Puck');
+    // VOICE REGISTRY: Use fixed provider voice from registry identity
+    const selectedVoiceId = selectedIdentity?.providerVoiceId || (settings.gender === 'female' ? 'Aoede' : 'Puck');
 
     const results: { label: string; audioUrl: string; emotion: string }[] = [];
 
@@ -505,9 +528,8 @@ const App: React.FC = () => {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       }
 
-      const selectedVoiceId = settings.gender === 'female' 
-        ? (selectedCountry.geminiVoiceFemale || 'Aoede') 
-        : (selectedCountry.geminiVoiceMale || 'Puck');
+      // VOICE REGISTRY: Use fixed provider voice from registry identity
+      const selectedVoiceId = selectedIdentity?.providerVoiceId || (settings.gender === 'female' ? 'Aoede' : 'Puck');
 
       const result = await generateVoiceOver(script, selectedVoiceId, {
         countryId: selectedCountry.id,
@@ -563,6 +585,7 @@ const App: React.FC = () => {
           script,
           settings,
           audioData: base64data,
+          voiceId: selectedIdentity?.voiceId,
         };
         setHistory((prev) => [newItem, ...prev].slice(0, MAX_HISTORY_ITEMS));
       };
@@ -649,7 +672,9 @@ const App: React.FC = () => {
   const handleLoadFromHistory = (item: HistoryItem) => {
     setSelectedCountry(item.country);
     setScript(item.script);
-    setSettings(item.settings);
+    // Restore voice selection: use stored voiceId or migrate from country+gender
+    const restoredVoiceId = item.voiceId || migrateToVoiceId(item.country.id, item.settings.gender);
+    setSettings({ ...item.settings, selectedVoiceId: restoredVoiceId || undefined });
     setStatus((prev) => ({ ...prev, audioUrl: item.audioData, error: null }));
     setActiveTab('studio');
     addToast('info', 'Audio Rechargé', `Script et paramètres de ${item.country.name} importés dans le studio.`);
@@ -903,7 +928,7 @@ const App: React.FC = () => {
                 </div>
               </section>
 
-              {/* ÉTAPE 2: CHOISIR LA VOIX & PAYS */}
+              {/* ÉTAPE 2: CHOISIR TA VOIX AFRICAINE */}
               <section
                 className={`rounded-[36px] p-6 sm:p-8 border transition-all duration-300 ${
                   isDark
@@ -917,65 +942,52 @@ const App: React.FC = () => {
                   </span>
                   <div>
                     <h2 className="text-lg font-black tracking-tight">
-                      {isEn ? 'Choose Voice & African Accent' : 'Choisis la Voix & l\'Accent Africain'}
+                      {isEn ? 'Choose Your African Voice' : 'Choisis Ta Voix Africaine'}
                     </h2>
                     <p className="text-xs text-zinc-500 font-medium">
-                      {isEn ? 'Select gender, country, and accent intensity' : 'Sélectionne le genre, le pays et l\'intensité de l\'accent'}
+                      {isEn ? 'Select a country, then pick your voice identity' : 'Sélectionne un pays, puis choisis ton identité vocale'}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Genre */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-zinc-500">
-                      {isEn ? 'Voice Gender' : 'Genre de la Voix'}
-                    </label>
-                    <div className="flex gap-2">
-                      {['female', 'male'].map((g) => (
-                        <button
-                          key={g}
-                          onClick={() => setSettings({ ...settings, gender: g as any })}
-                          className={`flex-1 py-3.5 px-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
-                            settings.gender === g
-                              ? 'bg-[#D4FF00] text-black shadow-md'
-                              : isDark
-                              ? 'bg-[#09090B] text-zinc-400 border border-white/5 hover:border-white/20'
-                              : 'bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-zinc-200'
-                          }`}
-                        >
-                          {g === 'female' ? (isEn ? '👩 Female' : '👩 Femme') : (isEn ? '👨 Male' : '👨 Homme')}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Pays & Accent (Dropdown élégant) */}
+                {/* Pays Filter + Voice Count */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-black uppercase tracking-widest text-zinc-500">
-                        {isEn ? 'African Country / Accent' : 'Pays / Accent Africain'}
+                        {isEn ? 'Country / Accent' : 'Pays / Accent'}
                       </label>
                       <span className="text-[10px] font-mono text-zinc-400 font-bold">
-                        {currentPlan.id === 'free' ? '5/20 🔒' : '20/20'}
+                        {currentPlan.id === 'free' ? '5/20' : currentPlan.id === 'creator' ? '10/20' : '20/20'}
+                        {currentPlan.id !== 'pro' && ' 🔒'}
                       </span>
                     </div>
                     <select
                       value={selectedCountry.id}
                       onChange={(e) => {
                         const targetId = e.target.value;
-                        const idx = COUNTRIES.findIndex((c) => c.id === targetId);
-                        if (currentPlan.id === 'free' && idx >= 5) {
+                        const accessibleIds = getAccessibleCountryIds(currentPlan.id as 'free' | 'creator' | 'pro');
+                        if (!accessibleIds.includes(targetId)) {
                           addToast(
                             'warning',
-                            isEn ? '🔒 Plan Upgrade Required' : '🔒 Forfait CREATOR Requis',
-                            isEn ? 'Upgrade to CREATOR to unlock all 20 countries.' : 'Passez au forfait CREATOR pour débloquer les 20 pays.'
+                            isEn ? '🔒 Plan Upgrade Required' : '🔒 Forfait Supérieur Requis',
+                            isEn ? 'Upgrade your plan to unlock more countries.' : 'Passez au forfait supérieur pour débloquer plus de pays.'
                           );
                           setActiveTab('pricing');
                           return;
                         }
                         const country = COUNTRIES.find((c) => c.id === targetId);
-                        if (country) setSelectedCountry(country);
+                        if (country) {
+                          setSelectedCountry(country);
+                          // Auto-select first available voice for new country
+                          const voices = getVoicesForCountry(targetId);
+                          const first = voices.find(v => {
+                            if (currentPlan.id === 'free') return v.tier === 'natural';
+                            if (currentPlan.id === 'creator') return v.tier === 'natural' || v.tier === 'dynamic';
+                            return true;
+                          });
+                          if (first) setSettings(s => ({ ...s, selectedVoiceId: first.voiceId, gender: first.gender }));
+                        }
                       }}
                       className={`w-full border rounded-2xl px-4 py-3.5 text-sm font-bold outline-none transition-colors cursor-pointer ${
                         isDark
@@ -983,11 +995,12 @@ const App: React.FC = () => {
                           : 'bg-zinc-50 text-zinc-900 border-zinc-200 hover:border-zinc-300'
                       }`}
                     >
-                      {COUNTRIES.map((c, idx) => {
-                        const isLocked = currentPlan.id === 'free' && idx >= 5;
+                      {COUNTRIES.map((c) => {
+                        const accessibleIds = getAccessibleCountryIds(currentPlan.id as 'free' | 'creator' | 'pro');
+                        const isLockedCountry = !accessibleIds.includes(c.id);
                         return (
                           <option key={c.id} value={c.id}>
-                            {c.flag} {c.name} ({c.primaryLanguage}) {isLocked ? '🔒' : ''}
+                            {c.flag} {c.name} ({c.primaryLanguage}) {isLockedCountry ? '🔒' : ''}
                           </option>
                         );
                       })}
@@ -1016,6 +1029,58 @@ const App: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                  </div>
+                </div>
+
+                {/* Voice Cards Grid */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-widest text-zinc-500">
+                      {isEn ? 'Available Voices' : 'Voix Disponibles'} — {selectedCountry.flag} {selectedCountry.name}
+                    </label>
+                    {selectedIdentity && (
+                      <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                        isDark ? 'bg-[#D4FF00]/15 text-[#D4FF00]' : 'bg-[#D4FF00]/20 text-zinc-800'
+                      }`}>
+                        {selectedIdentity.persona} ✓
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {availableVoicesForCountry.map((voice) => {
+                      const isVoiceLocked = (() => {
+                        if (currentPlan.id === 'pro') return false;
+                        if (currentPlan.id === 'creator') return voice.tier === 'premium';
+                        return voice.tier !== 'natural';
+                      })();
+                      return (
+                        <VoiceCard
+                          key={voice.voiceId}
+                          voice={voice}
+                          isSelected={selectedIdentity?.voiceId === voice.voiceId}
+                          isLocked={isVoiceLocked}
+                          isDark={isDark}
+                          isEn={isEn}
+                          onSelect={(v) => {
+                            setSettings(s => ({
+                              ...s,
+                              selectedVoiceId: v.voiceId,
+                              gender: v.gender,
+                              voiceVariant: v.voiceVariant,
+                            }));
+                          }}
+                          onLockedClick={() => {
+                            const neededPlan = voice.tier === 'premium' ? 'PRO' : 'CREATOR';
+                            addToast(
+                              'warning',
+                              isEn ? `🔒 ${neededPlan} Plan Required` : `🔒 Forfait ${neededPlan} Requis`,
+                              isEn ? `Upgrade to ${neededPlan} to unlock ${voice.persona}.` : `Passez au forfait ${neededPlan} pour débloquer ${voice.persona}.`
+                            );
+                            setActiveTab('pricing');
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1427,7 +1492,11 @@ const App: React.FC = () => {
                                 {new Date(item.timestamp).toLocaleDateString()}
                               </span>
                               <span className="text-[10px] font-bold uppercase text-zinc-900 dark:text-[#D4FF00]">
-                                {item.settings.gender === 'female' ? 'Aoede' : 'Puck'} ({item.settings.age}a)
+                                {(() => {
+                                  const vid = item.voiceId || migrateToVoiceId(item.country.id, item.settings.gender);
+                                  const identity = vid ? getVoiceById(vid) : null;
+                                  return identity ? `${identity.persona}` : (item.settings.gender === 'female' ? 'Aoede' : 'Puck');
+                                })()} ({item.settings.age}a)
                               </span>
                             </div>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate italic font-medium">

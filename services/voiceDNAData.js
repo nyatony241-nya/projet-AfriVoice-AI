@@ -308,6 +308,22 @@ export const VOICE_DNA = {
     defaultWarmth: 9,
     defaultConfidence: 8,
     defaultEnergy: 7
+  },
+  RW: {
+    countryId: 'RW',
+    region: 'East Africa',
+    capital: 'Kigali',
+    malePersonaName: 'Habimana',
+    femalePersonaName: 'Uwase',
+    localLanguages: ['Kinyarwanda', 'French', 'English'],
+    speechMelody: 'Elegant, precise Kinyarwanda-influenced melody. Gentle rises on important words, measured and refined pitch contour with soft East African warmth.',
+    consonantStyle: 'Clear, gentle articulation with Bantu softness. Distinct Kinyarwanda nasal sounds, soft rolling Rs, precise French consonant blending.',
+    rhythmPattern: 'Measured, deliberate, and elegant pacing. Gentle pauses between phrases. Calm, composed delivery reflecting Rwandan cultural precision.',
+    culturalContext: 'Resilient, forward-looking, precise, and culturally proud. Inspired by Kigali\'s modernity and Rwanda\'s renaissance spirit.',
+    antiPatterns: ['Standard American English', 'British RP English', 'Parisian French', 'West African French patterns'],
+    defaultWarmth: 8,
+    defaultConfidence: 8,
+    defaultEnergy: 7
   }
 };
 
@@ -406,5 +422,10 @@ export const LOCAL_EXPRESSIONS = {
     fillers: ['sawa sawa', 'kweli', 'basi'],
     greetings: ['Habari!', 'Mambo!'],
     emphasis: ['Kweli!', 'Pole sana!', 'Asante!'],
+  },
+  RW: {
+    fillers: ['murakaza', 'yego', 'ni byiza', 'koko'],
+    greetings: ['Muraho!', 'Amakuru?', 'Bite?'],
+    emphasis: ['Imana!', 'Ni byiza cyane!', 'Urakoze!'],
   },
 };

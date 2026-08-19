@@ -714,6 +714,7 @@ export function getVoiceProfileByCountryAndGender(countryId: string, gender: 'ma
     EG: 'EGYPT',
     UG: 'UGANDA',
     TZ: 'TANZANIA',
+    RW: 'RWANDA',
   };
 
   const prefix = countryMapping[normalizedCountry] || 'SENEGAL';

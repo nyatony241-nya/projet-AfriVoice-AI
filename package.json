@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"nodemon server/index.js\"",
+    "dev": "concurrently \"vite\" \"nodemon --exec tsx server/index.js\"",
     "dev:frontend": "vite",
-    "dev:backend": "nodemon server/index.js",
+    "dev:backend": "nodemon --exec tsx server/index.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server/index.js"
@@ -19,6 +19,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.0",
+    "lamejs": "^1.2.1",
     "multer": "^2.2.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
@@ -30,6 +31,7 @@
     "concurrently": "^10.0.3",
     "nodemon": "^3.1.14",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
