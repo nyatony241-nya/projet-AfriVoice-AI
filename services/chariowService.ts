@@ -14,9 +14,9 @@ export const CHARIOW_CHECKOUT_URLS: Record<string, string> = {
   pro:             'https://kboghdly.mychariow.shop/prd_pq817d6j',  // PRO – STUDIO HD
 
   // Packs de recharges vocales
-  starter_booster: 'https://kboghdly.mychariow.shop/prd_n6d89d8s',  // Pack Découverte (+15 min)
-  creator_booster: 'https://kboghdly.mychariow.shop/prd_f639rpw2',  // Pack Créateur (+30 min)
-  pro_booster:     'https://kboghdly.mychariow.shop/prd_pq817d6j',  // Pack Pro Studio (+60 min)
+  starter_booster: 'https://kboghdly.mychariow.shop/prd_221tec74',  // Pack Découverte (+15 min)
+  creator_booster: 'https://kboghdly.mychariow.shop/prd_9zvjwbz5',  // Pack Créateur (+30 min)
+  pro_booster:     'https://kboghdly.mychariow.shop/prd_78vr0y1w',  // Pack Pro Studio (+60 min)
 };
 
 /**
