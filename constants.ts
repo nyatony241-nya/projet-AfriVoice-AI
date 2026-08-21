@@ -29,6 +29,7 @@ export const VOICE_OPTIONS: VoiceOption[] = [
   { id: 'Fenrir', name: 'Fenrir', gender: 'male' },
   { id: 'Aoede', name: 'Aoede', gender: 'female' },
   { id: 'Kore', name: 'Kore', gender: 'female' },
+  { id: 'Leda', name: 'Leda', gender: 'female' },
 ];
 
 export const BG_MUSIC_TRACKS: BackgroundMusic[] = [

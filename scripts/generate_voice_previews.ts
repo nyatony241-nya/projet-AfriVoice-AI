@@ -54,104 +54,104 @@ function pcmToWavBuffer(base64Pcm: string, sampleRate = 24000, numChannels = 1, 
 // Tailored natural preview phrases per country and persona
 const PREVIEW_SCRIPTS: Record<string, string> = {
   // Nigeria (EN)
-  'NG_BLESSING_01': "Hello, I am Blessing from Nigeria. Welcome to AfriVoice, your complete natural voice solution.",
-  'NG_NGOZI_02': "Hey there! I am Ngozi from Lagos! Ready to make your social media content pop and blow up?",
-  'NG_EMEKA_03': "Good day. I am Emeka from Abuja. Elevate your brand with authoritative and powerful voiceovers.",
+  'NG_EMEKA_03': "How far, my people! I am Emeka, your voice from the heart of Nigeria. Ehen! Whether it's for your business, your podcast, or your brand, I bring you that authentic and warm Naija presence.",
+  'NG_NGOZI_02': "Heey! Na Ngozi be this o! If you wan blow on social media, I go give your content that Lagos energy wey nobody fit ignore. Let's go!",
+  'NG_BLESSING_01': "Greetings. I am Blessing. When your brand needs that top-tier, authoritative voice that commands respect across Africa and beyond, you can count on my world-class Nigerian delivery.",
 
   // Côte d'Ivoire (FR)
-  'CI_AMINATA_01': "Bonjour, je suis Aminata d'Abidjan. Bienvenue sur AfriVoice pour des voix naturelles et chaleureuses.",
-  'CI_MARIAM_02': "Salut tout le monde ! C'est Mariam ! On va donner une énergie incroyable à vos vidéos !",
-  'CI_KOUASSI_03': "Bonjour. Je suis Kouassi. Offrez à vos spots publicitaires et campagnes une prestance exceptionnelle.",
+  'CI_AMINATA_01': "Akwaba ! Je suis Aminata de la belle Côte d'Ivoire. Que ce soit pour raconter une histoire ou présenter votre entreprise, ma voix vous apporte cette chaleur typiquement ivoirienne. On est ensemble !",
+  'CI_KOUASSI_03': "Eh Allah ! C'est Kouassi d'Abidjan ! Si tu veux que ta vidéo fasse le buzz et capte tout le monde sur internet, donne-moi le micro ! On va tout casser, c'est gâté !",
+  'CI_MARIAM_02': "Bonjour, je suis Mariam. Pour vos documentaires, vos publicités de prestige ou vos communications institutionnelles, ma voix vous offre une élégance et une prestance incomparables, directement depuis Babi.",
 
   // Cameroun (FR)
-  'CM_CHANTAL_01': "Bonjour, je m'appelle Chantal du Cameroun. Découvrez la douceur et l'authenticité de nos voix.",
-  'CM_MARIE_02': "Wouah, salut ! C'est Marie de Yaoundé ! Prête à booster votre communication avec style !",
-  'CM_PAUL_03': "Bienvenue. Je suis Paul de Douala. Une voix sobre, crédible et puissante pour vos grands projets.",
+  'CM_PAUL_03': "Bonjour à tous, c'est Paul du Cameroun. Eh oui, la vraie voix du terroir ! Je vous accompagne avec calme et assurance pour donner vie à vos projets les plus chers. On est ensemble !",
+  'CM_CHANTAL_01': "Mouf ! C'est Chantal de Douala ! Tu cherches l'énergie qui va faire sauter ton audience au plafond ? Laisse-moi enflammer ton contenu avec la vraie vibe camerounaise. On y va !",
+  'CM_MARIE_02': "Mesdames et messieurs, je suis Marie. L'excellence n'a pas de prix. Pour vos campagnes publicitaires de haut niveau et vos présentations officielles, ma voix incarne la force et la fierté du continent.",
 
   // Sénégal (FR)
-  'SN_FATOU_01': "Bonjour, je suis Fatou du Sénégal. Laissez-vous séduire par la chaleur et l'élégance de notre accent.",
-  'SN_AWA_02': "Salut les amis ! C'est Awa de Dakar ! Donnons vie à vos idées avec une touche dynamique et moderne !",
-  'SN_BABACAR_03': "Salam aleikoum. Je suis Babacar. L'excellence et le professionnalisme au service de vos récits.",
+  'SN_FATOU_01': "Salamaleikoum, je suis Fatou du Sénégal. Ma voix porte la teranga — cette chaleur sénégalaise qui touche directement le cœur de vos auditeurs. Dieuredieuf de m'écouter et à très vite.",
+  'SN_BABACAR_03': "Waw waw ! C'est Babacar de Dakar ! Prêt à dynamiser vos vidéos et faire bouger la toile ? Avec mon énergie, votre message ne passera jamais inaperçu. Nio far, on est ensemble !",
+  'SN_AWA_02': "Bonjour, je suis Awa. Quand l'élégance rencontre l'autorité, votre marque prend une toute autre dimension. Offrez à vos auditeurs une expérience vocale sénégalaise d'une qualité studio irréprochable.",
 
   // Congo (FR)
-  'CG_GRACE_01': "Bonjour, ici Grâce du Congo. Une narration fluide et apaisante pour captiver votre audience.",
-  'CG_BEATRICE_02': "Salut ! Moi c'est Béatrice de Brazzaville ! On propulse votre contenu au sommet avec enthousiasme !",
-  'CG_FISTON_03': "Bonjour. Je suis Fiston. Une voix profonde et assurée pour marquer les esprits avec force.",
+  'CG_FISTON_03': "Mbote na bino ! Je suis Fiston du Congo. Je prête ma voix chaleureuse et posée à vos histoires pour créer une connexion vraie et profonde avec votre public.",
+  'CG_GRACE_01': "Éh la famille ! C'est Grâce ! Si tu veux de l'ambiance, du peps et une voix qui réveille tout le monde sur les réseaux, c'est moi qu'il te faut ! Tokooos !",
+  'CG_BEATRICE_02': "Bonjour, je suis Béatrice. Le prestige exige une narration parfaite. Pour vos vidéos corporatives et vos documentaires haut de gamme, ma voix congolaise vous assure un impact magistral.",
 
   // Ghana (EN)
-  'GH_AKUA_01': "Hello, I am Akua from Ghana. Bringing you smooth, natural, and friendly African storytelling.",
-  'GH_ABENA_02': "Akwaaba! I am Abena from Accra! Let's create viral videos and engaging promos together!",
-  'GH_KWAME_03': "Welcome. I am Kwame. A strong, confident, and professional voice for your corporate media.",
+  'GH_AKUA_01': "Akwaaba! I am Akua from Ghana. Just like our famous jollof, my voice brings that comforting, warm, and rich flavor to your everyday storytelling. Medaase for choosing me.",
+  'GH_KWAME_03': "Chale, what's up! Kwame here! You want your content to go viral and grab attention immediately? I've got that pure Accra street energy to make your audience stop and listen!",
+  'GH_ABENA_02': "Greetings. I am Abena. For brands that demand absolute excellence, my commanding and sophisticated voice delivers the ultimate premium experience for your global campaigns.",
 
   // Maroc (FR)
-  'MA_LEILA_01': "Bonjour, je suis Leïla du Maroc. Un ton doux, chaleureux et raffiné pour sublimer vos messages.",
-  'MA_YASMINE_02': "Salam ! C'est Yasmine de Casablanca ! Donnons un coup de peps créatif à vos projets audiovisuels !",
-  'MA_YOUSSEF_03': "Bonjour. Je suis Youssef. Une présence vocale distinguée et percutante pour vos publicités.",
+  'MA_YOUSSEF_03': "Salam ! Je suis Youssef du Maroc. Avec douceur et sincérité, je vous aide à tisser un lien de confiance avec vos clients. Marhaba, bienvenue dans mon univers vocal.",
+  'MA_LEILA_01': "Yallah ! C'est Leïla de Casablanca ! Vous voulez du rythme, de la fraîcheur et une voix qui accroche dès la première seconde ? Suivez-moi, on va faire sensation !",
+  'MA_YASMINE_02': "Bonjour, je suis Yasmine. Pour représenter votre marque avec majesté et raffinement, ma voix de velours offre une signature marocaine d'un prestige absolu.",
 
   // Afrique du Sud (EN)
-  'ZA_NALEDI_01': "Hello, I am Naledi from South Africa. Experience rich, authentic, and engaging vocal identity.",
-  'ZA_THANDI_02': "Hi everyone! I am Thandi from Joburg! Ready to bring high energy and excitement to your brand!",
-  'ZA_SIPHO_03': "Greetings. I am Sipho from Cape Town. Delivering clear, authoritative impact for your production.",
+  'ZA_NALEDI_01': "Sawubona! I am Naledi from South Africa. I'm here to share your stories with that warm, authentic Mzansi spirit that makes everyone feel right at home. Sho sho!",
+  'ZA_SIPHO_03': "Heita hola! It's Sipho from Jozi! If you need high energy, massive vibes, and a voice that keeps the timeline buzzing, you have found your guy! Let's do this!",
+  'ZA_THANDI_02': "Good day. I am Thandi. When authority and elegance are non-negotiable, my voice provides the polished, world-class South African standard your corporate projects deserve.",
 
   // Kenya (EN)
-  'KE_WANJIRU_01': "Jambo, I am Wanjiru from Kenya. Warm, clear, and inspiring voiceover for all your projects.",
-  'KE_AISHA_02': "Hey! I am Aisha from Nairobi! Let me bring vibrant energy and passion to your campaigns!",
-  'KE_KAMAU_03': "Welcome. I am Kamau. A solid, trusted voice built to empower your corporate vision.",
+  'KE_KAMAU_03': "Jambo! I am Kamau from beautiful Kenya. I bring a steady, comforting, and deeply natural tone to ensure your message is heard, understood, and trusted. Karibu sana.",
+  'KE_WANJIRU_01': "Sasa! Wanjiru here from Nairobi! Ready to hype up your brand and bring that unstoppable East African energy to your videos? Let's make some noise!",
+  'KE_AISHA_02': "Greetings, I am Aisha. For documentaries, luxury brands, and executive presentations, my voice delivers the commanding presence and unmatched quality you expect.",
 
   // Gabon (FR)
-  'GA_SYLVIE_01': "Bonjour, je suis Sylvie du Gabon. Une diction claire et naturelle pour accompagner vos productions.",
-  'GA_ORNELLA_02': "Coucou ! C'est Ornella de Libreville ! Prête à faire briller vos contenus avec peps et fraîcheur !",
-  'GA_HERVE_03': "Bonjour. Je suis Hervé. La garantie d'un timbre sobre, élégant et captivant pour vos spots.",
+  'GA_SYLVIE_01': "Mbolo ! Je suis Sylvie du Gabon. Ma voix douce et rassurante est là pour accompagner vos auditeurs comme un ami fidèle. Confiez-moi vos plus beaux textes.",
+  'GA_HERVE_03': "Eh ah ! C'est Hervé de Libreville ! Tu cherches une voix qui claque pour tes pubs et tes réseaux sociaux ? Avec moi, l'ambiance est garantie, on va tout casser !",
+  'GA_ORNELLA_02': "Bonjour, ici Ornella. L'excellence de la voix off gabonaise à votre service. Une diction parfaite et une assurance hors pair pour vos campagnes institutionnelles et documentaires.",
 
   // Bénin (FR)
-  'BJ_ADJO_01': "Bonjour, je m'appelle Adjo du Bénin. Une voix bienveillante et authentique à votre service.",
-  'BJ_FIFAME_02': "Salut ! C'est Fifamè de Cotonou ! Donnons du rythme et de la couleur à tous vos messages !",
-  'BJ_KOFFI_03': "Bienvenue. Je suis Koffi. La rigueur et la profondeur vocale pour réussir vos présentations.",
+  'BJ_KOFFI_03': "Kouabo ! Je suis Koffi du Bénin. Je donne vie à vos projets avec ce ton naturel et apaisant qui instaure directement la confiance. Merci de m'écouter.",
+  'BJ_ADJO_01': "Coucou tout le monde ! C'est Adjo de Cotonou ! Besoin d'une énergie folle pour booster vos ventes et animer vos vidéos ? Je suis là, allons-y !",
+  'BJ_FIFAME_02': "Bonjour, je suis Fifamè. Incarnez le succès et la fiabilité avec une voix béninoise premium, taillée sur mesure pour les marques exigeantes et les communications de haut vol.",
 
   // Burkina Faso (FR)
-  'BF_RASMATA_01': "Bonjour, je suis Rasmata du Burkina Faso. Un accent sincère et chaleureux qui touche le cœur.",
-  'BF_MARIAM_02': "Salut ! C'est Mariam de Ouagadougou ! Faisons vibrer vos abonnés avec une énergie communicative !",
-  'BF_IBRAHIM_03': "Bonjour. Je suis Ibrahim. Une voix noble, assurée et respectée pour vos grands projets.",
+  'BF_RASMATA_01': "Ne y wogo ! Je suis Rasmata du pays des Hommes intègres. Avec ma voix sincère et chaleureuse, je raconte vos histoires avec toute l'authenticité du Burkina Faso.",
+  'BF_IBRAHIM_03': "Eh bien ! C'est Ibrahim de Ouaga ! Vous voulez réveiller votre public et capter l'attention en un clin d'œil ? Confiez-moi vos textes, l'impact est assuré !",
+  'BF_MARIAM_02': "Bonjour, c'est Mariam. Pour vos productions de classe internationale, je vous apporte une narration puissante, solennelle et majestueuse. La qualité studio par excellence.",
 
   // Mali (FR)
-  'ML_FATOUMATA_01': "Bonjour, je suis Fatoumata du Mali. Laissez-vous porter par la douceur et la sérénité de notre voix.",
-  'ML_OUMOU_02': "Salut à tous ! C'est Oumou de Bamako ! Ensemble, donnons du mouvement et du pep's à vos vidéos !",
-  'ML_MOUSSA_03': "Salam. Je suis Moussa. Une présence calme, forte et mémorable pour marquer les esprits.",
+  'ML_MOUSSA_03': "Aw ni tié ! Je suis Moussa du Mali. Une voix posée, authentique et rassurante, parfaite pour guider vos auditeurs et transmettre vos valeurs avec sagesse.",
+  'ML_FATOUMATA_01': "Hé les amis ! C'est Fatoumata de Bamako ! Prête à mettre le feu à vos contenus digitaux ! Si vous cherchez du dynamisme et de la joie, c'est parti !",
+  'ML_OUMOU_02': "Bonjour, je suis Oumou. Le prestige malien dans toute sa splendeur. Ma voix offre une prestance et une autorité naturelles pour vos documentaires et projets corporate.",
 
   // Togo (FR)
-  'TG_AMA_01': "Bonjour, je suis Ama du Togo. Une voix harmonieuse et accessible pour vos narrations.",
-  'TG_AKOSSIWA_02': "Salut ! C'est Akossiwa de Lomé ! Prête à apporter enthousiasme et spontanéité à vos projets !",
-  'TG_KODJO_03': "Bonjour. Je suis Kodjo. La force de l'expérience et l'assurance pour vos communications pro.",
+  'TG_AMA_01': "Miawezon ! Je suis Ama du Togo. Pour vos podcasts ou vos vidéos explicatives, je vous propose une voix douce, claire et toujours souriante. À très bientôt.",
+  'TG_KODJO_03': "Eh oui ! C'est Kodjo de Lomé ! Vous cherchez une voix percutante qui va faire défiler les vues et les partages ? Ne cherchez plus, je suis votre homme !",
+  'TG_AKOSSIWA_02': "Bonjour, je suis Akossiwa. L'élégance et la clarté d'une voix professionnelle togolaise. Idéale pour vos messages institutionnels nécessitant une confiance et une crédibilité absolues.",
 
   // Tunisie (FR)
-  'TN_AMIRA_01': "Bonjour, je suis Amira de Tunisie. Une voix douce, claire et mélodieuse pour captiver vos auditeurs.",
-  'TN_SELMA_02': "Salut ! C'est Selma de Tunis ! Donnons une touche dynamique et captivante à votre marque !",
-  'TN_MEHDI_03': "Bonjour. Je suis Mehdi. Une voix chaleureuse et captivante pour un impact garanti.",
+  'TN_MEHDI_03': "Aslema ! Je suis Mehdi de Tunisie. Une voix familière et chaleureuse pour accompagner votre public au quotidien. Avec moi, votre message passe en toute simplicité.",
+  'TN_AMIRA_01': "Aychek ! C'est Amira de Tunis ! On met le turbo ? Si vous voulez une communication vibrante et moderne qui accroche les jeunes, c'est avec moi que ça se passe !",
+  'TN_SELMA_02': "Bonjour, je suis Selma. Une voix distinguée, profonde et parfaitement maîtrisée. L'atout majeur pour vos campagnes de luxe et vos présentations officielles.",
 
   // Algérie (FR)
-  'DZ_DJAMILA_01': "Bonjour, je suis Djamila d'Algérie. Une narration expressive et naturelle adaptée à vos attentes.",
-  'DZ_NADIA_02': "Salam ! C'est Nadia d'Alger ! Prête à faire décoller votre communication sur le web !",
-  'DZ_KARIM_03': "Bonjour. Je suis Karim. L'assurance d'une voix charismatique et convaincante.",
+  'DZ_DJAMILA_01': "Saha ! Je suis Djamila d'Algérie. La sincérité avant tout. Je donne à vos textes une couleur locale, humaine et attachante pour toucher le cœur de votre cible.",
+  'DZ_KARIM_03': "Wesh la famille ! C'est Karim d'Alger ! Vous voulez du rythme, de la puissance et une énergie débordante pour vos vidéos ? Allez, on y va à fond !",
+  'DZ_NADIA_02': "Bonjour, je suis Nadia. L'assurance d'une grande voix algérienne. Une narration impeccable, sérieuse et charismatique, spécialement conçue pour vos productions haut de gamme.",
 
   // Égypte (EN)
-  'EG_NOUR_01': "Welcome, I am Nour from Egypt. Smooth, elegant, and timeless vocal delivery for your brand.",
-  'EG_YASMIN_02': "Hi there! I am Yasmin from Cairo! Let's make your promotional videos pop with exciting energy!",
-  'EG_OMAR_03': "Greetings. I am Omar. Delivering prestige, depth, and strong character to your media.",
+  'EG_OMAR_03': "Ahlan wa sahlan! I am Omar from Egypt. I offer a calm, warm, and natural storytelling voice that builds an instant bond of trust with your audience. Shukran.",
+  'EG_NOUR_01': "Yalla bina! Nour here from Cairo! Need that upbeat, trendy energy to make your next viral video shine? I'll give your brand the massive boost it deserves!",
+  'EG_YASMIN_02': "Greetings. I am Yasmin. When you require a sophisticated and majestic voice for your international corporate brand, I deliver unmatched Egyptian elegance and authority.",
 
   // Ouganda (EN)
-  'UG_NAMUKASA_01': "Hello, I am Namukasa from Uganda. Distinctive, melodic, and engaging narration for your audience.",
-  'UG_AKELLO_02': "Hey! I am Akello from Kampala! Ready to bring fresh enthusiasm and rhythm to your content!",
-  'UG_OKELLO_03': "Welcome. I am Okello. A dependable, rich, and commanding voice for serious storytelling.",
+  'UG_NAMUKASA_01': "Oli otya! I am Namukasa from Uganda. Experience the true warmth of the Pearl of Africa in every word I speak. Let's tell your story naturally and beautifully.",
+  'UG_OKELLO_03': "Hey, hey! It's Okello from Kampala! Looking to grab attention and keep your audience fully engaged? My vibrant energy will bring your scripts to life right now!",
+  'UG_AKELLO_02': "Good day, I am Akello. A commanding, clear, and perfectly paced voice. I provide the ultimate professional polish for your most important business and documentary projects.",
 
   // Tanzanie (EN)
-  'TZ_REHEMA_01': "Jambo, I am Rehema from Tanzania. Gentle, peaceful, and clear vocal presence.",
-  'TZ_ZAWADI_02': "Mambo! I am Zawadi from Dar es Salaam! Let's craft fun, energetic, and memorable audio!",
-  'TZ_BARAKA_03': "Welcome. I am Baraka. A calm, authoritative, and deeply resonant voice for your project.",
+  'TZ_BARAKA_03': "Mambo vipi! I am Baraka from Tanzania. My voice brings you the peace and natural beauty of our land. Perfect for narration that needs to be deeply felt. Karibu.",
+  'TZ_REHEMA_01': "Habari! Rehema here from Dar es Salaam! Want to make your brand impossible to ignore? Let me inject fun, hype, and pure excitement into your next campaign!",
+  'TZ_ZAWADI_02': "Greetings. I am Zawadi. The standard of excellence. For premium advertising and corporate communications, my voice offers a distinguished and authoritative Swahili-English presence.",
 
   // Rwanda (FR)
-  'RW_UWASE_01': "Bonjour, je suis Uwase du Rwanda. Une diction élégante et mesurée pour illuminer vos messages.",
-  'RW_MUTONI_02': "Salut ! C'est Mutoni de Kigali ! Prête à impulser de la modernité et du dynamisme à vos projets !",
-  'RW_HABIMANA_03': "Bonjour. Je suis Habimana. Une voix posée, distinguée et rassurante pour vos productions."
+  'RW_UWASE_01': "Muraho ! Je suis Uwase du Rwanda. Laissez ma voix douce et apaisante du pays des mille collines porter vos mots avec grâce et authenticité. Merci.",
+  'RW_HABIMANA_03': "Eh bien salut ! C'est Habimana de Kigali ! Besoin d'une énergie communicative pour vos réseaux sociaux et vos lancements de produits ? Avec moi, on passe à la vitesse supérieure !",
+  'RW_MUTONI_02': "Bonjour, je suis Mutoni. Le raffinement et la perfection vocale. Pour vos projets de grande envergure, je vous garantis une présence majestueuse et une diction irréprochable."
 };
 
 interface ExecutionReport {
