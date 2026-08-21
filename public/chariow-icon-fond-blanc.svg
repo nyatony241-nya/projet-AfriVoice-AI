@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <style>
+      .cls-1 { fill: #FFCC00; }
+      .cls-2 { fill: #1C1E21; }
+    </style>
+  </defs>
+
+  <!-- Fond Blanc Pur -->
+  <rect width="500" height="500" rx="32" fill="#FFFFFF"/>
+
+  <!-- Icône Chariot Chariow Centrée -->
+  <g transform="translate(84, 63)">
+    <path d="M331.11 146.09c0 91.44-74.12 165.56-165.56 165.56S0 237.53 0 146.09h41.22c0 68.67 55.66 124.34 124.33 124.34s124.34-55.67 124.34-124.34z" class="cls-1"/>
+    <circle cx="217.46" cy="343.01" r="30.8" class="cls-2" transform="rotate(-67.5 217.465 343.015)"/>
+    <circle cx="113.64" cy="343.01" r="30.8" class="cls-2" transform="rotate(-67.5 113.642 343.014)"/>
+    <path d="M206.73 42.47h82.86v82.86h-82.86z" class="cls-1"/>
+    <path d="m223.89 191.13-58.59 58.59L41.52 125.94l1.6-1.6 56.99-56.99 78.74 78.74z" class="cls-2"/>
+  </g>
+</svg>

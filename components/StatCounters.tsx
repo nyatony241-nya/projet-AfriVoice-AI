@@ -97,8 +97,8 @@ const StatCounters: React.FC<StatCountersProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
-      trend: currentPlan.id === 'pro' ? (isEn ? 'Unlimited' : 'Illimité') : (isEn ? 'Standard' : 'Standard'),
-      trendPositive: currentPlan.id === 'pro',
+      trend: currentPlan.id === 'pro' ? 'Studio HD' : currentPlan.id === 'creator' ? (isEn ? 'Creator' : 'Créateur') : (isEn ? 'Starter' : 'Starter'),
+      trendPositive: currentPlan.id !== 'free',
     },
   ];
 
