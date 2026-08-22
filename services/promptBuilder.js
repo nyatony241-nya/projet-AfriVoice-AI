@@ -118,110 +118,68 @@ export function buildDirectorPrompt(params) {
     console.log(`🎙️ [Voice Profile Locked] Profile ID: ${voiceProfileId} | Provider Voice: ${actualVoiceId}`);
   }
 
-  const sections = [];
+  // ── COMPACT PROMPT STRATEGY ──────────────────────────────────────
+  // The old multi-section prompt was ~3000-4000 chars of instructions
+  // BEFORE the user script, pushing total tokens near Gemini TTS's
+  // 8192-token limit → silent empty responses.
+  // Solution: one dense, high-signal paragraph ~500-700 chars max.
+  // Voice quality comes from voiceName selection, not instruction length.
+  // ─────────────────────────────────────────────────────────────────
 
-  // SYSTEM HEADER FOR GEMINI TTS
-  sections.push(`[DIRECTOR BRIEF - INTERNAL PERFORMANCE GUIDANCE ONLY - DO NOT READ ALOUD]`);
-
-  // SECTION 0: VOCAL PROFILE SETTINGS (MACHINE-READABLE COHERENCE ANCHORS)
-  const pitchLevel = pitch >= 1.05 ? 'HIGH' : pitch <= 0.95 ? 'LOW' : 'NORMAL';
-  const speedLevel = speed >= 1.05 ? 'FAST' : speed <= 0.95 ? 'SLOW' : 'NORMAL';
-  sections.push(`[VOCAL PROFILE SETTINGS]
-PROFILE_ID = ${voiceProfileId}
-VOICE_IDENTITY = FIXED
-ACCENT_PROFILE = FIXED_${countryId}_ACCENT
-PROSODY_PROFILE = FIXED_${contentStyle.toUpperCase()}
-PITCH = FIXED_${pitchLevel}
-SPEAKING_RATE = FIXED_${speedLevel}
-PACE = FIXED`);
-
-  // SECTION 1: CHARACTER
   const gw = gender.toLowerCase() === 'female' ? 'woman' : 'man';
-  const charParts = [
-    `You are a ${age}-year-old ${gw} who was BORN AND RAISED in ${countryName} (${dna.capital}). You have NEVER lived outside ${countryName}.`,
-    `You grew up speaking ${dna.localLanguages[0]} at home before learning any other language. ${dna.localLanguages[0]} is the foundation of how you think, breathe, and speak.`,
-    `Your speech is deeply, natively rooted in ${dna.localLanguages.join(', ')}.`,
-    `${dna.culturalContext}.`,
-    `Your natural voice quality is ${voicePersona}.`,
-  ];
-  if (personality && PERSONALITY_MAP[personality]) {
-    charParts.push(PERSONALITY_MAP[personality]);
-  }
-  sections.push(`[CHARACTER]\n${charParts.join(' ')}`);
 
-  // SECTION 2: ACCENT (SURGICAL PRECISION DEFINITION)
-  const intensityMap = {
-    light: `You have a professional, polished speaking voice with subtle, understated traces of your ${dna.capital} accent.`,
-    medium: `You have a clear, unmistakable, authentic native accent from ${countryName} (${dna.capital}).`,
-    strong: `You have a rich, thick, heavy, unapologetic native accent from ${countryName} (${dna.capital}). Every word is deeply infused with local speech patterns and the rhythm of ${dna.localLanguages[0]}.`,
-  };
-  const accentIntensity = intensityMap[accentLevel] || intensityMap.strong;
+  // Core accent descriptor — max 1 sentence
+  const accentLine = accentLevel === 'light'
+    ? `You have a subtle ${countryName} (${dna.capital}) accent, polished and professional.`
+    : `You have a thick, authentic native accent from ${countryName} (${dna.capital}), rooted in ${dna.localLanguages[0]}.`;
 
-  const accentParts = [
-    accentIntensity,
-    `Speech Melody: ${dna.speechMelody}`,
-    `Consonant & Vowel Articulation: ${dna.consonantStyle}`,
-    `Rhythm & Cadence: ${dna.rhythmPattern}`,
-    `STRICT ANTI-PATTERNS: You must NEVER sound like: ${dna.antiPatterns.join(', ')}. Do NOT sound like a standard European, Parisian, or American speaker.`,
-  ];
-  sections.push(`[ACCENT]\n${accentParts.join(' ')}`);
-
-  // SECTION 3: SCENE
+  // Scene in 1 sentence
   const sceneFn = CONTENT_SCENES[contentStyle] || CONTENT_SCENES.narration;
-  let sceneText = sceneFn(countryName);
-  if (vocalObjective && OBJECTIVE_MAP[vocalObjective]) {
-    sceneText += ` ${OBJECTIVE_MAP[vocalObjective]}`;
-  }
-  sections.push(`[SCENE]\n${sceneText}`);
+  const sceneOneLiner = sceneFn(countryName).split('.')[0] + '.';
 
-  // SECTION 4: PERFORMANCE
-  const perfParts = [];
+  // Emotion in ≤1 sentence
   const activeEmotion = emotion.toLowerCase();
-  if (EMOTION_MAP[activeEmotion]) {
-    perfParts.push(EMOTION_MAP[activeEmotion]);
-  }
-  if (speed < 0.95) {
-    perfParts.push('Speak at a deliberately slower, measured pace. Take your time.');
-  } else if (speed > 1.05) {
-    perfParts.push('Speak at a brisk, energetic pace. Keep the momentum up.');
-  }
-  if (pitch < 0.95) {
-    perfParts.push('Lower vocal register — deep, resonant chest tone.');
-  } else if (pitch > 1.05) {
-    perfParts.push('Slightly higher vocal register — bright, buoyant pitch.');
-  }
-  if (perfParts.length > 0) {
-    sections.push(`[PERFORMANCE]\n${perfParts.join(' ')}`);
-  }
+  const emotionLine = EMOTION_MAP[activeEmotion]
+    ? EMOTION_MAP[activeEmotion].split('.')[0] + '.'
+    : '';
 
-  // SECTION 5: CULTURAL TEXTURE
+  // Pace/pitch modifiers — only when non-default
+  const modifiers = [];
+  if (speed < 0.95) modifiers.push('Speak slowly and deliberately.');
+  else if (speed > 1.05) modifiers.push('Speak at a brisk, energetic pace.');
+  if (pitch < 0.95) modifiers.push('Use a deep, resonant chest tone.');
+  else if (pitch > 1.05) modifiers.push('Use a bright, slightly higher register.');
+
+  // Local expressions — max 3 fillers
+  let expressionLine = '';
   if (useLocalExpressions && LOCAL_EXPRESSIONS[countryId]) {
-    const expressions = LOCAL_EXPRESSIONS[countryId];
-    const textureText = [
-      `Infuse your delivery with authentic ${countryName} speech patterns.`,
-      `Natural fillers a real speaker would use: ${expressions.fillers.slice(0, 3).join(', ')}.`,
-      `The cultural emphasis and exclamations of ${countryName}: ${expressions.emphasis.join(', ')}.`,
-      `Let these patterns naturally color your rhythm and cadence — don't force them, let them emerge organically.`,
-    ].join(' ');
-    sections.push(`[CULTURAL TEXTURE]\n${textureText}`);
+    const ex = LOCAL_EXPRESSIONS[countryId];
+    expressionLine = `Natural speech fillers: ${ex.fillers.slice(0, 2).join(', ')}.`;
   }
 
-  // SECTION 6: RULES
-  sections.push(`[RULES]
-1. Speak ONLY the exact transcript text inside <transcript></transcript>.
-2. Do NOT read any section headers, directives, or bracketed instructions aloud.
-3. Perform bracketed audio tags like [sighs], [laughs], or [pause] as acoustic effects, not spoken words.
-4. Sound like a real native person from ${countryName}, never synthetic or European.
-5. VOICE IDENTITY LOCK: Your voice is ${voiceProfileId}. You are ALWAYS the same person. Your vocal signature — timbre, pitch range, resonance, nasality, breathiness — is FIXED and IMMUTABLE. Whether the transcript is one sentence or ten paragraphs, you sound EXACTLY the same. No variation in your fundamental voice quality is permitted.
-6. ACCENT LOCK: Your accent is permanently anchored to ${countryName} (${dna.capital}). The phonetic patterns of ${dna.localLanguages[0]} color every single word you speak. This accent does NOT fade, shift, or weaken regardless of the content. It is your identity.
-7. CONSISTENCY PROTOCOL: Maintain identical prosody patterns across all generations. Same intonation curves. Same rhythm. Same pacing habits. Same breathing patterns. You are a consistent, recognizable voice — like a real human voice actor who always sounds like themselves.`);
+  // Personality — 1 sentence max
+  const personalityLine = (personality && PERSONALITY_MAP[personality])
+    ? PERSONALITY_MAP[personality].split('.')[0] + '.'
+    : '';
 
-  // SECTION 7: TRANSCRIPT (ALWAYS placed last, per Gemini best practices)
+  // Build the compact brief — targeting ~600 chars total (well under token limit)
+  const compactBrief = [
+    `You are a ${age}-year-old ${gw} born and raised in ${countryName}. ${accentLine}`,
+    sceneOneLiner,
+    emotionLine,
+    personalityLine,
+    expressionLine,
+    modifiers.join(' '),
+    `Speak ONLY the text inside <transcript>. Never read instructions aloud.`,
+  ].filter(Boolean).join(' ');
+
+  // TRANSCRIPT placed last per Gemini best practices
   const finalTranscript = phoneticScript || script;
-  sections.push(`[TRANSCRIPT - READ ONLY THIS TEXT]\n<transcript>\n${finalTranscript.trim()}\n</transcript>`);
+  const directorBrief = `${compactBrief}\n\n<transcript>\n${finalTranscript.trim()}\n</transcript>`;
 
   return {
-    directorBrief: sections.join('\n\n'),
+    directorBrief,
     actualVoiceId,
   };
 }
+

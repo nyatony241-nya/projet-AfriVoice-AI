@@ -150,45 +150,68 @@ export default async function handler(req: any, res: any) {
         // Voice consistency is enforced via the prompt VOICE IDENTITY LOCK instead.
       };
 
+      // ── Production-grade retry: exponential backoff + jitter ─────────
+      // Gemini TTS returns empty responses intermittently (finishReason OTHER/STOP).
+      // Unique nonce prevents server-side caching causing silent failures.
+      const requestNonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const promptWithNonce = fullPrompt + `\n<!-- req:${requestNonce} -->`;
+
+      const callGeminiTTS = async (promptText: string): Promise<{ audioData: string; mimeType: string }> => {
+        const MAX_ATTEMPTS = 5;
+        let lastError: any;
+
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          try {
+            const geminiResponse = await ai.models.generateContent({
+              model: 'gemini-2.5-flash-preview-tts',
+              contents: [{ role: 'user', parts: [{ text: promptText }] }],
+              // @ts-ignore
+              config: ttsConfig,
+            });
+
+            const candidate = geminiResponse.candidates?.[0];
+            const finishReason = candidate?.finishReason;
+            const part = candidate?.content?.parts?.[0];
+            const inlineAudio = (part as any)?.inlineData?.data;
+
+            if (inlineAudio) {
+              return {
+                audioData: inlineAudio,
+                mimeType: (part as any)?.inlineData?.mimeType || 'audio/L16;rate=24000',
+              };
+            }
+
+            console.warn(`[AfriVoice] Attempt ${attempt}/${MAX_ATTEMPTS}: empty audio. finishReason=${finishReason}, voice=${actualVoiceId}`);
+            lastError = new Error(`Empty audio (finishReason: ${finishReason})`);
+
+          } catch (err: any) {
+            if (err?.status === 400) throw err;
+            console.warn(`[AfriVoice] Attempt ${attempt}/${MAX_ATTEMPTS}: API error: ${err?.message}`);
+            lastError = err;
+          }
+
+          if (attempt < MAX_ATTEMPTS) {
+            const base = Math.min(1000 * Math.pow(2, attempt - 1), 16000);
+            const jitter = Math.random() * 1000;
+            await new Promise(r => setTimeout(r, Math.round(base + jitter)));
+          }
+        }
+
+        throw lastError || new Error(`Gemini TTS failed after ${MAX_ATTEMPTS} attempts.`);
+      };
+      // ─────────────────────────────────────────────────────────────────
+
       try {
         if (!needsChunking) {
-          // Single generation for short texts
-          const genWithRetry = async (attempt = 1): Promise<any> => {
-            try {
-              return await ai.models.generateContent({
-                model: 'gemini-2.5-flash-preview-tts',
-                contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-                // @ts-ignore
-                config: ttsConfig,
-              });
-            } catch (err) {
-              if (attempt < 3) {
-                console.warn(`[AfriVoice] TTS attempt ${attempt} failed, retrying in ${attempt * 2}s...`);
-                await new Promise(r => setTimeout(r, attempt * 2000));
-                return genWithRetry(attempt + 1);
-              }
-              throw err;
-            }
-          };
-          
-          const geminiResponse = await genWithRetry();
-          const candidate = geminiResponse.candidates?.[0];
-          const finishReason = candidate?.finishReason;
-          const part = candidate?.content?.parts?.[0];
-          const inlineAudio = (part as any)?.inlineData?.data;
+          // ── Short text: single call ──
+          const result = await callGeminiTTS(promptWithNonce);
+          audioData = result.audioData;
+          mimeType = result.mimeType;
 
-          if (!inlineAudio) {
-            const reason = finishReason ? ` (finishReason: ${finishReason})` : '';
-            console.error(`[AfriVoice] Empty audio from Gemini${reason}. Voice: ${actualVoiceId}, Script length: ${scriptText.length}`);
-            throw new Error(`Aucune donnée audio générée par Gemini${reason}. Veuillez réessayer.`);
-          }
-          audioData = inlineAudio;
-          mimeType = (part as any)?.inlineData?.mimeType || 'audio/L16;rate=24000';
         } else {
-          // Chunked generation for long texts
-          console.log(`[AfriVoice] Long text detected (${scriptText.length} chars). Splitting into chunks of ~${MAX_CHARS_PER_CHUNK} chars.`);
-          
-          // Split at sentence boundaries
+          // ── Long text: split at sentence boundaries, generate each chunk ──
+          console.log(`[AfriVoice] Long text (${scriptText.length} chars) → chunking into ~${MAX_CHARS_PER_CHUNK}-char segments.`);
+
           const sentences = scriptText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [scriptText];
           const chunks: string[] = [];
           let currentChunk = '';
@@ -201,53 +224,28 @@ export default async function handler(req: any, res: any) {
             }
           }
           if (currentChunk.trim()) chunks.push(currentChunk.trim());
-
           console.log(`[AfriVoice] Split into ${chunks.length} chunks.`);
-          
+
           const audioChunks: string[] = [];
           for (let i = 0; i < chunks.length; i++) {
+            // Build chunk-specific prompt using the compact brief base (replace transcript part)
             const chunkPrompt = fullPrompt.replace(
               /<transcript>[\s\S]*<\/transcript>/,
               `<transcript>\n${chunks[i]}\n</transcript>`
-            );
-            
-            const genChunkWithRetry = async (attempt = 1): Promise<any> => {
-              try {
-                return await ai.models.generateContent({
-                  model: 'gemini-2.5-flash-preview-tts',
-                  contents: [{ role: 'user', parts: [{ text: chunkPrompt }] }],
-                  // @ts-ignore
-                  config: ttsConfig,
-                });
-              } catch (err) {
-                if (attempt < 3) {
-                  console.warn(`[AfriVoice] Chunk ${i + 1}/${chunks.length} attempt ${attempt} failed, retrying...`);
-                  await new Promise(r => setTimeout(r, attempt * 2000));
-                  return genChunkWithRetry(attempt + 1);
-                }
-                throw err;
-              }
-            };
+            ) + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
 
-            const chunkResponse = await genChunkWithRetry();
-            const chunkCandidate = chunkResponse.candidates?.[0];
-            const chunkFinishReason = chunkCandidate?.finishReason;
-            const chunkPart = chunkCandidate?.content?.parts?.[0];
-            const chunkAudio = (chunkPart as any)?.inlineData?.data;
-            if (!chunkAudio) {
-              console.error(`[AfriVoice] Chunk ${i + 1}/${chunks.length} empty. finishReason: ${chunkFinishReason}`);
-              throw new Error(`Chunk ${i + 1}/${chunks.length} returned no audio (finishReason: ${chunkFinishReason})`);
-            }
-            audioChunks.push(chunkAudio);
-            console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} generated successfully.`);
+            console.log(`[AfriVoice] Generating chunk ${i + 1}/${chunks.length}...`);
+            const chunkResult = await callGeminiTTS(chunkPrompt);
+            audioChunks.push(chunkResult.audioData);
+            console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} ✅`);
           }
 
-          // Concatenate all PCM audio chunks (base64 -> buffer -> concat -> base64)
           const combinedBuffer = Buffer.concat(audioChunks.map(b64 => Buffer.from(b64, 'base64')));
           audioData = combinedBuffer.toString('base64');
           mimeType = 'audio/L16;rate=24000';
-          console.log(`[AfriVoice] All ${chunks.length} chunks concatenated. Total audio size: ${combinedBuffer.length} bytes.`);
+          console.log(`[AfriVoice] All ${chunks.length} chunks merged. Total: ${combinedBuffer.length} bytes.`);
         }
+
       } catch (apiError: any) {
         console.error('[AfriVoice] Gemini API call failed:', apiError);
         
