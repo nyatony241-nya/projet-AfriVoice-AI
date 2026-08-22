@@ -199,7 +199,8 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
             },
           },
         },
-        temperature: 0.1,
+        // NOTE: temperature intentionally omitted — values <0.5 cause Gemini TTS to return empty audio.
+        // Voice consistency is enforced via the prompt VOICE IDENTITY LOCK instead.
       };
 
       if (!needsChunking) {
@@ -221,9 +222,15 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
           }
         };
         const response = await genWithRetry();
-        const part = response.candidates?.[0]?.content?.parts?.[0];
-        if (!part) throw new Error("Réponse vide de Gemini");
-        audioData = part?.inlineData?.data;
+        const candidate = response.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+        const part = candidate?.content?.parts?.[0];
+        const inlineAudio = part?.inlineData?.data;
+        if (!inlineAudio) {
+          console.error(`[AfriVoice] Empty audio. finishReason=${finishReason}, voice=${actualVoiceId}`);
+          throw new Error(`Gemini TTS returned no audio (finishReason: ${finishReason}). Veuillez réessayer.`);
+        }
+        audioData = inlineAudio;
         mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
       } else {
         // Chunked generation for long texts
@@ -271,9 +278,14 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
           };
 
           const chunkResponse = await genChunkWithRetry();
-          const chunkPart = chunkResponse.candidates?.[0]?.content?.parts?.[0];
+          const chunkCandidate = chunkResponse.candidates?.[0];
+          const chunkFinishReason = chunkCandidate?.finishReason;
+          const chunkPart = chunkCandidate?.content?.parts?.[0];
           const chunkAudio = chunkPart?.inlineData?.data;
-          if (!chunkAudio) throw new Error(`Chunk ${i + 1}/${chunks.length} returned no audio`);
+          if (!chunkAudio) {
+            console.error(`[AfriVoice] Chunk ${i+1}/${chunks.length} empty. finishReason=${chunkFinishReason}`);
+            throw new Error(`Chunk ${i + 1}/${chunks.length} returned no audio (finishReason: ${chunkFinishReason})`);
+          }
           audioChunks.push(chunkAudio);
           console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} generated successfully.`);
         }
