@@ -131,14 +131,29 @@ export const generateVoiceOver = async (
     token = undefined;
   }
 
-  const response = await fetch(backendUrl, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    },
-    body: JSON.stringify({ script, voiceId, customApiKey, options }),
-  });
+  // Timeout de 5 minutes pour les longues générations TTS (chunked)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300_000);
+
+  let response: Response;
+  try {
+    response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ script, voiceId, customApiKey, options }),
+      signal: controller.signal,
+    });
+  } catch (fetchErr: any) {
+    clearTimeout(timeoutId);
+    if (fetchErr.name === 'AbortError') {
+      throw new Error("La génération audio a pris trop de temps. Essayez avec un texte plus court ou réessayez.");
+    }
+    throw fetchErr;
+  }
+  clearTimeout(timeoutId);
 
 
   // Parse la réponse de façon défensive : Vercel peut renvoyer du HTML en cas d'erreur 500
