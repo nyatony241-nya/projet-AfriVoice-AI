@@ -131,9 +131,9 @@ export const generateVoiceOver = async (
     token = undefined;
   }
 
-  // Timeout de 5 minutes pour les longues générations TTS (chunked)
+  // Timeout de 65 secondes (légèrement au-dessus du maxDuration Vercel 60s)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 300_000);
+  const timeoutId = setTimeout(() => controller.abort(), 65_000);
 
   let response: Response;
   try {
