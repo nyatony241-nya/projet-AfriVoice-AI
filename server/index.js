@@ -185,25 +185,105 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       }
       const ai = global.aiClientCache.get(apiKey);
 
-      let response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-preview-tts',
-        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-        config: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: actualVoiceId,
-              },
+      // ── Smart Chunking for Long Texts ──
+      const MAX_CHARS_PER_CHUNK = 2000;
+      const scriptText = finalScript || script;
+      const needsChunking = scriptText.length > MAX_CHARS_PER_CHUNK;
+
+      const ttsConfig = {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName: actualVoiceId,
             },
           },
         },
-      });
+        temperature: 0.1,
+      };
 
-      const part = response.candidates?.[0]?.content?.parts?.[0];
-      if (!part) throw new Error("Réponse vide de Gemini");
-      audioData = part?.inlineData?.data;
-      mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
+      if (!needsChunking) {
+        // Single generation for short texts
+        const genWithRetry = async (attempt = 1) => {
+          try {
+            return await ai.models.generateContent({
+              model: 'gemini-2.5-flash-preview-tts',
+              contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+              config: ttsConfig,
+            });
+          } catch (err) {
+            if (attempt < 3) {
+              console.warn(`[AfriVoice] TTS attempt ${attempt} failed, retrying in ${attempt * 2}s...`);
+              await new Promise(r => setTimeout(r, attempt * 2000));
+              return genWithRetry(attempt + 1);
+            }
+            throw err;
+          }
+        };
+        const response = await genWithRetry();
+        const part = response.candidates?.[0]?.content?.parts?.[0];
+        if (!part) throw new Error("Réponse vide de Gemini");
+        audioData = part?.inlineData?.data;
+        mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
+      } else {
+        // Chunked generation for long texts
+        console.log(`[AfriVoice] Long text detected (${scriptText.length} chars). Splitting into chunks of ~${MAX_CHARS_PER_CHUNK} chars.`);
+        
+        // Split at sentence boundaries
+        const sentences = scriptText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [scriptText];
+        const chunks = [];
+        let currentChunk = '';
+        for (const sentence of sentences) {
+          if ((currentChunk + sentence).length > MAX_CHARS_PER_CHUNK && currentChunk.length > 0) {
+            chunks.push(currentChunk.trim());
+            currentChunk = sentence;
+          } else {
+            currentChunk += sentence;
+          }
+        }
+        if (currentChunk.trim()) chunks.push(currentChunk.trim());
+
+        console.log(`[AfriVoice] Split into ${chunks.length} chunks.`);
+        
+        // Generate audio for each chunk with the SAME voice config
+        const audioChunks = [];
+        for (let i = 0; i < chunks.length; i++) {
+          const chunkPrompt = fullPrompt.replace(
+            /<transcript>[\s\S]*<\/transcript>/,
+            `<transcript>\n${chunks[i]}\n</transcript>`
+          );
+          
+          const genChunkWithRetry = async (attempt = 1) => {
+            try {
+              return await ai.models.generateContent({
+                model: 'gemini-2.5-flash-preview-tts',
+                contents: [{ role: 'user', parts: [{ text: chunkPrompt }] }],
+                config: ttsConfig,
+              });
+            } catch (err) {
+              if (attempt < 3) {
+                console.warn(`[AfriVoice] Chunk ${i + 1}/${chunks.length} attempt ${attempt} failed, retrying...`);
+                await new Promise(r => setTimeout(r, attempt * 2000));
+                return genChunkWithRetry(attempt + 1);
+              }
+              throw err;
+            }
+          };
+
+          const chunkResponse = await genChunkWithRetry();
+          const chunkPart = chunkResponse.candidates?.[0]?.content?.parts?.[0];
+          const chunkAudio = chunkPart?.inlineData?.data;
+          if (!chunkAudio) throw new Error(`Chunk ${i + 1}/${chunks.length} returned no audio`);
+          audioChunks.push(chunkAudio);
+          console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} generated successfully.`);
+        }
+
+        // Concatenate all PCM audio chunks (base64 -> buffer -> concat -> base64)
+        const combinedBuffer = Buffer.concat(audioChunks.map(b64 => Buffer.from(b64, 'base64')));
+        audioData = combinedBuffer.toString('base64');
+        mimeType = 'audio/L16;rate=24000';
+        console.log(`[AfriVoice] All ${chunks.length} chunks concatenated. Total audio size: ${combinedBuffer.length} bytes.`);
+      }
     }
 
     if (!audioData) {

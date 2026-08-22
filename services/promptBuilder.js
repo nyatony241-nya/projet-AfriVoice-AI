@@ -212,8 +212,9 @@ PACE = FIXED`);
 2. Do NOT read any section headers, directives, or bracketed instructions aloud.
 3. Perform bracketed audio tags like [sighs], [laughs], or [pause] as acoustic effects, not spoken words.
 4. Sound like a real native person from ${countryName}, never synthetic or European.
-5. Pour chaque pays parmi les 19 déjà définis, respecte l’identité culturelle spécifique. Le rendu doit reproduire l’accent distinct de chaque pays (par exemple, accent sénégalais pour le Sénégal, accent ivoirien pour la Côte d'Ivoire). À chaque génération, avec les mêmes paramètres, la voix doit être identique et reproduire fidèlement l’accent propre à chaque pays. Utilise un seed unique par pays pour assurer cette constance.
-6. Chaque génération de voix doit être parfaitement identique, sans aucune variation, même si le texte change. Fixe un identifiant unique par pays et par configuration, et utilise ce seed pour stabiliser la voix. Même si le texte varie, la prosodie, le timbre et l’accent doivent rester exactement les mêmes. Aucun bruit aléatoire ne doit être introduit, et chaque sortie doit reproduire fidèlement la même qualité de voix.`);
+5. VOICE IDENTITY LOCK: Your voice is ${voiceProfileId}. You are ALWAYS the same person. Your vocal signature — timbre, pitch range, resonance, nasality, breathiness — is FIXED and IMMUTABLE. Whether the transcript is one sentence or ten paragraphs, you sound EXACTLY the same. No variation in your fundamental voice quality is permitted.
+6. ACCENT LOCK: Your accent is permanently anchored to ${countryName} (${dna.capital}). The phonetic patterns of ${dna.localLanguages[0]} color every single word you speak. This accent does NOT fade, shift, or weaken regardless of the content. It is your identity.
+7. CONSISTENCY PROTOCOL: Maintain identical prosody patterns across all generations. Same intonation curves. Same rhythm. Same pacing habits. Same breathing patterns. You are a consistent, recognizable voice — like a real human voice actor who always sounds like themselves.`);
 
   // SECTION 7: TRANSCRIPT (ALWAYS placed last, per Gemini best practices)
   const finalTranscript = phoneticScript || script;

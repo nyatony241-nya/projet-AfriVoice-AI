@@ -277,6 +277,7 @@ async function main() {
                 },
               },
             },
+            temperature: 0.1,
           },
         });
 
