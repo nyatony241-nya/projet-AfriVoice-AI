@@ -5,8 +5,8 @@ import { humanizeScript } from "../services/phonetic-humanizer/index.js";
 import { buildDirectorPrompt } from "../services/promptBuilder.js";
 // @ts-ignore
 import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "../services/voiceProfiles.js";
-// @ts-ignore
-import { synthesizeWithGoogleVoiceClone } from "../services/googleTtsService.js";
+// Google TTS Voice Cloning service - désactivé (fichier supprimé)
+const synthesizeWithGoogleVoiceClone: any = null;
 
 const aiClientCache = new Map<string, GoogleGenAI>();
 
