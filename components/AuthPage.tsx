@@ -5,7 +5,7 @@ import { triggerCelebration } from './ConfettiHelper';
 import { LogoIcon } from './BrandLogo';
 
 interface AuthPageProps {
-  onAuthSuccess: () => void;
+  onAuthSuccess: (userEmail?: string) => void;
   addToast: (type: Toast['type'], title: string, message?: string) => void;
   isDark: boolean;
   language: 'fr' | 'en';
@@ -23,16 +23,27 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
     if (!email) return;
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-    });
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+      });
+      setLoading(false);
 
-    if (error) {
-      addToast('error', isEn ? 'Authentication Error' : 'Erreur d\'authentification', error.message);
-    } else {
-      addToast('success', isEn ? 'Code Sent' : 'Code envoyé', isEn ? 'Check your email for the verification code.' : 'Vérifiez vos e-mails pour le code de vérification.');
-      setStep('token');
+      if (error) {
+        addToast('error', isEn ? 'Authentication Error' : 'Erreur d\'envoi du code', error.message);
+      } else {
+        addToast(
+          'success',
+          isEn ? 'Code Sent!' : 'Code Envoyé !',
+          isEn
+            ? 'Check your inbox or SPAM folder for your verification code.'
+            : 'Vérifiez votre boîte de réception ou votre dossier SPAMS / Courriers indésirables.'
+        );
+        setStep('token');
+      }
+    } catch (err: any) {
+      setLoading(false);
+      addToast('error', isEn ? 'Authentication Error' : 'Erreur d\'authentification', err?.message || 'Impossible d\'envoyer le code');
     }
   };
 
@@ -49,11 +60,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
     setLoading(false);
 
     if (error) {
-      addToast('error', isEn ? 'Invalid Code' : 'Code Invalide', error.message);
+      addToast('error', isEn ? 'Invalid Code' : 'Code Invalide ou Expiré', error.message);
     } else {
-      addToast('success', isEn ? 'Connected' : 'Connecté', isEn ? 'Welcome to AfriVoice Studio.' : 'Bienvenue sur AfriVoice Studio.');
+      addToast('success', isEn ? 'Connected' : 'Connexion Réussie', isEn ? 'Welcome to AfriVoice Studio.' : 'Bienvenue sur AfriVoice Studio.');
       triggerCelebration();
-      onAuthSuccess();
+      onAuthSuccess(email);
     }
   };
 
@@ -62,28 +73,28 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
       <div className={`w-full max-w-md p-8 sm:p-10 rounded-[40px] border shadow-2xl animate-in fade-in zoom-in-95 duration-500 ${isDark ? 'bg-[#14151C] border-white/10' : 'bg-white border-[#E4E4E7]'}`}>
         
         {/* Branding */}
-        <div className="flex flex-col items-center justify-center mb-10 text-center">
+        <div className="flex flex-col items-center justify-center mb-8 text-center">
           <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-xl overflow-hidden ${isDark ? 'shadow-[#ccff00]/10' : 'shadow-[#ccff00]/20'}`}>
             <LogoIcon className="w-full h-full" />
           </div>
           <h1 className="text-2xl font-black tracking-tighter">AfriVoice<span className="text-[#ccff00]"> AI</span></h1>
           <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mt-1">
-            {isEn ? 'Authentication Required' : 'Authentification Requise'}
+            {isEn ? 'Secured Authentication' : 'Authentification Sécurisée'}
           </p>
         </div>
 
         {step === 'email' ? (
-          <form onSubmit={handleSendCode} className="space-y-6">
+          <form onSubmit={handleSendCode} className="space-y-5">
             <div className="space-y-2">
               <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">
-                {isEn ? 'Email Address' : 'Adresse E-mail'}
+                {isEn ? 'Email Address' : 'Votre Adresse E-mail'}
               </label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="studio@exemple.com"
+                placeholder="votre.email@exemple.com"
                 className={`w-full px-5 py-4 rounded-2xl text-sm font-bold border transition-all outline-none ${
                   isDark
                     ? 'bg-[#09090B] border-white/10 focus:border-[#D4FF00] text-white'
@@ -102,25 +113,29 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
               }`}
             >
               {loading ? (
-                <span className="animate-pulse">{isEn ? 'SENDING...' : 'ENVOI EN COURS...'}</span>
+                <span className="animate-pulse">{isEn ? 'SENDING CODE...' : 'ENVOI DU CODE...'}</span>
               ) : (
-                <span>{isEn ? 'RECEIVE VERIFICATION CODE' : 'RECEVOIR LE CODE DE VÉRIFICATION'}</span>
+                <span>{isEn ? 'RECEIVE VERIFICATION CODE' : 'RECEVOIR LE CODE DE SÉCURITÉ'}</span>
               )}
             </button>
+
+            <p className="text-[11px] text-zinc-400 font-medium text-center pt-2 leading-relaxed">
+              🔒 {isEn ? 'A unique code will be sent to your email to verify your identity.' : 'Un code unique de sécurité sera envoyé par mail pour vérifier votre identité.'}
+            </p>
           </form>
         ) : (
           <form onSubmit={handleVerifyCode} className="space-y-6 animate-in slide-in-from-right-4 duration-300">
             <div className="space-y-2">
               <div className="flex justify-between items-end">
                 <label className="text-[11px] font-black uppercase tracking-widest text-zinc-500">
-                  {isEn ? 'Verification Code' : 'Code de vérification'}
+                  {isEn ? 'Enter 8-Digit Code' : 'Entrez votre code à 8 chiffres'}
                 </label>
                 <button
                   type="button"
                   onClick={() => setStep('email')}
-                  className="text-[10px] font-bold text-zinc-400 hover:text-zinc-300 underline"
+                  className="text-[10px] font-bold text-[#D4FF00] hover:underline"
                 >
-                  {isEn ? 'Change email' : 'Modifier l\'e-mail'}
+                  {isEn ? 'Change email' : 'Changer l\'e-mail'}
                 </button>
               </div>
               <input
@@ -150,9 +165,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
               {loading ? (
                 <span className="animate-pulse">{isEn ? 'VERIFYING...' : 'VÉRIFICATION...'}</span>
               ) : (
-                <span>{isEn ? 'VERIFY & CONNECT' : 'VÉRIFIER ET SE CONNECTER'}</span>
+                <span>{isEn ? 'VERIFY & ACCESS STUDIO' : 'VÉRIFIER ET ACCÉDER AU STUDIO'}</span>
               )}
             </button>
+
+            {/* Warning regarding SPAM folder */}
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[11px] font-medium text-center space-y-1">
+              <p className="font-bold">📩 Vous ne trouvez pas le mail ?</p>
+              <p>Vérifiez impérativement votre dossier <strong>SPAMS / Courriers indésirables</strong>.</p>
+            </div>
           </form>
         )}
 
