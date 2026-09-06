@@ -21,6 +21,11 @@ export const validateUserLicense = async (licenseKey) => {
   // Appel API Chariow
   const license = await chariowProvider.validateLicense(licenseKey);
   
+  // Normaliser planId si Chariow renvoie 'starter'
+  if (license && license.planId === 'starter') {
+    license.planId = 'free';
+  }
+
   // Mettre en cache
   licenseCache.set(licenseKey, {
     data: license,
@@ -35,14 +40,14 @@ export const validateUserLicense = async (licenseKey) => {
  * Ces limites correspondent aux forfaits AfriVoice.
  */
 export const getQuotaForPlan = (planId) => {
+  const normalizedPlanId = planId === 'starter' ? 'free' : planId;
   const quotas = {
-    starter: { maxSeconds: 600,  maxCharsPerScript: 500,  label: 'STARTER — 10 min/mois' },
+    free:    { maxSeconds: 600,  maxCharsPerScript: 500,  label: 'STARTER — 10 min/mois' },
     creator: { maxSeconds: 1800, maxCharsPerScript: 1500, label: 'CREATOR — 30 min/mois' },
-    pro:     { maxSeconds: 3600, maxCharsPerScript: 3000, label: 'PRO STUDIO HD — 60 min/mois' },
-    free:    { maxSeconds: 60,   maxCharsPerScript: 200,  label: 'GRATUIT — 1 min/mois' }
+    pro:     { maxSeconds: 3600, maxCharsPerScript: 3000, label: 'PRO STUDIO HD — 60 min/mois' }
   };
   
-  return quotas[planId] || quotas.free;
+  return quotas[normalizedPlanId] || quotas.free;
 };
 
 /**

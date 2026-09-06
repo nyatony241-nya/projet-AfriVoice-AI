@@ -1,4 +1,4 @@
-import { getPaymentConfigForCountry, CHARIOW_PRODUCTS } from './paymentConfig';
+import { getPaymentConfigForCountry, CHARIOW_PRODUCTS, PLAN_TO_CHARIOW_PRODUCT } from './paymentConfig';
 import { PaymentMethod, PaymentProvider } from '../types';
 import * as chariowProvider from './providers/chariowProvider';
 import * as paystackProvider from './providers/paystackProvider';
@@ -8,7 +8,7 @@ import * as paytechProvider from './providers/paytechProvider';
 
 export const routePayment = async (
   countryId: string,
-  planId: 'starter' | 'creator' | 'pro',
+  planId: 'free' | 'starter' | 'creator' | 'pro',
   customerEmail: string,
   paymentMethod: PaymentMethod,
   successUrl: string,
@@ -21,7 +21,8 @@ export const routePayment = async (
   }
 
   // Get pricing based on product/plan
-  const product = CHARIOW_PRODUCTS[planId];
+  const productKey = PLAN_TO_CHARIOW_PRODUCT[planId] || planId;
+  const product = CHARIOW_PRODUCTS[productKey as keyof typeof CHARIOW_PRODUCTS];
   if (!product) {
     throw new Error(`Invalid plan: ${planId}`);
   }

@@ -6,6 +6,18 @@ export const CHARIOW_PRODUCTS = {
   pro:     { id: 'prd_pq817d6j', priceXOF: 8900 },
 } as const;
 
+/**
+ * Mapping des IDs de plan vers les clés produits Chariow.
+ * Le plan 'free' dans types.ts et constants.ts (STARTER — 10 min/mois)
+ * correspond au produit 'starter' dans Chariow (1 900 FCFA).
+ */
+export const PLAN_TO_CHARIOW_PRODUCT: Record<'free' | 'starter' | 'creator' | 'pro' | string, keyof typeof CHARIOW_PRODUCTS> = {
+  free: 'starter',
+  starter: 'starter',
+  creator: 'creator',
+  pro: 'pro',
+};
+
 export const countryPaymentConfigs: Record<string, CountryPaymentConfig> = {
   NG: {
     countryId: 'NG',

@@ -1,7 +1,7 @@
 // ── Payment Router (Server-side JS) ───────────────────────────
 // Cerveau du système — route chaque paiement vers le bon provider
 
-import { getPaymentConfigForCountry, CHARIOW_PRODUCTS } from './paymentConfig.js';
+import { getPaymentConfigForCountry, CHARIOW_PRODUCTS, PLAN_TO_CHARIOW_PRODUCT } from './paymentConfig.js';
 import * as chariowProvider from './providers/chariowProvider.js';
 import * as paystackProvider from './providers/paystackProvider.js';
 import * as pawapayProvider from './providers/pawapayProvider.js';
@@ -19,7 +19,8 @@ export const routePayment = async (countryId, planId, customerEmail, paymentMeth
     throw new Error(`Configuration de paiement introuvable pour le pays: ${countryId}`);
   }
 
-  const product = CHARIOW_PRODUCTS[planId];
+  const productKey = PLAN_TO_CHARIOW_PRODUCT?.[planId] || planId;
+  const product = CHARIOW_PRODUCTS[productKey];
   if (!product) {
     throw new Error(`Plan invalide: ${planId}`);
   }

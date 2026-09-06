@@ -13,21 +13,31 @@ export const validateUserLicense = async (licenseKey: string): Promise<LicenseIn
 
   const result = await chariowValidateLicense(licenseKey);
   
+  // Normalize planId if 'starter' is returned
+  if ((result.planId as string) === 'starter') {
+    result.planId = 'free';
+  }
+  
   // Update cache
   licenseCache.set(licenseKey, { data: result, timestamp: Date.now() });
   
   return result;
 };
 
-export const getQuotaForPlan = (planId: 'free' | 'creator' | 'pro') => {
-  switch (planId) {
+export const getQuotaForPlan = (planId: 'free' | 'creator' | 'pro' | string) => {
+  const normalizedPlanId = planId === 'starter' ? 'free' : planId;
+  switch (normalizedPlanId) {
     case 'free':
-      return { maxSeconds: 300, maxCharsPerScript: 1000 };
+      return { maxSeconds: 600, maxCharsPerScript: 500, label: 'STARTER — 10 min/mois' };
     case 'creator':
-      return { maxSeconds: 3600, maxCharsPerScript: 5000 };
+      return { maxSeconds: 1800, maxCharsPerScript: 1500, label: 'CREATOR — 30 min/mois' };
     case 'pro':
-      return { maxSeconds: 14400, maxCharsPerScript: 10000 };
+      return { maxSeconds: 3600, maxCharsPerScript: 3000, label: 'PRO STUDIO HD — 60 min/mois' };
     default:
-      return { maxSeconds: 300, maxCharsPerScript: 1000 };
+      return { maxSeconds: 600, maxCharsPerScript: 500, label: 'STARTER — 10 min/mois' };
   }
+};
+
+export const invalidateLicenseCache = (licenseKey: string) => {
+  licenseCache.delete(licenseKey);
 };

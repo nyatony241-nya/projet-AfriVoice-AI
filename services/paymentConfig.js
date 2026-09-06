@@ -7,6 +7,18 @@ export const CHARIOW_PRODUCTS = {
   pro:     { id: 'prd_pq817d6j', priceXOF: 8900 },
 };
 
+/**
+ * Mapping des IDs de plan vers les clés produits Chariow.
+ * Le plan 'free' dans types.ts et constants.ts (STARTER — 10 min/mois)
+ * correspond au produit 'starter' dans Chariow (1 900 FCFA).
+ */
+export const PLAN_TO_CHARIOW_PRODUCT = {
+  free: 'starter',
+  starter: 'starter',
+  creator: 'creator',
+  pro: 'pro',
+};
+
 export const countryPaymentConfigs = {
   NG: { countryId: 'NG', primaryProvider: 'chariow', cardAvailable: true, mobileMoneyAvailable: true, mobileMoneyOperators: ['OPay', 'MTN MoMo'], currency: 'NGN', currencySymbol: '₦', fallbackProvider: 'paystack' },
   CI: { countryId: 'CI', primaryProvider: 'chariow', cardAvailable: true, mobileMoneyAvailable: true, mobileMoneyOperators: ['Orange Money', 'MTN MoMo', 'Wave', 'Moov'], currency: 'XOF', currencySymbol: 'FCFA', fallbackProvider: 'paystack' },

@@ -19,7 +19,14 @@ function getAiClient(apiKey: string): GoogleGenAI {
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const allowedOrigins = ['http://localhost:3000', 'http://localhost:5173', process.env.FRONTEND_URL || ''].filter(Boolean);
+  const origin = req.headers?.origin || '';
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    // Server-to-server calls (no Origin header)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
@@ -55,9 +62,9 @@ export default async function handler(req: any, res: any) {
         return res.status(401).json({ error: "Token d'authentification manquant." });
       }
       const token = authHeader.split(' ')[1];
-      const { error: authError } = await supabase.auth.getUser(token);
-      if (authError) {
-        console.warn('[AfriVoice] Supabase auth check failed (non-blocking):', authError?.message);
+      const { data: authData, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !authData.user) {
+        return res.status(401).json({ error: "Token d'authentification invalide ou expiré." });
       }
     }
 

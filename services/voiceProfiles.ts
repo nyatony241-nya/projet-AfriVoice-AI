@@ -684,6 +684,42 @@ export const VOICE_PROFILES: Record<string, VoiceProfile> = {
     provider: 'google',
     providerModel: 'chirp-3',
   },
+
+  // 🇷🇼 RWANDA
+  RWANDA_INFLUENCER_FEMALE_01: {
+    voiceProfileId: 'RWANDA_INFLUENCER_FEMALE_01',
+    version: '1.0.0',
+    country: 'Rwanda',
+    language: 'French',
+    gender: 'female',
+    persona: 'Uwase',
+    masterVoiceSample: 'services/voice-profiles/rwanda/influencer/female-01/master.wav',
+    consentAudio: 'services/voice-profiles/rwanda/influencer/female-01/consent.wav',
+    consentStatus: 'APPROVED',
+    voiceCloningKey: process.env.RWANDA_INFLUENCER_FEMALE_01_KEY || '',
+    accentProfile: 'Rwanda',
+    styleProfile: 'Influencer',
+    basePace: 1.0,
+    provider: 'google',
+    providerModel: 'chirp-3',
+  },
+  RWANDA_INFLUENCER_MALE_01: {
+    voiceProfileId: 'RWANDA_INFLUENCER_MALE_01',
+    version: '1.0.0',
+    country: 'Rwanda',
+    language: 'French',
+    gender: 'male',
+    persona: 'Mugisha',
+    masterVoiceSample: 'services/voice-profiles/rwanda/influencer/male-01/master.wav',
+    consentAudio: 'services/voice-profiles/rwanda/influencer/male-01/consent.wav',
+    consentStatus: 'APPROVED',
+    voiceCloningKey: process.env.RWANDA_INFLUENCER_MALE_01_KEY || '',
+    accentProfile: 'Rwanda',
+    styleProfile: 'Influencer',
+    basePace: 1.0,
+    provider: 'google',
+    providerModel: 'chirp-3',
+  },
 };
 
 /**
