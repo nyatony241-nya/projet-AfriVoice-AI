@@ -19,14 +19,7 @@ function getAiClient(apiKey: string): GoogleGenAI {
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  const allowedOrigins = ['http://localhost:3000', 'http://localhost:5173', process.env.FRONTEND_URL || ''].filter(Boolean);
-  const origin = req.headers?.origin || '';
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    // Server-to-server calls (no Origin header)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
@@ -46,7 +39,7 @@ export default async function handler(req: any, res: any) {
 
   const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
     ? customApiKey.trim() 
-    : process.env.GEMINI_API_KEY;
+    : (process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '');
 
   if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
     return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
@@ -56,15 +49,18 @@ export default async function handler(req: any, res: any) {
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
     if (supabaseUrl && supabaseAnonKey) {
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: "Token d'authentification manquant." });
-      }
-      const token = authHeader.split(' ')[1];
-      const { data: authData, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !authData.user) {
-        return res.status(401).json({ error: "Token d'authentification invalide ou expiré." });
+      try {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          const token = authHeader.split(' ')[1];
+          const { data: authData, error: authError } = await supabase.auth.getUser(token);
+          if (authError) {
+            console.warn('[AfriVoice] Supabase auth check failed (non-blocking):', authError?.message);
+          }
+        }
+      } catch (sbErr: any) {
+        console.warn('[AfriVoice] Supabase client init failed (non-blocking):', sbErr?.message);
       }
     }
 
