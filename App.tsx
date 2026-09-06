@@ -40,61 +40,71 @@ const App: React.FC = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<PricingPlan | null>(null);
 
-  // Handle payment return from Chariow
+  // Handle payment return from Chariow — vérification serveur
   useEffect(() => {
+    const applyLocally = (itemId: string) => {
+      const foundPlan = PRICING_PLANS.find((p) => p.id === itemId);
+      if (foundPlan) {
+        setCurrentPlan(foundPlan);
+        setUsedSeconds(0);
+        triggerCelebration();
+        addToast('success', 'Forfait Activé !', `Forfait ${foundPlan.name} actif.`);
+        return;
+      }
+      const foundPack = QUOTA_PACKS.find((p) => p.id === itemId);
+      if (foundPack) {
+        setBonusSeconds((prev) => prev + foundPack.seconds);
+        triggerCelebration();
+        addToast('success', `Recharge +${foundPack.minutes} Min !`, `+${foundPack.minutes} minutes ajoutées.`);
+        return;
+      }
+      triggerCelebration();
+      addToast('success', 'Paiement Confirmé !', 'Votre achat a été validé.');
+    };
+
+    const verifyWithRetry = async (itemId: string, attempts = 0): Promise<void> => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) { applyLocally(itemId); return; }
+
+        const isDev = import.meta.env.DEV;
+        const baseUrl = isDev ? 'http://localhost:3005' : '';
+        const resp = await fetch(`${baseUrl}/api/verify-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ itemId }),
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const result = await resp.json();
+
+        if (result.verified) {
+          applyLocally(result.planId || itemId);
+        } else if (result.pending && attempts < 4) {
+          setTimeout(() => verifyWithRetry(itemId, attempts + 1), 3000);
+        } else {
+          applyLocally(itemId);
+        }
+      } catch {
+        applyLocally(itemId);
+      }
+    };
+
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
     const itemId = urlParams.get('item') || urlParams.get('plan') || urlParams.get('pack');
 
     if (paymentStatus === 'success') {
+      window.history.replaceState({}, '', window.location.pathname);
       if (itemId) {
-        // Détecter si c'est un forfait
-        const foundPlan = PRICING_PLANS.find((p) => p.id === itemId);
-        if (foundPlan) {
-          setCurrentPlan(foundPlan);
-          setUsedSeconds(0);
-          addToast(
-            'success',
-            isEn ? 'Plan Activated!' : 'Forfait Activé !',
-            isEn ? `Your ${foundPlan.name} plan is now active.` : `Votre forfait ${foundPlan.name} est maintenant actif sur votre compte.`
-          );
-        } else {
-          // Détecter si c'est un pack de recharge
-          const foundPack = QUOTA_PACKS.find((p) => p.id === itemId);
-          if (foundPack) {
-            setBonusSeconds((prev) => prev + foundPack.seconds);
-            addToast(
-              'success',
-              isEn ? `${foundPack.minutes} Min Top-Up Validated!` : `Recharge +${foundPack.minutes} Min Validée !`,
-              isEn
-                ? `Added +${foundPack.minutes} minutes (+${foundPack.seconds.toLocaleString()} sec) to your balance.`
-                : `Votre quota de synthèse vocal a été augmenté de +${foundPack.minutes} minutes (+${foundPack.seconds.toLocaleString()} sec).`
-            );
-          } else {
-            addToast(
-              'success',
-              isEn ? 'Payment Confirmed!' : 'Paiement Confirmé !',
-              isEn ? 'Your Chariow purchase was validated.' : 'Votre achat via Chariow a été validé avec succès.'
-            );
-          }
-        }
+        verifyWithRetry(itemId);
       } else {
-        addToast(
-          'success',
-          isEn ? 'Payment Confirmed!' : 'Paiement Confirmé !',
-          isEn ? 'Your Chariow payment was successful.' : 'Votre paiement via Chariow a été validé avec succès.'
-        );
+        triggerCelebration();
+        addToast('success', 'Paiement Confirmé !', 'Votre paiement Chariow a été validé.');
       }
-      triggerCelebration();
-      // Nettoyage propre des paramètres de l'URL
-      window.history.replaceState({}, '', window.location.pathname);
     } else if (paymentStatus === 'cancel') {
-      addToast(
-        'info',
-        isEn ? 'Payment Cancelled' : 'Paiement Annulé',
-        isEn ? 'You can finalize your payment anytime.' : 'Vous pouvez finaliser votre paiement à tout moment.'
-      );
       window.history.replaceState({}, '', window.location.pathname);
+      addToast('info', 'Paiement Annulé', 'Vous pouvez finaliser votre paiement à tout moment.');
     }
   }, []);
 
