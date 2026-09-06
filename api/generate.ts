@@ -1,12 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
-import { humanizeScript } from "../services/phonetic-humanizer/index.js";
+import { humanizeScript } from "../services/phonetic-humanizer/index";
 // @ts-ignore
-import { buildDirectorPrompt } from "../services/promptBuilder.js";
+import { buildDirectorPrompt } from "../services/promptBuilder";
 // @ts-ignore
-import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "../services/voiceProfiles.js";
+import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "../services/voiceProfiles";
 // @ts-ignore
-import { synthesizeWithGoogleVoiceClone } from "../services/googleTtsService.js";
+import { synthesizeWithGoogleVoiceClone } from "../services/googleTtsService";
 
 const aiClientCache = new Map<string, GoogleGenAI>();
 
