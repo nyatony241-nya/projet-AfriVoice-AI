@@ -5,8 +5,8 @@ import { humanizeScript } from "../services/phonetic-humanizer/index.js";
 import { buildDirectorPrompt } from "../services/promptBuilder.js";
 // @ts-ignore
 import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "../services/voiceProfiles.js";
-// Google TTS Voice Cloning service - désactivé (fichier supprimé)
-const synthesizeWithGoogleVoiceClone: any = null;
+// @ts-ignore
+import { synthesizeWithGoogleVoiceClone } from "../services/googleTtsService.js";
 
 const aiClientCache = new Map<string, GoogleGenAI>();
 
@@ -286,44 +286,6 @@ export default async function handler(req: any, res: any) {
       createdAt: new Date().toISOString(),
       status: replicationStatus
     } : undefined;
-
-    // Enregistrer l'événement dans la table voice_events pour le Dashboard Admin
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-    if (supabaseUrl && serviceRoleKey) {
-      try {
-        const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
-        let userId = null;
-        let userEmail = null;
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-          const token = authHeader.split(' ')[1];
-          const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-          if (user) {
-            userId = user.id;
-            userEmail = user.email;
-          }
-        }
-
-        await supabaseAdmin.from('voice_events').insert({
-          user_id: userId,
-          user_email: userEmail,
-          country_id: options?.countryId || 'sn',
-          country_name: options?.countryName || '',
-          voice_id: voiceId || options?.voiceId || '',
-          voice_persona: options?.voicePersona || options?.gender || '',
-          gender: options?.gender || '',
-          plan_id: options?.planId || 'free',
-          content_style: options?.contentStyle || '',
-          script_length: script.length,
-          audio_duration_seconds: Math.round(script.length / 15),
-          status: 'success',
-          generation_id: generationId
-        });
-      } catch (logErr) {
-        console.warn('[AfriVoice] Voice event logging failed (non-blocking):', logErr);
-      }
-    }
 
     return res.status(200).json({ base64Audio: audioData, mimeType, metadata });
 
