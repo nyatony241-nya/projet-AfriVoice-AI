@@ -14,9 +14,6 @@
   "functions": {
     "api/*.ts": {
       "maxDuration": 60
-    },
-    "api/webhook-chariow.ts": {
-      "maxDuration": 30
     }
   },
   "headers": [
