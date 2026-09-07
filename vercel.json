@@ -1,6 +1,13 @@
 {
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/(prd_.*)",
+      "destination": "https://chariow.com/$1",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!api/.*).*)",

@@ -90,6 +90,12 @@ const App: React.FC = () => {
       }
     };
 
+    if (window.location.pathname.includes('/prd_')) {
+      const chariowPath = window.location.pathname.substring(window.location.pathname.indexOf('/prd_'));
+      window.location.href = `https://chariow.com${chariowPath}${window.location.search}`;
+      return;
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
     const itemId = urlParams.get('item') || urlParams.get('plan') || urlParams.get('pack');
