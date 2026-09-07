@@ -1,11 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
-import { humanizeScript } from "../services/phonetic-humanizer/index.js";
+import { humanizeScript } from "./_lib/phonetic-humanizer/index.js";
 // @ts-ignore
-import { buildDirectorPrompt } from "../services/promptBuilder.js";
+import { buildDirectorPrompt } from "./_lib/promptBuilder.js";
 // @ts-ignore
-import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "../services/voiceProfiles.js";
+import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "./_lib/voiceProfiles.js";
 // @ts-ignore
-import { synthesizeWithGoogleVoiceClone } from "../services/googleTtsService.js";
+import { synthesizeWithGoogleVoiceClone } from "./_lib/googleTtsService.js";
 
 async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
