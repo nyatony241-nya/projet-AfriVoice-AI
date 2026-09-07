@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import { humanizeScript } from "../services/phonetic-humanizer/index.js";
 // @ts-ignore
@@ -8,13 +7,67 @@ import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "../services/v
 // @ts-ignore
 import { synthesizeWithGoogleVoiceClone } from "../services/googleTtsService.js";
 
-const aiClientCache = new Map<string, GoogleGenAI>();
+async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+  const MAX_ATTEMPTS = 3;
+  let lastError: any;
 
-function getAiClient(apiKey: string): GoogleGenAI {
-  if (!aiClientCache.has(apiKey)) {
-    aiClientCache.set(apiKey, new GoogleGenAI({ apiKey }));
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: promptText }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: {
+                  voiceName: voiceName || "Aoede"
+                }
+              }
+            }
+          }
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        console.warn(`[AfriVoice] Gemini REST attempt ${attempt}/${MAX_ATTEMPTS} HTTP ${res.status}: ${errText}`);
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          throw new Error(`Gemini API Error (${res.status}): ${errText}`);
+        }
+        lastError = new Error(`HTTP ${res.status}: ${errText}`);
+      } else {
+        const data = await res.json();
+        const candidate = data.candidates?.[0];
+        const part = candidate?.content?.parts?.[0];
+        const inlineAudio = part?.inlineData?.data;
+
+        if (inlineAudio) {
+          return {
+            audioData: inlineAudio,
+            mimeType: part?.inlineData?.mimeType || 'audio/L16;rate=24000',
+          };
+        }
+        console.warn(`[AfriVoice] Gemini REST attempt ${attempt}/${MAX_ATTEMPTS}: audio vide reçue (finishReason: ${candidate?.finishReason}).`);
+        lastError = new Error(`Audio vide (finishReason: ${candidate?.finishReason})`);
+      }
+    } catch (err: any) {
+      if (err?.message?.includes("Gemini API Error")) {
+        throw err;
+      }
+      console.warn(`[AfriVoice] Gemini REST attempt ${attempt}/${MAX_ATTEMPTS} error: ${err?.message}`);
+      lastError = err;
+    }
+
+    if (attempt < MAX_ATTEMPTS) {
+      await new Promise(r => setTimeout(r, 800 * attempt));
+    }
   }
-  return aiClientCache.get(apiKey)!;
+
+  throw lastError || new Error(`Génération Gemini TTS échouée après ${MAX_ATTEMPTS} tentatives.`);
 }
 
 export default async function handler(req: any, res: any) {
@@ -31,27 +84,27 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }
 
-  const { script, voiceId, customApiKey, options, voiceProfileId } = req.body;
-
-  if (!script) {
-    return res.status(400).json({ error: "Le paramètre 'script' est requis." });
-  }
-
-  const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
-    ? customApiKey.trim() 
-    : (process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '');
-
-  if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
-    return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
-  }
-
   try {
+    const { script, voiceId, customApiKey, options, voiceProfileId } = req.body || {};
+
+    if (!script) {
+      return res.status(400).json({ error: "Le paramètre 'script' est requis." });
+    }
+
+    const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
+      ? customApiKey.trim() 
+      : (process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '');
+
+    if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
+      return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
+    }
+
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
     if (supabaseUrl && supabaseAnonKey) {
       try {
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
-        const authHeader = req.headers.authorization;
+        const authHeader = req.headers?.authorization;
         if (authHeader && authHeader.startsWith('Bearer ')) {
           const token = authHeader.split(' ')[1];
           const { data: authData, error: authError } = await supabase.auth.getUser(token);
@@ -69,7 +122,7 @@ export default async function handler(req: any, res: any) {
       ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
       : script;
 
-    // 2. Vérification et résolution dynamique des profils vocaux pour les 19 pays
+    // 2. Résolution des profils vocaux
     const targetProfileId = voiceProfileId || options?.voiceProfileId;
     let voiceCloningKey = '';
     let isReplicationAttempted = false;
@@ -113,7 +166,7 @@ export default async function handler(req: any, res: any) {
         replicationStatus = 'VOICE_FALLBACK_USED';
       }
 
-      // 3. Construction chirurgicale du prompt à partir de la source de vérité partagée
+      // 3. Construction du prompt
       const { directorBrief: fullPrompt, actualVoiceId } = buildDirectorPrompt({
         script,
         countryId: options?.countryId || (profileData ? 'SN' : undefined),
@@ -132,148 +185,50 @@ export default async function handler(req: any, res: any) {
         phoneticScript: finalScript,
       });
 
-      const ai = getAiClient(apiKey);
-
-      // 4. Appel de l'API Gemini TTS avec chunking
+      // 4. Appel de l'API Gemini TTS native REST avec chunking
       const MAX_CHARS_PER_CHUNK = 2000;
       const scriptText = finalScript || script;
       const needsChunking = scriptText.length > MAX_CHARS_PER_CHUNK;
-
-      const ttsConfig = {
-        responseModalities: ["AUDIO"] as any,
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: actualVoiceId,
-            },
-          },
-        },
-        // NOTE: temperature is intentionally NOT set for TTS.
-        // Values below 0.5 cause Gemini TTS to return empty responses (documented behavior).
-        // Voice consistency is enforced via the prompt VOICE IDENTITY LOCK instead.
-      };
-
-      // ── Production-grade retry: exponential backoff + jitter ─────────
-      // Gemini TTS returns empty responses intermittently (finishReason OTHER/STOP).
-      // Unique nonce prevents server-side caching causing silent failures.
       const requestNonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const promptWithNonce = fullPrompt + `\n<!-- req:${requestNonce} -->`;
 
-      const callGeminiTTS = async (promptText: string): Promise<{ audioData: string; mimeType: string }> => {
-        const MAX_ATTEMPTS = 5;
-        let lastError: any;
-
-        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-          try {
-            const geminiResponse = await ai.models.generateContent({
-              model: 'gemini-2.5-flash-preview-tts',
-              contents: [{ role: 'user', parts: [{ text: promptText }] }],
-              // @ts-ignore
-              config: ttsConfig,
-            });
-
-            const candidate = geminiResponse.candidates?.[0];
-            const finishReason = candidate?.finishReason;
-            const part = candidate?.content?.parts?.[0];
-            const inlineAudio = (part as any)?.inlineData?.data;
-
-            if (inlineAudio) {
-              return {
-                audioData: inlineAudio,
-                mimeType: (part as any)?.inlineData?.mimeType || 'audio/L16;rate=24000',
-              };
-            }
-
-            console.warn(`[AfriVoice] Attempt ${attempt}/${MAX_ATTEMPTS}: empty audio. finishReason=${finishReason}, voice=${actualVoiceId}`);
-            lastError = new Error(`Empty audio (finishReason: ${finishReason})`);
-
-          } catch (err: any) {
-            if (err?.status === 400) throw err;
-            console.warn(`[AfriVoice] Attempt ${attempt}/${MAX_ATTEMPTS}: API error: ${err?.message}`);
-            lastError = err;
-          }
-
-          if (attempt < MAX_ATTEMPTS) {
-            const base = Math.min(1000 * Math.pow(2, attempt - 1), 16000);
-            const jitter = Math.random() * 1000;
-            await new Promise(r => setTimeout(r, Math.round(base + jitter)));
+      if (!needsChunking) {
+        const result = await callGeminiTtsRest(apiKey, promptWithNonce, actualVoiceId);
+        audioData = result.audioData;
+        mimeType = result.mimeType;
+      } else {
+        const sentences = scriptText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [scriptText];
+        const chunks: string[] = [];
+        let currentChunk = '';
+        for (const sentence of sentences) {
+          if ((currentChunk + sentence).length > MAX_CHARS_PER_CHUNK && currentChunk.length > 0) {
+            chunks.push(currentChunk.trim());
+            currentChunk = sentence;
+          } else {
+            currentChunk += sentence;
           }
         }
+        if (currentChunk.trim()) chunks.push(currentChunk.trim());
 
-        throw lastError || new Error(`Gemini TTS failed after ${MAX_ATTEMPTS} attempts.`);
-      };
-      // ─────────────────────────────────────────────────────────────────
+        const audioChunks: string[] = [];
+        for (let i = 0; i < chunks.length; i++) {
+          const chunkPrompt = fullPrompt.replace(
+            /<transcript>[\s\S]*<\/transcript>/,
+            `<transcript>\n${chunks[i]}\n</transcript>`
+          ) + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
 
-      try {
-        if (!needsChunking) {
-          // ── Short text: single call ──
-          const result = await callGeminiTTS(promptWithNonce);
-          audioData = result.audioData;
-          mimeType = result.mimeType;
-
-        } else {
-          // ── Long text: split at sentence boundaries, generate each chunk ──
-          console.log(`[AfriVoice] Long text (${scriptText.length} chars) → chunking into ~${MAX_CHARS_PER_CHUNK}-char segments.`);
-
-          const sentences = scriptText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [scriptText];
-          const chunks: string[] = [];
-          let currentChunk = '';
-          for (const sentence of sentences) {
-            if ((currentChunk + sentence).length > MAX_CHARS_PER_CHUNK && currentChunk.length > 0) {
-              chunks.push(currentChunk.trim());
-              currentChunk = sentence;
-            } else {
-              currentChunk += sentence;
-            }
-          }
-          if (currentChunk.trim()) chunks.push(currentChunk.trim());
-          console.log(`[AfriVoice] Split into ${chunks.length} chunks.`);
-
-          const audioChunks: string[] = [];
-          for (let i = 0; i < chunks.length; i++) {
-            // Build chunk-specific prompt using the compact brief base (replace transcript part)
-            const chunkPrompt = fullPrompt.replace(
-              /<transcript>[\s\S]*<\/transcript>/,
-              `<transcript>\n${chunks[i]}\n</transcript>`
-            ) + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
-
-            console.log(`[AfriVoice] Generating chunk ${i + 1}/${chunks.length}...`);
-            const chunkResult = await callGeminiTTS(chunkPrompt);
-            audioChunks.push(chunkResult.audioData);
-            console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} ✅`);
-          }
-
-          const combinedBuffer = Buffer.concat(audioChunks.map(b64 => Buffer.from(b64, 'base64')));
-          audioData = combinedBuffer.toString('base64');
-          mimeType = 'audio/L16;rate=24000';
-          console.log(`[AfriVoice] All ${chunks.length} chunks merged. Total: ${combinedBuffer.length} bytes.`);
+          const chunkResult = await callGeminiTtsRest(apiKey, chunkPrompt, actualVoiceId);
+          audioChunks.push(chunkResult.audioData);
         }
 
-      } catch (apiError: any) {
-        console.error('[AfriVoice] Gemini API call failed:', apiError);
-        
-        const errMessage = apiError?.message || '';
-        const isAuthError = 
-          apiError?.status === 401 || 
-          errMessage.includes('API_KEY_INVALID') || 
-          errMessage.includes('key not valid') ||
-          errMessage.includes('UNAUTHENTICATED') ||
-          errMessage.includes('invalid credentials');
-
-        if (isAuthError) {
-          return res.status(401).json({
-            error: 'Clé API Gemini invalide ou expirée. Veuillez vérifier votre clé API (GEMINI_API_KEY) dans les variables d\'environnement Vercel ou dans les paramètres du Studio.',
-            errorType: 'API_KEY_INVALID'
-          });
-        }
-        throw apiError;
+        const combinedBuffer = Buffer.concat(audioChunks.map(b64 => Buffer.from(b64, 'base64')));
+        audioData = combinedBuffer.toString('base64');
+        mimeType = 'audio/L16;rate=24000';
       }
     }
 
     if (!audioData) {
-      return res.status(500).json({
-        error: 'Aucune donnée audio reçue de la synthèse.',
-      });
+      return res.status(500).json({ error: 'Aucune donnée audio reçue de la synthèse.' });
     }
 
     const generationId = 'gen_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -293,10 +248,9 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ base64Audio: audioData, mimeType, metadata });
 
   } catch (error: any) {
-    console.error('[AfriVoice] Error:', error?.message || error);
-    const statusCode = typeof error?.status === 'number' ? Math.min(error.status, 599) : 500;
-    return res.status(statusCode).json({
-      error: error?.message || 'Erreur inconnue lors de la génération audio.',
+    console.error('[AfriVoice] Handler Error:', error?.message || error);
+    return res.status(500).json({
+      error: error?.message || 'Erreur interne lors de la génération audio.',
       errorType: error?.constructor?.name || 'UnknownError',
     });
   }
