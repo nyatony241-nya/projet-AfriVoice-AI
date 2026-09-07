@@ -8,15 +8,15 @@
 
 export const CHARIOW_CHECKOUT_URLS: Record<string, string> = {
   // Forfaits mensuels
-  free:            'https://chariow.com/prd_n6d89d8s',  // STARTER (1 900 FCFA)
-  starter:         'https://chariow.com/prd_n6d89d8s',  // STARTER (1 900 FCFA)
-  creator:         'https://chariow.com/prd_f639rpw2',  // CREATOR (4 900 FCFA)
-  pro:             'https://chariow.com/prd_pq817d6j',  // PRO – STUDIO HD (8 900 FCFA)
+  free:            'https://kboghdly.mychariow.shop/prd_n6d89d8s',  // STARTER (1 900 FCFA)
+  starter:         'https://kboghdly.mychariow.shop/prd_n6d89d8s',  // STARTER (1 900 FCFA)
+  creator:         'https://kboghdly.mychariow.shop/prd_f639rpw2',  // CREATOR (4 900 FCFA)
+  pro:             'https://kboghdly.mychariow.shop/prd_pq817d6j',  // PRO – STUDIO HD (8 900 FCFA)
 
   // Packs de recharges vocales
-  starter_booster: 'https://chariow.com/prd_221tec74',  // Pack Découverte (+15 min) (990 FCFA)
-  creator_booster: 'https://chariow.com/prd_9zvjwbz5',  // Pack Créateur (+30 min) (1 990 FCFA)
-  pro_booster:     'https://chariow.com/prd_78vr0y1w',  // Pack Pro Studio (+60 min) (3 490 FCFA)
+  starter_booster: 'https://kboghdly.mychariow.shop/prd_221tec74',  // Pack Découverte (+15 min) (990 FCFA)
+  creator_booster: 'https://kboghdly.mychariow.shop/prd_9zvjwbz5',  // Pack Créateur (+30 min) (1 990 FCFA)
+  pro_booster:     'https://kboghdly.mychariow.shop/prd_78vr0y1w',  // Pack Pro Studio (+60 min) (3 490 FCFA)
 };
 
 /**
