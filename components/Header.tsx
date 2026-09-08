@@ -154,16 +154,7 @@ const Header: React.FC<HeaderProps> = ({
               </svg>
             ),
           },
-          {
-            id: 'mastering' as const,
-            label: language === 'en' ? 'Mastering' : 'Mastering',
-            badge: currentPlan.id === 'pro' ? 'HD' : 'PRO',
-            icon: (
-              <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
-            ),
-          },
+
           {
             id: 'history' as const,
             label: language === 'en' ? 'Audio' : 'Audio',
@@ -185,12 +176,11 @@ const Header: React.FC<HeaderProps> = ({
           },
         ].map((item) => {
           const isActive = activeTab === item.id;
-          const isMasteringTab = item.id === 'mastering';
           return (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-black tracking-tight transition-all shrink-0 ${isMasteringTab ? 'hidden sm:flex' : ''} ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-black tracking-tight transition-all shrink-0 ${
                 isActive
                   ? isDark
                     ? 'bg-[#D4FF00] text-black shadow-md shadow-[#D4FF00]/20 scale-[1.02]'

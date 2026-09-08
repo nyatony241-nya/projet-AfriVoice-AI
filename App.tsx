@@ -241,13 +241,6 @@ const App: React.FC = () => {
   }, [settings]);
 
 
-  const [mixer, setMixer] = useState<MixerSettings>({
-    voiceVolume: 100,
-    bgMusicVolume: 30,
-    bgMusicId: null,
-    isMixing: false,
-  });
-
   const [status, setStatus] = useState<GenerationState>({
     isGenerating: false,
     error: null,
@@ -637,53 +630,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleApplyMix = async () => {
-    if (!voiceBufferRef.current || !audioContextRef.current) {
-      addToast('warning', 'Aucun flux audio', "Générez d'abord une voix avant d'appliquer un mastering.");
-      return;
-    }
-
-    setIsApplyingMix(true);
-    setStatus((prev) => ({ ...prev, error: null }));
-
-    try {
-      let currentBgBuffer: AudioBuffer | null = null;
-      if (mixer.bgMusicId) {
-        const track = BG_MUSIC_TRACKS.find((t) => t.id === mixer.bgMusicId);
-        if (track) {
-          if (!bgMusicBufferRef.current || mixer.bgMusicId !== (bgMusicBufferRef.current as any).label) {
-            currentBgBuffer = await fetchAndDecodeAudio(track.url, audioContextRef.current);
-            (currentBgBuffer as any).label = track.id;
-            bgMusicBufferRef.current = currentBgBuffer;
-          } else {
-            currentBgBuffer = bgMusicBufferRef.current;
-          }
-        }
-      }
-
-      const mixedBuffer = mixAudioBuffers(
-        voiceBufferRef.current,
-        currentBgBuffer,
-        mixer.voiceVolume,
-        mixer.bgMusicVolume,
-        audioContextRef.current
-      );
-
-      const wavBlob = audioBufferToWav(mixedBuffer);
-      const newUrl = URL.createObjectURL(wavBlob);
-
-      if (status.audioUrl && !status.audioUrl.startsWith('data:')) URL.revokeObjectURL(status.audioUrl);
-
-      setStatus((prev) => ({ ...prev, audioUrl: newUrl }));
-      addToast('success', 'Mastering HD Appliqué', 'Le mixage audio (voix + pistes) est prêt pour l’exportation.');
-    } catch (err: any) {
-      console.error('Mastering failed', err);
-      setStatus((prev) => ({ ...prev, error: err.message || 'Échec du mastering audio.' }));
-      addToast('error', 'Erreur de mixage', err.message || 'Impossible de combiner les pistes.');
-    } finally {
-      setIsApplyingMix(false);
-    }
-  };
 
   const handleLoadFromHistory = (item: HistoryItem) => {
     setSelectedCountry(item.country);
