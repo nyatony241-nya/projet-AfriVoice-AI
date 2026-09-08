@@ -322,15 +322,54 @@ const App: React.FC = () => {
     }
 
     // Check active session and subscribe to auth changes
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setLoadingAuth(false);
+      // 🔒 Charger le plan payé depuis Supabase
+      if (session?.user?.email) {
+        const { data } = await supabase
+          .from('user_plans')
+          .select('plan_id')
+          .eq('email', session.user.email)
+          .maybeSingle();
+        if (data?.plan_id) {
+          const found = PRICING_PLANS.find(p => p.id === data.plan_id);
+          if (found) {
+            setCurrentPlan(found);
+            localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
+          }
+        } else {
+          // Aucun plan payé → forcer FREE (plan restreint, pas accès complet)
+          const freePlan = PRICING_PLANS.find(p => p.id === 'free');
+          if (freePlan) setCurrentPlan(freePlan);
+          localStorage.setItem('AFRIVOICE_PLAN_ID', 'free');
+        }
+      }
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+      // 🔒 Recharger le plan à chaque changement d'état d'auth
+      if (session?.user?.email) {
+        const { data } = await supabase
+          .from('user_plans')
+          .select('plan_id')
+          .eq('email', session.user.email)
+          .maybeSingle();
+        if (data?.plan_id) {
+          const found = PRICING_PLANS.find(p => p.id === data.plan_id);
+          if (found) {
+            setCurrentPlan(found);
+            localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
+          }
+        } else {
+          const freePlan = PRICING_PLANS.find(p => p.id === 'free');
+          if (freePlan) setCurrentPlan(freePlan);
+          localStorage.setItem('AFRIVOICE_PLAN_ID', 'free');
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -361,7 +400,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!isPremiumFeature) {
-      setMixer((prev) => ({ ...prev, isMixing: false, bgMusicId: null }));
+      // Mixer removed — no action needed
     }
   }, [isPremiumFeature]);
 
@@ -488,6 +527,19 @@ const App: React.FC = () => {
       return;
     }
 
+    // 🔒 PAYWALL: Vérifier que l'utilisateur a un forfait payé
+    if (currentPlan.id === 'free') {
+      setActiveTab('pricing');
+      addToast(
+        'warning',
+        isEn ? 'Subscription Required' : 'Forfait requis',
+        isEn
+          ? 'Please subscribe to a plan to generate voices.'
+          : 'Veuillez souscrire à un forfait pour générer des voix.'
+      );
+      return;
+    }
+
     // Safety Rail #1: Hard Quota Check
     if (usedSeconds >= quota.maxSeconds) {
       setStatus((prev) => ({
@@ -500,6 +552,7 @@ const App: React.FC = () => {
       addToast('warning', isEn ? 'Quota Exhausted' : 'Plafond de Synthèse Atteint', isEn ? 'Please recharge your account to continue.' : 'Votre quota est épuisé. Veuillez recharger pour continuer.');
       return;
     }
+
 
     // Safety Rail #3: Max Character Limit check
     if (script.length > quota.maxCharsPerScript) {
