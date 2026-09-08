@@ -185,11 +185,12 @@ const Header: React.FC<HeaderProps> = ({
           },
         ].map((item) => {
           const isActive = activeTab === item.id;
+          const isMasteringTab = item.id === 'mastering';
           return (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-black tracking-tight transition-all shrink-0 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-black tracking-tight transition-all shrink-0 ${isMasteringTab ? 'hidden sm:flex' : ''} ${
                 isActive
                   ? isDark
                     ? 'bg-[#D4FF00] text-black shadow-md shadow-[#D4FF00]/20 scale-[1.02]'
