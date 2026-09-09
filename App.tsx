@@ -69,7 +69,7 @@ const App: React.FC = () => {
               const expiresAt = new Date(activatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
               const limitMap: Record<string, number> = { starter: 600, creator: 1800, pro: 3600 };
 
-              await supabase.from('user_plans').upsert(
+              const { error: planErr } = await supabase.from('user_plans').upsert(
                 {
                   email: currentSession.user.email,
                   plan_id: planId,
@@ -78,18 +78,20 @@ const App: React.FC = () => {
                   is_active: true,
                   updated_at: activatedAt.toISOString(),
                 },
-                { onConflict: 'email' }
+                { onConflict: 'email', ignoreDuplicates: false }
               );
+              if (planErr) console.error('[Paiement] Erreur user_plans upsert:', planErr.message, planErr.code);
 
-              await supabase.from('user_quotas').upsert(
+              const { error: quotaErr } = await supabase.from('user_quotas').upsert(
                 {
                   email: currentSession.user.email,
                   monthly_limit: limitMap[planId] || 600,
                   seconds_used: 0,
                   updated_at: activatedAt.toISOString(),
                 },
-                { onConflict: 'email' }
+                { onConflict: 'email', ignoreDuplicates: false }
               );
+              if (quotaErr) console.error('[Paiement] Erreur user_quotas upsert:', quotaErr.message, quotaErr.code);
             }
           } catch (sbErr) {
             console.warn('[Paiement] Erreur activation locale Supabase:', sbErr);
@@ -425,12 +427,18 @@ const App: React.FC = () => {
           supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
           supabase.from('user_quotas').select('monthly_limit, seconds_used, bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
-        const planId = planResult.data?.plan_id;
+        const rawPlanId = planResult.data?.plan_id;
         const monthlyLimit = quotaResult.data?.monthly_limit ?? 0;
 
-        if (planId && planId !== 'none' && monthlyLimit > 0) {
-          const effectiveId = planId === 'free' ? 'starter' : planId;
-          const found = PRICING_PLANS.find(p => p.id === effectiveId);
+        // ✅ Résolution du plan : user_plans en priorité, sinon inféré depuis monthly_limit
+        // (fallback si user_plans n'a pas pu être écrit par le client — RLS)
+        let effectivePlanId = (rawPlanId && rawPlanId !== 'none' && rawPlanId !== 'free') ? rawPlanId : null;
+        if (!effectivePlanId && monthlyLimit >= 3600) effectivePlanId = 'pro';
+        else if (!effectivePlanId && monthlyLimit >= 1800) effectivePlanId = 'creator';
+        else if (!effectivePlanId && monthlyLimit >= 600) effectivePlanId = 'starter';
+
+        if (effectivePlanId) {
+          const found = PRICING_PLANS.find(p => p.id === effectivePlanId);
           if (found) {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
@@ -438,9 +446,9 @@ const App: React.FC = () => {
             setCurrentPlan(UNSUBSCRIBED_PLAN);
             localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
           }
-          if (planResult.data.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
+          if (planResult.data?.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
         } else {
-          // Aucun plan payé ou 0 min → forcer UNSUBSCRIBED_PLAN
+          // Aucun plan payé → UNSUBSCRIBED
           setCurrentPlan(UNSUBSCRIBED_PLAN);
           localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
         }
@@ -466,12 +474,17 @@ const App: React.FC = () => {
           supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
           supabase.from('user_quotas').select('monthly_limit, seconds_used, bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
-        const planId = planResult.data?.plan_id;
-        const monthlyLimit = quotaResult.data?.monthly_limit ?? 0;
+        const rawPlanId2 = planResult.data?.plan_id;
+        const monthlyLimit2 = quotaResult.data?.monthly_limit ?? 0;
 
-        if (planId && planId !== 'none' && monthlyLimit > 0) {
-          const effectiveId = planId === 'free' ? 'starter' : planId;
-          const found = PRICING_PLANS.find(p => p.id === effectiveId);
+        // ✅ Résolution du plan : user_plans en priorité, sinon inféré depuis monthly_limit
+        let effectivePlanId2 = (rawPlanId2 && rawPlanId2 !== 'none' && rawPlanId2 !== 'free') ? rawPlanId2 : null;
+        if (!effectivePlanId2 && monthlyLimit2 >= 3600) effectivePlanId2 = 'pro';
+        else if (!effectivePlanId2 && monthlyLimit2 >= 1800) effectivePlanId2 = 'creator';
+        else if (!effectivePlanId2 && monthlyLimit2 >= 600) effectivePlanId2 = 'starter';
+
+        if (effectivePlanId2) {
+          const found = PRICING_PLANS.find(p => p.id === effectivePlanId2);
           if (found) {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
@@ -479,7 +492,7 @@ const App: React.FC = () => {
             setCurrentPlan(UNSUBSCRIBED_PLAN);
             localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
           }
-          if (planResult.data.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
+          if (planResult.data?.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
         } else {
           setCurrentPlan(UNSUBSCRIBED_PLAN);
           localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
