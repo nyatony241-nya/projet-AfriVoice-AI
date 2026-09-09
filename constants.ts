@@ -39,9 +39,22 @@ export const BG_MUSIC_TRACKS: BackgroundMusic[] = [
   { id: 'savannah', name: 'Savannah Morning', url: 'https://actions.google.com/animusic/High_Noon.mp3' },
 ];
 
+export const UNSUBSCRIBED_PLAN: PricingPlan = {
+  id: 'none',
+  name: 'Sans Abonnement',
+  price: '0 FCFA',
+  description: 'Aucun abonnement actif — Souscrivez pour débloquer les voix',
+  color: 'stone',
+  features: [
+    '0 minute disponible',
+    'Écoute d\'extraits vocaux autorisée',
+    '🔒 Génération vocale bloquée (Abonnement requis)',
+  ]
+};
+
 export const PRICING_PLANS: PricingPlan[] = [
   {
-    id: 'free',
+    id: 'starter',
     name: 'STARTER',
     price: '1 900 FCFA',
     description: 'Pour démarrer la voix off africaine',
@@ -91,7 +104,7 @@ export const PRICING_PLANS: PricingPlan[] = [
 
 export const PRICING_PLANS_EN: PricingPlan[] = [
   {
-    id: 'free',
+    id: 'starter',
     name: 'STARTER',
     price: '1,900 FCFA ($3.00)',
     description: 'To start with African voice-over',

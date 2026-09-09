@@ -7,7 +7,7 @@ import crypto from 'crypto';
 // ══════════════════════════════════════════════════════════════
 
 const CHARIOW_PRODUCT_TO_PLAN: Record<string, string> = {
-  'prd_n6d89d8s': 'free',    // STARTER 1 900 FCFA
+  'prd_n6d89d8s': 'starter', // STARTER 1 900 FCFA
   'prd_f639rpw2': 'creator', // CREATOR 4 900 FCFA
   'prd_pq817d6j': 'pro',     // PRO STUDIO HD 8 900 FCFA
   // Boosters de recharge
@@ -160,7 +160,8 @@ export default async function handler(req: any, res: any) {
       // ✅ Mettre à jour monthly_limit selon le plan activé
       // free = Starter (10 min = 600s), creator = 30 min (1800s), pro = 60 min (3600s)
       const PLAN_LIMITS: Record<string, number> = {
-        'free':    600,   // Starter — 10 min
+        'starter': 600,   // Starter — 10 min
+        'free':    600,   // Starter fallback — 10 min
         'creator': 1800,  // Creator — 30 min
         'pro':     3600,  // Pro — 60 min
       };

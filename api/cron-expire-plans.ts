@@ -65,7 +65,7 @@ export default async function handler(req: any, res: any) {
     const { error: updateError } = await supabase
       .from('user_plans')
       .update({
-        plan_id: 'free',
+        plan_id: 'none',
         is_active: false,
         updated_at: now,
       })

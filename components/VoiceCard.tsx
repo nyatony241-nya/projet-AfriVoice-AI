@@ -26,7 +26,6 @@ const VoiceCard: React.FC<VoiceCardProps> = ({
 
   const handlePreview = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isLocked) return;
     
     if (isPlaying && audioRef.current) {
       audioRef.current.pause();
@@ -155,7 +154,6 @@ const VoiceCard: React.FC<VoiceCardProps> = ({
       <div className="mt-auto w-full pt-2">
         <button
           onClick={handlePreview}
-          disabled={isLocked}
           className={`w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors ${previewBg} ${previewText}`}
           aria-label={isEn ? `Listen to ${voice.persona}` : `Écouter ${voice.persona}`}
         >

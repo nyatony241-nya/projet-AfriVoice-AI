@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { COUNTRIES, VOICE_OPTIONS, PRICING_PLANS, PRICING_PLANS_EN, BG_MUSIC_TRACKS } from './constants';
+import { COUNTRIES, VOICE_OPTIONS, PRICING_PLANS, PRICING_PLANS_EN, BG_MUSIC_TRACKS, UNSUBSCRIBED_PLAN } from './constants';
 import { Country, VoiceIdentity, GenerationState, VoiceSettings, PricingPlan, MixerSettings, HistoryItem, QuotaUsage, Language, AccentLevel, ContentStyle, VocalPersonality, VocalObjective, QualityScore } from './types';
 import { analyzeQuality } from './services/qualityAnalyzer';
 import CountryCard from './components/CountryCard';
@@ -163,8 +163,10 @@ const App: React.FC = () => {
   // Core Application & Pricing Plan States
   const [currentPlan, setCurrentPlan] = useState<PricingPlan>(() => {
     const savedPlanId = localStorage.getItem('AFRIVOICE_PLAN_ID');
-    const found = PRICING_PLANS.find(p => p.id === savedPlanId);
-    return found || PRICING_PLANS[0];
+    if (!savedPlanId || savedPlanId === 'none') return UNSUBSCRIBED_PLAN;
+    const effectiveId = savedPlanId === 'free' ? 'starter' : savedPlanId;
+    const found = PRICING_PLANS.find(p => p.id === effectiveId);
+    return found || UNSUBSCRIBED_PLAN;
   });
   const [showQuotaError, setShowQuotaError] = useState(false);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
@@ -185,16 +187,20 @@ const App: React.FC = () => {
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const availableCountries = useMemo(() => {
-    const accessibleIds = getAccessibleCountryIds(currentPlan.id as 'free' | 'creator' | 'pro');
+    const accessibleIds = getAccessibleCountryIds(currentPlan.id);
+    if (accessibleIds.length === 0) return COUNTRIES; // Unsubscribed: allow browsing all countries for voice previews
     return COUNTRIES.filter(c => accessibleIds.includes(c.id));
   }, [currentPlan]);
 
   // Dynamic Quota limits by plan (Safety Rail #1 & #3) + Recharge bonus
   const quota = useMemo<QuotaUsage>(() => {
-    let baseMaxSeconds = 600; // Starter: 10 min
+    let baseMaxSeconds = 0; // Sans abonnement: 0 min
     let maxChars = 500;
 
-    if (currentPlan.id === 'creator') {
+    if (currentPlan.id === 'starter' || currentPlan.id === 'free') {
+      baseMaxSeconds = 600; // Starter: 10 min
+      maxChars = 500;
+    } else if (currentPlan.id === 'creator') {
       baseMaxSeconds = 1800; // Creator: 30 min
       maxChars = 1500;
     } else if (currentPlan.id === 'pro') {
@@ -350,20 +356,26 @@ const App: React.FC = () => {
       if (session?.user?.email) {
         const [planResult, quotaResult] = await Promise.all([
           supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
-          supabase.from('user_quotas').select('bonus_seconds').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_quotas').select('monthly_limit, bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
-        if (planResult.data?.plan_id) {
-          const found = PRICING_PLANS.find(p => p.id === planResult.data!.plan_id);
+        const planId = planResult.data?.plan_id;
+        const monthlyLimit = quotaResult.data?.monthly_limit ?? 0;
+
+        if (planId && planId !== 'none' && monthlyLimit > 0) {
+          const effectiveId = planId === 'free' ? 'starter' : planId;
+          const found = PRICING_PLANS.find(p => p.id === effectiveId);
           if (found) {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
+          } else {
+            setCurrentPlan(UNSUBSCRIBED_PLAN);
+            localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
           }
           if (planResult.data.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
         } else {
-          // Aucun plan payé → forcer FREE
-          const freePlan = PRICING_PLANS.find(p => p.id === 'free');
-          if (freePlan) setCurrentPlan(freePlan);
-          localStorage.setItem('AFRIVOICE_PLAN_ID', 'free');
+          // Aucun plan payé ou 0 min → forcer UNSUBSCRIBED_PLAN
+          setCurrentPlan(UNSUBSCRIBED_PLAN);
+          localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
         }
         if (quotaResult.data?.bonus_seconds != null) {
           setBonusSeconds(quotaResult.data.bonus_seconds as number);
@@ -379,19 +391,25 @@ const App: React.FC = () => {
       if (session?.user?.email) {
         const [planResult, quotaResult] = await Promise.all([
           supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
-          supabase.from('user_quotas').select('bonus_seconds').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_quotas').select('monthly_limit, bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
-        if (planResult.data?.plan_id) {
-          const found = PRICING_PLANS.find(p => p.id === planResult.data!.plan_id);
+        const planId = planResult.data?.plan_id;
+        const monthlyLimit = quotaResult.data?.monthly_limit ?? 0;
+
+        if (planId && planId !== 'none' && monthlyLimit > 0) {
+          const effectiveId = planId === 'free' ? 'starter' : planId;
+          const found = PRICING_PLANS.find(p => p.id === effectiveId);
           if (found) {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
+          } else {
+            setCurrentPlan(UNSUBSCRIBED_PLAN);
+            localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
           }
           if (planResult.data.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
         } else {
-          const freePlan = PRICING_PLANS.find(p => p.id === 'free');
-          if (freePlan) setCurrentPlan(freePlan);
-          localStorage.setItem('AFRIVOICE_PLAN_ID', 'free');
+          setCurrentPlan(UNSUBSCRIBED_PLAN);
+          localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
         }
         if (quotaResult.data?.bonus_seconds != null) {
           setBonusSeconds(quotaResult.data.bonus_seconds as number);
@@ -555,7 +573,7 @@ const App: React.FC = () => {
     }
 
     // 🔒 PAYWALL: Vérifier que l'utilisateur a un forfait payé
-    if (currentPlan.id === 'free') {
+    if (currentPlan.id === 'none' || quota.maxSeconds <= 0) {
       setActiveTab('pricing');
       addToast(
         'warning',
@@ -1042,35 +1060,26 @@ const App: React.FC = () => {
                         {isEn ? 'Country / Accent' : 'Pays / Accent'}
                       </label>
                       <span className="text-[10px] font-mono text-zinc-400 font-bold">
-                        {currentPlan.id === 'free' ? '5/20' : currentPlan.id === 'creator' ? '10/20' : '20/20'}
-                        {currentPlan.id !== 'pro' && ' 🔒'}
+                        {currentPlan.id === 'none' ? '0/20 🔒' : (currentPlan.id === 'starter' || currentPlan.id === 'free') ? '5/20 🔒' : currentPlan.id === 'creator' ? '10/20 🔒' : '20/20'}
                       </span>
                     </div>
                     <select
                       value={selectedCountry.id}
                       onChange={(e) => {
                         const targetId = e.target.value;
-                        const accessibleIds = getAccessibleCountryIds(currentPlan.id as 'free' | 'creator' | 'pro');
-                        if (!accessibleIds.includes(targetId)) {
-                          addToast(
-                            'warning',
-                            isEn ? '🔒 Plan Upgrade Required' : '🔒 Forfait Supérieur Requis',
-                            isEn ? 'Upgrade your plan to unlock more countries.' : 'Passez au forfait supérieur pour débloquer plus de pays.'
-                          );
-                          setActiveTab('pricing');
-                          return;
-                        }
                         const country = COUNTRIES.find((c) => c.id === targetId);
                         if (country) {
                           setSelectedCountry(country);
                           // Auto-select first available voice for new country
                           const voices = getVoicesForCountry(targetId);
                           const first = voices.find(v => {
-                            if (currentPlan.id === 'free') return v.tier === 'natural';
+                            if (currentPlan.id === 'starter' || currentPlan.id === 'free') return v.tier === 'natural';
                             if (currentPlan.id === 'creator') return v.tier === 'natural' || v.tier === 'dynamic';
-                            return true;
+                            if (currentPlan.id === 'pro') return true;
+                            return false;
                           });
                           if (first) setSettings(s => ({ ...s, selectedVoiceId: first.voiceId, gender: first.gender }));
+                          else if (voices.length > 0) setSettings(s => ({ ...s, selectedVoiceId: voices[0].voiceId, gender: voices[0].gender }));
                         }
                       }}
                       className={`w-full border rounded-2xl px-4 py-3.5 text-sm font-bold outline-none transition-colors cursor-pointer ${
@@ -1080,8 +1089,8 @@ const App: React.FC = () => {
                       }`}
                     >
                       {COUNTRIES.map((c) => {
-                        const accessibleIds = getAccessibleCountryIds(currentPlan.id as 'free' | 'creator' | 'pro');
-                        const isLockedCountry = !accessibleIds.includes(c.id);
+                        const accessibleIds = getAccessibleCountryIds(currentPlan.id);
+                        const isLockedCountry = currentPlan.id !== 'none' && !accessibleIds.includes(c.id);
                         return (
                           <option key={c.id} value={c.id}>
                             {c.flag} {c.name} ({c.primaryLanguage}) {isLockedCountry ? '🔒' : ''}
@@ -1133,15 +1142,17 @@ const App: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {availableVoicesForCountry.map((voice) => {
                       const isVoiceLocked = (() => {
+                        if (currentPlan.id === 'none') return true; // Sans abonnement => toutes les voix sont verrouillées pour sélection
                         if (currentPlan.id === 'pro') return false;
                         if (currentPlan.id === 'creator') return voice.tier === 'premium';
-                        return voice.tier !== 'natural';
+                        if (currentPlan.id === 'starter' || currentPlan.id === 'free') return voice.tier !== 'natural';
+                        return true;
                       })();
                       return (
                         <VoiceCard
                           key={voice.voiceId}
                           voice={voice}
-                          isSelected={selectedIdentity?.voiceId === voice.voiceId}
+                          isSelected={selectedIdentity?.voiceId === voice.voiceId && !isVoiceLocked}
                           isLocked={isVoiceLocked}
                           isDark={isDark}
                           isEn={isEn}
@@ -1154,12 +1165,20 @@ const App: React.FC = () => {
                             }));
                           }}
                           onLockedClick={() => {
-                            const neededPlan = voice.tier === 'premium' ? 'PRO' : 'CREATOR';
-                            addToast(
-                              'warning',
-                              isEn ? `🔒 ${neededPlan} Plan Required` : `🔒 Forfait ${neededPlan} Requis`,
-                              isEn ? `Upgrade to ${neededPlan} to unlock ${voice.persona}.` : `Passez au forfait ${neededPlan} pour débloquer ${voice.persona}.`
-                            );
+                            if (currentPlan.id === 'none') {
+                              addToast(
+                                'warning',
+                                isEn ? '🔒 Subscription Required' : '🔒 Abonnement Requis',
+                                isEn ? 'Please subscribe to a plan to select and generate voices.' : 'Veuillez souscrire à un forfait pour sélectionner et générer des voix.'
+                              );
+                            } else {
+                              const neededPlan = voice.tier === 'premium' ? 'PRO' : 'CREATOR';
+                              addToast(
+                                'warning',
+                                isEn ? `🔒 ${neededPlan} Plan Required` : `🔒 Forfait ${neededPlan} Requis`,
+                                isEn ? `Upgrade to ${neededPlan} to unlock ${voice.persona}.` : `Passez au forfait ${neededPlan} pour débloquer ${voice.persona}.`
+                              );
+                            }
                             setActiveTab('pricing');
                           }}
                         />
@@ -1641,7 +1660,7 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
                 {(isEn ? PRICING_PLANS_EN : PRICING_PLANS).map((plan) => {
-                  const isActivePlan = currentPlan.id === plan.id;
+                  const isActivePlan = currentPlan.id === plan.id || (currentPlan.id === 'free' && plan.id === 'starter');
                   return (
                     <div
                       key={plan.id}

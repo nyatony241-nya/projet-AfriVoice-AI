@@ -1086,21 +1086,24 @@ export function getAllVoices(): VoiceIdentity[] {
 }
 
 /** Get voices accessible for a given plan */
-export function getAccessibleVoices(planId: 'free' | 'creator' | 'pro'): VoiceIdentity[] {
+export function getAccessibleVoices(planId: string): VoiceIdentity[] {
   const accessibleCountries = getAccessibleCountryIds(planId);
+  if (accessibleCountries.length === 0) return [];
   return getAllVoices().filter((v) => {
     if (!accessibleCountries.includes(v.countryId)) return false;
-    if (planId === 'free') return v.tier === 'natural';
+    if (planId === 'starter' || planId === 'free') return v.tier === 'natural';
     if (planId === 'creator') return v.tier === 'natural' || v.tier === 'dynamic';
-    return true; // pro gets all
+    if (planId === 'pro') return true;
+    return false;
   });
 }
 
 /** Get accessible countries for a plan */
-export function getAccessibleCountryIds(planId: 'free' | 'creator' | 'pro'): string[] {
-  if (planId === 'free') return STARTER_COUNTRIES;
+export function getAccessibleCountryIds(planId: string): string[] {
+  if (planId === 'starter' || planId === 'free') return STARTER_COUNTRIES;
   if (planId === 'creator') return CREATOR_COUNTRIES;
-  return PRO_COUNTRIES;
+  if (planId === 'pro') return PRO_COUNTRIES;
+  return [];
 }
 
 /** Migrate an old history item to the closest voice_id */
