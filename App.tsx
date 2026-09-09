@@ -770,6 +770,8 @@ const App: React.FC = () => {
         isDark={isDark}
         language={language}
         onSelectPack={handleSelectQuotaPack}
+        currentPlanId={currentPlan.id}
+        onUpgrade={() => setIsPaymentModalOpen(true)}
       />
 
       {selectedPlanForPayment && (

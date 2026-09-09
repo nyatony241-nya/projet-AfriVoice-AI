@@ -21,6 +21,8 @@ interface RechargeModalProps {
   isDark: boolean;
   language?: 'fr' | 'en';
   onSelectPack: (pack: QuotaPack) => void;
+  currentPlanId?: string;       // ← NOUVEAU : pour bloquer les free users
+  onUpgrade?: () => void;       // ← NOUVEAU : ouvre la modal d'upgrade
 }
 
 export const QUOTA_PACKS: QuotaPack[] = [
@@ -72,9 +74,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
   isDark,
   language = 'fr',
   onSelectPack,
+  currentPlanId = 'free',
+  onUpgrade,
 }) => {
   if (!isOpen) return null;
   const isEn = language === 'en';
+  const isFree = !currentPlanId || currentPlanId === 'free';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
@@ -102,6 +107,63 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
           </svg>
         </button>
 
+        {/* ══════════════════════════════════════════ */}
+        {/* GATE : Utilisateur sur plan GRATUIT       */}
+        {/* ══════════════════════════════════════════ */}
+        {isFree ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            {/* Icône cadenas */}
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+              style={{ background: 'linear-gradient(135deg, #EA580C22, #EA580C44)' }}>
+              <svg className="w-10 h-10 text-[#EA580C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#EA580C]/15 text-[#EA580C] mb-4">
+              {isEn ? '🔒 Subscription Required' : '🔒 Abonnement Requis'}
+            </span>
+
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-3">
+              {isEn ? 'Recharges for Subscribers Only' : 'Recharges réservées aux abonnés'}
+            </h2>
+
+            <p className={`text-sm max-w-md mx-auto mb-8 leading-relaxed ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
+              {isEn
+                ? 'You need an active paid plan (Starter, Creator, or Pro) to purchase quota recharges. Subscribe now and unlock extra minutes anytime.'
+                : 'Vous devez avoir un forfait actif (Starter, Creator ou Pro) pour acheter des recharges de quota. Souscrivez maintenant et rechargez quand vous voulez.'}
+            </p>
+
+            {/* Plans disponibles à l'upgrade */}
+            <div className={`w-full rounded-2xl p-5 mb-6 border ${isDark ? 'bg-white/5 border-white/10' : 'bg-zinc-50 border-zinc-200'}`}>
+              <p className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-4 text-center">
+                {isEn ? 'Choose a plan to unlock recharges' : 'Choisissez un forfait pour déverrouiller les recharges'}
+              </p>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                {[
+                  { name: 'Starter', price: '1 900 FCFA', minutes: '15 min' },
+                  { name: 'Creator', price: '4 900 FCFA', minutes: '45 min' },
+                  { name: 'Pro', price: '8 900 FCFA', minutes: '120 min' },
+                ].map((plan) => (
+                  <div key={plan.name} className={`rounded-xl p-3 border ${isDark ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                    <p className="text-xs font-black">{plan.name}</p>
+                    <p className="text-[10px] text-[#EA580C] font-bold mt-1">{plan.minutes}/mois</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">{plan.price}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => { onClose(); onUpgrade?.(); }}
+              className="px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-wider bg-[#EA580C] text-white hover:bg-[#C2410C] transition-all shadow-lg shadow-[#EA580C]/20 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {isEn ? '🚀 Upgrade Now — Unlock Recharges' : '🚀 Souscrire Maintenant — Débloquer les Recharges'}
+            </button>
+          </div>
+        ) : (
+          <>
         {/* Header Section */}
         <div className="text-center mb-8">
           <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#ccff00]/15 text-black dark:text-[#ccff00] mb-3">
@@ -205,6 +267,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             ? '🔒 Safe payment via Mobile Money & Cards. Minutes are added immediately to your balance.'
             : '🔒 Paiement sécurisé par Mobile Money & Cartes. Les minutes s’ajoutent immédiatement à votre solde.'}
         </p>
+          </>
+        )}
       </div>
     </div>
   );

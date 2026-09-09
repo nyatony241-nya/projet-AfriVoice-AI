@@ -1,6 +1,12 @@
 {
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "crons": [
+    {
+      "path": "/api/cron-monthly-reset",
+      "schedule": "5 0 1 * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/(prd_.*)",
