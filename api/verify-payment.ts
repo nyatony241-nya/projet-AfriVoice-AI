@@ -63,7 +63,15 @@ export default async function handler(req: any, res: any) {
 
     if (planData) {
       // Vérifier que le plan correspond à l'item demandé ou qu'il est supérieur
-      const planHierarchy: Record<string, number> = { free: 1, creator: 2, pro: 3 };
+      const planHierarchy: Record<string, number> = {
+        free: 1,
+        starter: 1,
+        prd_n6d89d8s: 1,
+        creator: 2,
+        prd_f639rpw2: 2,
+        pro: 3,
+        prd_pq817d6j: 3,
+      };
       const requestedLevel = planHierarchy[itemId] || 0;
       const activatedLevel = planHierarchy[planData.plan_id] || 0;
 

@@ -43,17 +43,76 @@ const App: React.FC = () => {
   // Handle payment return from Chariow — vérification serveur
   useEffect(() => {
     const applyLocally = async (itemId: string) => {
-      const foundPlan = PRICING_PLANS.find((p) => p.id === itemId);
-      if (foundPlan) {
-        setCurrentPlan(foundPlan);
-        setUsedSeconds(0);
-        triggerCelebration();
-        addToast('success', 'Forfait Activé !', `Forfait ${foundPlan.name} actif.`);
-        return;
+      const MAP_TO_PLAN: Record<string, string> = {
+        'starter': 'starter',
+        'free': 'starter',
+        'prd_n6d89d8s': 'starter',
+        'creator': 'creator',
+        'prd_f639rpw2': 'creator',
+        'pro': 'pro',
+        'prd_pq817d6j': 'pro',
+      };
+
+      const planId = MAP_TO_PLAN[itemId];
+      if (planId) {
+        const foundPlan = PRICING_PLANS.find((p) => p.id === planId);
+        if (foundPlan) {
+          setCurrentPlan(foundPlan);
+          setUsedSeconds(0);
+          localStorage.setItem('AFRIVOICE_PLAN_ID', planId);
+
+          // Activer immédiatement dans Supabase côté client en cas de délai du webhook
+          try {
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            if (currentSession?.user?.email) {
+              const activatedAt = new Date();
+              const expiresAt = new Date(activatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+              const limitMap: Record<string, number> = { starter: 600, creator: 1800, pro: 3600 };
+
+              await supabase.from('user_plans').upsert(
+                {
+                  email: currentSession.user.email,
+                  plan_id: planId,
+                  activated_at: activatedAt.toISOString(),
+                  expires_at: expiresAt.toISOString(),
+                  is_active: true,
+                  updated_at: activatedAt.toISOString(),
+                },
+                { onConflict: 'email' }
+              );
+
+              await supabase.from('user_quotas').upsert(
+                {
+                  email: currentSession.user.email,
+                  monthly_limit: limitMap[planId] || 600,
+                  seconds_used: 0,
+                  updated_at: activatedAt.toISOString(),
+                },
+                { onConflict: 'email' }
+              );
+            }
+          } catch (sbErr) {
+            console.warn('[Paiement] Erreur activation locale Supabase:', sbErr);
+          }
+
+          triggerCelebration();
+          addToast('success', 'Forfait Activé !', `Forfait ${foundPlan.name} actif (10 min/mois).`);
+          return;
+        }
       }
-      const foundPack = QUOTA_PACKS.find((p) => p.id === itemId);
+
+      const MAP_TO_BOOSTER: Record<string, string> = {
+        'starter_booster': 'starter_booster',
+        'prd_221tec74': 'starter_booster',
+        'creator_booster': 'creator_booster',
+        'prd_9zvjwbz5': 'creator_booster',
+        'pro_booster': 'pro_booster',
+        'prd_78vr0y1w': 'pro_booster',
+      };
+
+      const boosterId = MAP_TO_BOOSTER[itemId] || itemId;
+      const foundPack = QUOTA_PACKS.find((p) => p.id === boosterId);
       if (foundPack) {
-        // Recharger les bonus depuis Supabase pour avoir la valeur exacte (cumulée)
         try {
           const { data: { session: currentSession } } = await supabase.auth.getSession();
           if (currentSession?.user?.email) {
@@ -62,11 +121,18 @@ const App: React.FC = () => {
               .select('bonus_seconds')
               .eq('email', currentSession.user.email)
               .maybeSingle();
-            if (quotaData?.bonus_seconds != null) {
-              setBonusSeconds(quotaData.bonus_seconds as number);
-            } else {
-              setBonusSeconds((prev) => prev + foundPack.seconds);
-            }
+            const currentBonus = (quotaData?.bonus_seconds as number) || bonusSeconds || 0;
+            const newBonus = currentBonus + foundPack.seconds;
+            setBonusSeconds(newBonus);
+
+            await supabase.from('user_quotas').upsert(
+              {
+                email: currentSession.user.email,
+                bonus_seconds: newBonus,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'email' }
+            );
           } else {
             setBonusSeconds((prev) => prev + foundPack.seconds);
           }
@@ -74,9 +140,10 @@ const App: React.FC = () => {
           setBonusSeconds((prev) => prev + foundPack.seconds);
         }
         triggerCelebration();
-        addToast('success', `Recharge +${foundPack.minutes} Min ajoutées !`, `Votre quota a été crédité de ${foundPack.minutes} minutes supplémentaires. Bonne création !`);
+        addToast('success', `Recharge +${foundPack.minutes} Min ajoutées !`, `Votre quota a été crédité de ${foundPack.minutes} minutes supplémentaires.`);
         return;
       }
+
       triggerCelebration();
       addToast('success', 'Paiement Confirmé !', 'Votre achat a été validé.');
     };
