@@ -419,11 +419,11 @@ const App: React.FC = () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setLoadingAuth(false);
-      // 🔒 Charger le plan payé depuis Supabase + quota bonus depuis Supabase
+      // 🔒 Charger le plan payé depuis Supabase + quota complet (monthly_limit, seconds_used, bonus_seconds)
       if (session?.user?.email) {
         const [planResult, quotaResult] = await Promise.all([
           supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
-          supabase.from('user_quotas').select('monthly_limit, bonus_seconds').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_quotas').select('monthly_limit, seconds_used, bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
         const planId = planResult.data?.plan_id;
         const monthlyLimit = quotaResult.data?.monthly_limit ?? 0;
@@ -444,6 +444,12 @@ const App: React.FC = () => {
           setCurrentPlan(UNSUBSCRIBED_PLAN);
           localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
         }
+        // ✅ Charger les secondes consommées réelles depuis Supabase (source de vérité)
+        if (quotaResult.data?.seconds_used != null) {
+          const dbSeconds = quotaResult.data.seconds_used as number;
+          setUsedSeconds(dbSeconds);
+          localStorage.setItem(QUOTA_STORAGE_KEY, String(dbSeconds));
+        }
         if (quotaResult.data?.bonus_seconds != null) {
           setBonusSeconds(quotaResult.data.bonus_seconds as number);
         }
@@ -454,11 +460,11 @@ const App: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-      // 🔒 Recharger le plan à chaque changement d'état d'auth
+      // 🔒 Recharger le plan et le quota à chaque changement d'état d'auth
       if (session?.user?.email) {
         const [planResult, quotaResult] = await Promise.all([
           supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
-          supabase.from('user_quotas').select('monthly_limit, bonus_seconds').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_quotas').select('monthly_limit, seconds_used, bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
         const planId = planResult.data?.plan_id;
         const monthlyLimit = quotaResult.data?.monthly_limit ?? 0;
@@ -477,6 +483,12 @@ const App: React.FC = () => {
         } else {
           setCurrentPlan(UNSUBSCRIBED_PLAN);
           localStorage.setItem('AFRIVOICE_PLAN_ID', 'none');
+        }
+        // ✅ Charger les secondes consommées réelles depuis Supabase (source de vérité)
+        if (quotaResult.data?.seconds_used != null) {
+          const dbSeconds = quotaResult.data.seconds_used as number;
+          setUsedSeconds(dbSeconds);
+          localStorage.setItem(QUOTA_STORAGE_KEY, String(dbSeconds));
         }
         if (quotaResult.data?.bonus_seconds != null) {
           setBonusSeconds(quotaResult.data.bonus_seconds as number);
@@ -757,7 +769,22 @@ const App: React.FC = () => {
 
       // Account for exact audio duration inside Quota safety tracker
       const estimatedSeconds = Math.max(5, Math.round(buffer.duration || script.length / 14));
-      setUsedSeconds((prev) => prev + estimatedSeconds);
+      setUsedSeconds((prev) => {
+        const newTotal = prev + estimatedSeconds;
+        // ✅ Persister seconds_used dans Supabase (source de vérité) — survit aux rechargements
+        if (session?.user?.email) {
+          supabase
+            .from('user_quotas')
+            .upsert(
+              { email: session.user.email, seconds_used: newTotal, updated_at: new Date().toISOString() },
+              { onConflict: 'email', ignoreDuplicates: false }
+            )
+            .then(({ error }) => {
+              if (error) console.warn('[Quota] Erreur persistance seconds_used:', error.message);
+            });
+        }
+        return newTotal;
+      });
 
 
 
