@@ -483,6 +483,15 @@ const App: React.FC = () => {
 
   // Recharge : Ouvre la modal des 3 catégories de quota au choix de l'utilisateur
   const handleTopUpQuota = () => {
+    if (currentPlan.id === 'none') {
+      setActiveTab('pricing');
+      addToast(
+        'info',
+        isEn ? 'Subscription Required' : 'Abonnement Requis',
+        isEn ? 'Please choose a plan to start generating voices.' : 'Veuillez choisir un forfait pour commencer à générer des voix.'
+      );
+      return;
+    }
     setShowRechargeModal(true);
   };
 
@@ -1368,6 +1377,8 @@ const App: React.FC = () => {
                         <div className="w-5 h-5 border-[3px] border-black border-t-transparent dark:border-t-transparent rounded-full animate-spin" />
                         <span>{isEn ? 'SYNTHESIS IN PROGRESS...' : 'SYNTHÈSE EN COURS...'}</span>
                       </div>
+                    ) : currentPlan.id === 'none' ? (
+                      isEn ? '🔒 SUBSCRIPTION REQUIRED • CHOOSE A PLAN' : '🔒 ABONNEMENT REQUIS • CHOISIR UN FORFAIT'
                     ) : usedSeconds >= quota.maxSeconds ? (
                       isEn ? '🛑 QUOTA REACHED • TOP-UP REQUIRED' : '🛑 PLAFOND ATTEINT • RECHARGE REQUISE'
                     ) : (
