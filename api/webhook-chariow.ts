@@ -156,6 +156,32 @@ export default async function handler(req: any, res: any) {
       if (error) {
         console.error('[Webhook Chariow] Erreur upsert plan:', error);
       }
+
+      // ✅ Mettre à jour monthly_limit selon le plan activé
+      // free = Starter (10 min = 600s), creator = 30 min (1800s), pro = 60 min (3600s)
+      const PLAN_LIMITS: Record<string, number> = {
+        'free':    600,   // Starter — 10 min
+        'creator': 1800,  // Creator — 30 min
+        'pro':     3600,  // Pro — 60 min
+      };
+      const newLimit = PLAN_LIMITS[planId];
+      if (newLimit) {
+        const { error: quotaError } = await supabase
+          .from('user_quotas')
+          .upsert(
+            {
+              email: userEmail,
+              monthly_limit: newLimit,
+              seconds_used: 0,        // Reset à 0 lors de l'activation
+              reset_date: new Date().toISOString().slice(0, 10).slice(0, 8) + '01', // 1er du mois
+              updated_at: activatedAt.toISOString(),
+            },
+            { onConflict: 'email', ignoreDuplicates: false }
+          );
+        if (quotaError) {
+          console.error('[Webhook Chariow] Erreur mise à jour quota:', quotaError);
+        }
+      }
     }
 
     console.log(`✅ [Webhook Chariow] ${eventType} traité : ${userEmail} → ${planId} (commande ${chariowOrderId})`);

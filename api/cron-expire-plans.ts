@@ -76,11 +76,11 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ error: 'Erreur mise à jour base de données' });
     }
 
-    // 3. Remettre le quota mensuel à la limite gratuite (300 secondes = 5 min)
+    // 3. Remettre le quota à 0 — Aucune minute sans abonnement actif
     const { error: quotaError } = await supabase
       .from('user_quotas')
       .update({
-        monthly_limit: 300,
+        monthly_limit: 0,  // Aucune minute sans abonnement
         updated_at: now,
       })
       .in('email', expiredEmails);
