@@ -135,6 +135,10 @@ export default async function handler(req: any, res: any) {
       }
     } else {
       // Activer / upgrader le plan
+      // expires_at = aujourd'hui + 30 jours (renouvellement mensuel)
+      const activatedAt = new Date();
+      const expiresAt = new Date(activatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
       const { error } = await supabase
         .from('user_plans')
         .upsert(
@@ -142,8 +146,10 @@ export default async function handler(req: any, res: any) {
             email: userEmail,
             plan_id: planId,
             chariow_order_id: chariowOrderId,
-            activated_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            activated_at: activatedAt.toISOString(),
+            expires_at: expiresAt.toISOString(),
+            is_active: true,
+            updated_at: activatedAt.toISOString(),
           },
           { onConflict: 'email', ignoreDuplicates: false }
         );

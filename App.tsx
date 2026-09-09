@@ -169,6 +169,8 @@ const App: React.FC = () => {
   const [showQuotaError, setShowQuotaError] = useState(false);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  // Date d'expiration de l'abonnement (null = gratuit ou inconnu)
+  const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
 
   // Safety Rails: Quota & Rate Limit state
   const [usedSeconds, setUsedSeconds] = useState<number>(0);
@@ -347,7 +349,7 @@ const App: React.FC = () => {
       // 🔒 Charger le plan payé depuis Supabase + quota bonus depuis Supabase
       if (session?.user?.email) {
         const [planResult, quotaResult] = await Promise.all([
-          supabase.from('user_plans').select('plan_id').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
           supabase.from('user_quotas').select('bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
         if (planResult.data?.plan_id) {
@@ -356,6 +358,7 @@ const App: React.FC = () => {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
           }
+          if (planResult.data.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
         } else {
           // Aucun plan payé → forcer FREE
           const freePlan = PRICING_PLANS.find(p => p.id === 'free');
@@ -375,7 +378,7 @@ const App: React.FC = () => {
       // 🔒 Recharger le plan à chaque changement d'état d'auth
       if (session?.user?.email) {
         const [planResult, quotaResult] = await Promise.all([
-          supabase.from('user_plans').select('plan_id').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_plans').select('plan_id, expires_at').eq('email', session.user.email).maybeSingle(),
           supabase.from('user_quotas').select('bonus_seconds').eq('email', session.user.email).maybeSingle(),
         ]);
         if (planResult.data?.plan_id) {
@@ -384,6 +387,7 @@ const App: React.FC = () => {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
           }
+          if (planResult.data.expires_at) setPlanExpiresAt(planResult.data.expires_at as string);
         } else {
           const freePlan = PRICING_PLANS.find(p => p.id === 'free');
           if (freePlan) setCurrentPlan(freePlan);
@@ -845,6 +849,46 @@ const App: React.FC = () => {
                 onTopUp={handleTopUpQuota}
                 language={language}
               />
+
+              {/* ⚠️ Bannière d'expiration d'abonnement — visible si < 7 jours restants */}
+              {planExpiresAt && currentPlan.id !== 'free' && (() => {
+                const daysLeft = Math.ceil((new Date(planExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                if (daysLeft > 7 || daysLeft <= 0) return null;
+                const isUrgent = daysLeft <= 3;
+                return (
+                  <div className={`mt-3 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border animate-in fade-in slide-in-from-top-2 duration-300 ${
+                    isUrgent
+                      ? isDark ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'
+                      : isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{isUrgent ? '🚨' : '⏰'}</span>
+                      <div>
+                        <p className={`text-sm font-black ${isUrgent ? 'text-red-400' : 'text-amber-500'}`}>
+                          {isEn
+                            ? `Your ${currentPlan.name} subscription expires in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`
+                            : `Votre abonnement ${currentPlan.name} expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`}
+                        </p>
+                        <p className={`text-xs mt-0.5 ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                          {isEn
+                            ? 'Renew now to keep your quota and avoid losing access.'
+                            : 'Renouvelez maintenant pour conserver votre quota et éviter de perdre votre accès.'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setSelectedPlanForPayment(currentPlan); setIsPaymentModalOpen(true); }}
+                      className={`shrink-0 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                        isUrgent
+                          ? 'bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/20'
+                          : 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20'
+                      }`}
+                    >
+                      {isEn ? '🔄 Renew Now' : '🔄 Renouveler Maintenant'}
+                    </button>
+                  </div>
+                );
+              })()}
             </>
           )}
 
