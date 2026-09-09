@@ -39,16 +39,22 @@ function verifyChariowSignature(body: string, signature: string | undefined, sec
 export default async function handler(req: any, res: any) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Chariow-Signature');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // GET : health check pour Chariow (vérifie que l'endpoint est actif)
+  if (req.method === 'GET') {
+    return res.status(200).json({ status: 'ok', service: 'afrivoice-webhook-chariow', timestamp: new Date().toISOString() });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).send('Method Not Allowed');
   }
+
 
   const webhookSecret = process.env.CHARIOW_WEBHOOK_SECRET || '';
   const signature = req.headers['x-chariow-signature'] as string | undefined;
