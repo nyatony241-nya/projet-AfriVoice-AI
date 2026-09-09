@@ -26,6 +26,43 @@ const STORAGE_KEY = 'afrivoice_history_v1';
 const QUOTA_STORAGE_KEY = 'afrivoice_quota_v1';
 const MAX_HISTORY_ITEMS = 5;
 
+const safeSetStorage = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn(`[Storage] LocalStorage limit reached for key ${key}:`, e);
+  }
+};
+
+const safeSaveHistoryToLocalStorage = (historyItems: HistoryItem[]) => {
+  if (!historyItems || historyItems.length === 0) {
+    safeSetStorage(STORAGE_KEY, JSON.stringify([]));
+    return;
+  }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(historyItems));
+  } catch (err: any) {
+    console.warn('[Storage] LocalStorage quota exceeded on history. Sanitizing audio base64 data...', err?.message);
+    try {
+      const sanitized = historyItems.map((item, index) => {
+        if (index === 0 && item.audioData && item.audioData.length < 500000) {
+          return item;
+        }
+        const { audioData, ...rest } = item;
+        return rest as HistoryItem;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+    } catch {
+      try {
+        const metadataOnly = historyItems.map(({ audioData, ...rest }) => rest as HistoryItem);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(metadataOnly.slice(0, MAX_HISTORY_ITEMS)));
+      } catch {
+        // Safe fallback
+      }
+    }
+  }
+};
+
 const App: React.FC = () => {
   // Navigation & UI States
   const [activeTab, setActiveTab] = useState<'studio' | 'history' | 'pricing'>('studio');
@@ -512,21 +549,21 @@ const App: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Save history, quota, and bonus to localStorage
+  // Save history, quota, and bonus to localStorage safely
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    safeSaveHistoryToLocalStorage(history);
   }, [history]);
 
   useEffect(() => {
-    localStorage.setItem(QUOTA_STORAGE_KEY, String(usedSeconds));
+    safeSetStorage(QUOTA_STORAGE_KEY, String(usedSeconds));
   }, [usedSeconds]);
 
   useEffect(() => {
-    localStorage.setItem('AFRIVOICE_BONUS_SECONDS', String(bonusSeconds));
+    safeSetStorage('AFRIVOICE_BONUS_SECONDS', String(bonusSeconds));
   }, [bonusSeconds]);
 
   useEffect(() => {
-    localStorage.setItem('AFRIVOICE_PLAN_ID', currentPlan.id);
+    safeSetStorage('AFRIVOICE_PLAN_ID', currentPlan.id);
   }, [currentPlan]);
 
   useEffect(() => {
@@ -784,22 +821,41 @@ const App: React.FC = () => {
       const estimatedSeconds = Math.max(5, Math.round(buffer.duration || script.length / 14));
       setUsedSeconds((prev) => {
         const newTotal = prev + estimatedSeconds;
-        // ✅ Persister seconds_used dans Supabase (source de vérité) — survit aux rechargements
+        safeSetStorage(QUOTA_STORAGE_KEY, String(newTotal));
+        // ✅ Persister seconds_used dans Supabase avec email + user_id (source de vérité) — survit aux rechargements
         if (session?.user?.email) {
           supabase
             .from('user_quotas')
-            .upsert(
-              { email: session.user.email, seconds_used: newTotal, updated_at: new Date().toISOString() },
-              { onConflict: 'email', ignoreDuplicates: false }
-            )
-            .then(({ error }) => {
-              if (error) console.warn('[Quota] Erreur persistance seconds_used:', error.message);
+            .update({
+              seconds_used: newTotal,
+              user_id: session.user.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('email', session.user.email)
+            .then(({ error, count }) => {
+              if (error) {
+                console.warn('[Quota] Erreur update seconds_used:', error.message);
+              }
+              if (!error && (count === 0 || count === null)) {
+                supabase
+                  .from('user_quotas')
+                  .upsert(
+                    {
+                      email: session.user.email,
+                      user_id: session.user.id,
+                      seconds_used: newTotal,
+                      updated_at: new Date().toISOString()
+                    },
+                    { onConflict: 'email' }
+                  )
+                  .then(({ error: upsertErr }) => {
+                    if (upsertErr) console.warn('[Quota] Erreur upsert fallback seconds_used:', upsertErr.message);
+                  });
+              }
             });
         }
         return newTotal;
       });
-
-
 
       // Convert blob to base64 for history storage
       const reader = new FileReader();
@@ -856,7 +912,7 @@ const App: React.FC = () => {
     // Restore voice selection: use stored voiceId or migrate from country+gender
     const restoredVoiceId = item.voiceId || migrateToVoiceId(item.country.id, item.settings.gender);
     setSettings({ ...item.settings, selectedVoiceId: restoredVoiceId || undefined });
-    setStatus((prev) => ({ ...prev, audioUrl: item.audioData, error: null }));
+    setStatus((prev) => ({ ...prev, audioUrl: item.audioData || null, error: null }));
     setActiveTab('studio');
     addToast('info', 'Audio Rechargé', `Script et paramètres de ${item.country.name} importés dans le studio.`);
     window.scrollTo({ top: 0, behavior: 'smooth' });

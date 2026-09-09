@@ -20,15 +20,20 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
 }) => {
   const isEn = language === 'en';
   const isUnsubscribed = currentPlan.id === 'none' || quota.maxSeconds <= 0;
-  const percentage = isUnsubscribed
+
+  const maxSeconds = Math.max(0, quota.maxSeconds);
+  const remainingSeconds = isUnsubscribed ? 0 : Math.max(0, maxSeconds - quota.usedSeconds);
+
+  // Percentage of remaining quota (starts at 100% and decreases to 0% as quota is consumed)
+  const remainingPercentage = isUnsubscribed || maxSeconds <= 0
     ? 0
-    : Math.min(100, Math.round((quota.usedSeconds / Math.max(1, quota.maxSeconds)) * 100));
+    : Math.max(0, Math.min(100, Math.round((remainingSeconds / maxSeconds) * 100)));
 
-  const isHighUsage = !isUnsubscribed && percentage >= 80;
-  const isExhausted = !isUnsubscribed && percentage >= 100;
+  const isLowQuota = !isUnsubscribed && remainingPercentage <= 20 && remainingPercentage > 0;
+  const isExhausted = !isUnsubscribed && remainingSeconds <= 0;
 
-  const usedMinutes = (quota.usedSeconds / 60).toFixed(1);
-  const maxMinutes = (quota.maxSeconds / 60).toFixed(0);
+  const remainingMinutes = (remainingSeconds / 60).toFixed(1);
+  const maxMinutesFormatted = (maxSeconds / 60).toFixed(0);
 
   return (
     <div
@@ -41,9 +46,9 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
           ? isDark
             ? 'bg-red-500/10 border-red-500/30 shadow-xs'
             : 'bg-red-50 border-red-300 shadow-xs'
-          : isHighUsage
+          : isLowQuota
           ? isDark
-            ? 'bg-[#E2FF3B]/10 border-[#E2FF3B]/30'
+            ? 'bg-amber-500/10 border-amber-500/30'
             : 'bg-amber-50 border-amber-300'
           : isDark
           ? 'bg-[#14151C] border-white/10 shadow-sm'
@@ -60,8 +65,8 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
                   : 'bg-amber-100 text-amber-600'
                 : isExhausted
                 ? 'bg-red-500 text-white'
-                : isHighUsage
-                ? 'bg-[#E2FF3B] text-black'
+                : isLowQuota
+                ? 'bg-amber-400 text-black'
                 : 'bg-[#D4FF00]/15 text-[#D4FF00]'
             }`}
           >
@@ -84,16 +89,16 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
                     ? 'bg-zinc-700 text-zinc-200'
                     : isExhausted
                     ? 'bg-red-500 text-white'
-                    : isHighUsage
-                    ? 'bg-[#E2FF3B] text-black'
+                    : isLowQuota
+                    ? 'bg-amber-400 text-black'
                     : 'bg-[#16A34A] text-white'
                 }`}
               >
                 {isUnsubscribed
                   ? (isEn ? 'INACTIVE' : 'NON ABONNÉ')
                   : isExhausted
-                  ? (isEn ? '100% FULL' : '100% ATTEINT')
-                  : `${percentage}% ${isEn ? 'USED' : 'UTILISÉ'}`}
+                  ? (isEn ? '0% • EXHAUSTED' : '0% • ÉPUISÉ')
+                  : `${remainingPercentage}% ${isEn ? 'REMAINING' : 'DISPONIBLE'}`}
               </span>
             </div>
             <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700 font-bold">•</span>
@@ -103,8 +108,8 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
                   ? '0 min available • Choose a plan to unlock voice generation'
                   : '0 min disponible • Choisissez un forfait pour débloquer les voix'
                 : isEn
-                ? `Included: ${usedMinutes}m used / ${maxMinutes}m`
-                : `Inclus : ${usedMinutes}m sur ${maxMinutes}m`}
+                ? `Remaining: ${remainingMinutes}m out of ${maxMinutesFormatted}m`
+                : `Reste : ${remainingMinutes}m sur ${maxMinutesFormatted}m`}
             </p>
           </div>
         </div>
@@ -122,7 +127,7 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
         </button>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar — decreases from 100% down to 0% as quota is consumed */}
       <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden p-0.2">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
@@ -130,11 +135,11 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
               ? 'bg-zinc-600 opacity-20'
               : isExhausted
               ? 'bg-red-500'
-              : isHighUsage
-              ? 'bg-[#E2FF3B]'
+              : isLowQuota
+              ? 'bg-amber-400'
               : 'bg-[#D4FF00]'
           }`}
-          style={{ width: `${isUnsubscribed ? 0 : percentage}%` }}
+          style={{ width: `${isUnsubscribed ? 0 : remainingPercentage}%` }}
         />
       </div>
     </div>

@@ -173,7 +173,7 @@ export interface HistoryItem {
   country: Country;
   script: string;
   settings: VoiceSettings;
-  audioData: string; // Base64 encoded WAV/Audio
+  audioData?: string; // Base64 encoded WAV/Audio (optional if pruned for storage)
   /** Voice Registry ID utilisé pour cette génération */
   voiceId?: string;
 }
