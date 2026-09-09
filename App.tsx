@@ -508,9 +508,14 @@ const App: React.FC = () => {
   // ── 3 Variants Handler ──────────────────────────────
   const handleGenerateVariants = async () => {
     if (!script.trim() || status.isGenerating || isGeneratingVariants) return;
-    if (usedSeconds >= quota.maxSeconds) {
-      setShowRechargeModal(true);
-      addToast('warning', isEn ? 'Quota Exhausted' : 'Quota épuisé', isEn ? 'Please recharge to continue.' : 'Veuillez recharger pour continuer.');
+    if (currentPlan.id === 'none' || quota.maxSeconds <= 0 || usedSeconds >= quota.maxSeconds) {
+      setActiveTab('pricing');
+      setShowRechargeModal(usedSeconds >= quota.maxSeconds && currentPlan.id !== 'none');
+      addToast(
+        'warning',
+        isEn ? 'Subscription Required' : 'Forfait requis',
+        isEn ? 'Please subscribe to a plan to generate voices.' : 'Veuillez souscrire à un forfait pour générer des voix.'
+      );
       return;
     }
     setIsGeneratingVariants(true);
