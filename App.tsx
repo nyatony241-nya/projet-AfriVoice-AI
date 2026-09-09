@@ -327,7 +327,7 @@ const App: React.FC = () => {
       setLoadingAuth(false);
       // 🔒 Charger le plan payé depuis Supabase
       if (session?.user?.email) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('user_plans')
           .select('plan_id')
           .eq('email', session.user.email)
@@ -353,7 +353,7 @@ const App: React.FC = () => {
       setSession(session);
       // 🔒 Recharger le plan à chaque changement d'état d'auth
       if (session?.user?.email) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('user_plans')
           .select('plan_id')
           .eq('email', session.user.email)
