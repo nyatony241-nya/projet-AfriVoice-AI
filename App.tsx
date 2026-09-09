@@ -42,7 +42,7 @@ const App: React.FC = () => {
 
   // Handle payment return from Chariow — vérification serveur
   useEffect(() => {
-    const applyLocally = (itemId: string) => {
+    const applyLocally = async (itemId: string) => {
       const foundPlan = PRICING_PLANS.find((p) => p.id === itemId);
       if (foundPlan) {
         setCurrentPlan(foundPlan);
@@ -53,9 +53,28 @@ const App: React.FC = () => {
       }
       const foundPack = QUOTA_PACKS.find((p) => p.id === itemId);
       if (foundPack) {
-        setBonusSeconds((prev) => prev + foundPack.seconds);
+        // Recharger les bonus depuis Supabase pour avoir la valeur exacte (cumulée)
+        try {
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (currentSession?.user?.email) {
+            const { data: quotaData } = await supabase
+              .from('user_quotas')
+              .select('bonus_seconds')
+              .eq('email', currentSession.user.email)
+              .maybeSingle();
+            if (quotaData?.bonus_seconds != null) {
+              setBonusSeconds(quotaData.bonus_seconds as number);
+            } else {
+              setBonusSeconds((prev) => prev + foundPack.seconds);
+            }
+          } else {
+            setBonusSeconds((prev) => prev + foundPack.seconds);
+          }
+        } catch {
+          setBonusSeconds((prev) => prev + foundPack.seconds);
+        }
         triggerCelebration();
-        addToast('success', `Recharge +${foundPack.minutes} Min !`, `+${foundPack.minutes} minutes ajoutées.`);
+        addToast('success', `Recharge +${foundPack.minutes} Min ajoutées !`, `Votre quota a été crédité de ${foundPack.minutes} minutes supplémentaires. Bonne création !`);
         return;
       }
       triggerCelebration();
@@ -66,7 +85,7 @@ const App: React.FC = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        if (!token) { applyLocally(itemId); return; }
+        if (!token) { await applyLocally(itemId); return; }
 
         const isDev = import.meta.env.DEV;
         const baseUrl = isDev ? 'http://localhost:3005' : '';
@@ -79,14 +98,14 @@ const App: React.FC = () => {
         const result = await resp.json();
 
         if (result.verified) {
-          applyLocally(result.planId || itemId);
+          await applyLocally(result.planId || itemId);
         } else if (result.pending && attempts < 4) {
           setTimeout(() => verifyWithRetry(itemId, attempts + 1), 3000);
         } else {
-          applyLocally(itemId);
+          await applyLocally(itemId);
         }
       } catch {
-        applyLocally(itemId);
+        await applyLocally(itemId);
       }
     };
 
@@ -325,24 +344,26 @@ const App: React.FC = () => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setLoadingAuth(false);
-      // 🔒 Charger le plan payé depuis Supabase
+      // 🔒 Charger le plan payé depuis Supabase + quota bonus depuis Supabase
       if (session?.user?.email) {
-        const { data, error } = await supabase
-          .from('user_plans')
-          .select('plan_id')
-          .eq('email', session.user.email)
-          .maybeSingle();
-        if (data?.plan_id) {
-          const found = PRICING_PLANS.find(p => p.id === data.plan_id);
+        const [planResult, quotaResult] = await Promise.all([
+          supabase.from('user_plans').select('plan_id').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_quotas').select('bonus_seconds').eq('email', session.user.email).maybeSingle(),
+        ]);
+        if (planResult.data?.plan_id) {
+          const found = PRICING_PLANS.find(p => p.id === planResult.data!.plan_id);
           if (found) {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
           }
         } else {
-          // Aucun plan payé → forcer FREE (plan restreint, pas accès complet)
+          // Aucun plan payé → forcer FREE
           const freePlan = PRICING_PLANS.find(p => p.id === 'free');
           if (freePlan) setCurrentPlan(freePlan);
           localStorage.setItem('AFRIVOICE_PLAN_ID', 'free');
+        }
+        if (quotaResult.data?.bonus_seconds != null) {
+          setBonusSeconds(quotaResult.data.bonus_seconds as number);
         }
       }
     });
@@ -353,13 +374,12 @@ const App: React.FC = () => {
       setSession(session);
       // 🔒 Recharger le plan à chaque changement d'état d'auth
       if (session?.user?.email) {
-        const { data, error } = await supabase
-          .from('user_plans')
-          .select('plan_id')
-          .eq('email', session.user.email)
-          .maybeSingle();
-        if (data?.plan_id) {
-          const found = PRICING_PLANS.find(p => p.id === data.plan_id);
+        const [planResult, quotaResult] = await Promise.all([
+          supabase.from('user_plans').select('plan_id').eq('email', session.user.email).maybeSingle(),
+          supabase.from('user_quotas').select('bonus_seconds').eq('email', session.user.email).maybeSingle(),
+        ]);
+        if (planResult.data?.plan_id) {
+          const found = PRICING_PLANS.find(p => p.id === planResult.data!.plan_id);
           if (found) {
             setCurrentPlan(found);
             localStorage.setItem('AFRIVOICE_PLAN_ID', found.id);
@@ -368,6 +388,9 @@ const App: React.FC = () => {
           const freePlan = PRICING_PLANS.find(p => p.id === 'free');
           if (freePlan) setCurrentPlan(freePlan);
           localStorage.setItem('AFRIVOICE_PLAN_ID', 'free');
+        }
+        if (quotaResult.data?.bonus_seconds != null) {
+          setBonusSeconds(quotaResult.data.bonus_seconds as number);
         }
       }
     });

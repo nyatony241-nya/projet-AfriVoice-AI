@@ -114,11 +114,20 @@ export default async function handler(req: any, res: any) {
     const bonusSeconds = BOOSTER_SECONDS[planId];
 
     if (isBooster && bonusSeconds) {
-      // Ajouter des secondes bonus à l'utilisateur
+      // Lire les bonus existants avant d'incrémenter (évite l'écrasement)
+      const { data: existing } = await supabase
+        .from('user_quotas')
+        .select('bonus_seconds')
+        .eq('email', userEmail)
+        .maybeSingle();
+
+      const currentBonus = (existing?.bonus_seconds as number) || 0;
+      const newBonus = currentBonus + bonusSeconds;
+
       const { error } = await supabase
         .from('user_quotas')
         .upsert(
-          { email: userEmail, bonus_seconds: bonusSeconds, chariow_order_id: chariowOrderId, updated_at: new Date().toISOString() },
+          { email: userEmail, bonus_seconds: newBonus, chariow_order_id: chariowOrderId, updated_at: new Date().toISOString() },
           { onConflict: 'email', ignoreDuplicates: false }
         );
       if (error) {
