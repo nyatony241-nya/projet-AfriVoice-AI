@@ -1,18 +1,19 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+require('dotenv').config({ path: '.env.local' });
+const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey; // We'll try to find it
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.argv[2];
 
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-async function test() {
-  console.log("Checking user_plans with service_role...");
-  const { data, error } = await supabaseAdmin.from('user_plans').select('*');
-  console.log("Plans:", data);
-  console.log("Error:", error);
+async function main() {
+  const { data: quotas, error: fetchErr } = await supabase.from('user_quotas').select('*');
+  if (fetchErr) {
+    console.error("Fetch Error:", fetchErr);
+    return;
+  }
+  console.log("Current quotas:");
+  console.table(quotas);
 }
 
-test();
+main();

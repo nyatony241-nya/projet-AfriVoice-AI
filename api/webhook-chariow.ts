@@ -36,6 +36,20 @@ function verifyChariowSignature(body: string, signature: string | undefined, sec
   }
 }
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+async function getRawBody(req: any): Promise<string> {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
 export default async function handler(req: any, res: any) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -55,12 +69,11 @@ export default async function handler(req: any, res: any) {
     return res.status(405).send('Method Not Allowed');
   }
 
-
   const webhookSecret = process.env.CHARIOW_WEBHOOK_SECRET || '';
   const signature = req.headers['x-chariow-signature'] as string | undefined;
 
   // Obtenir le body brut pour la vérification de signature
-  const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+  const rawBody = await getRawBody(req);
 
   if (!verifyChariowSignature(rawBody, signature, webhookSecret)) {
     console.warn('[Webhook Chariow] Signature invalide ou secrèt manquant');
@@ -72,7 +85,7 @@ export default async function handler(req: any, res: any) {
 
   let event: any;
   try {
-    event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    event = JSON.parse(rawBody);
   } catch {
     return res.status(400).json({ error: 'Corps de requête invalide' });
   }
