@@ -94,23 +94,23 @@ export default async function handler(req: any, res: any) {
   }
 
   const eventType = event?.type || event?.event;
-  const orderData = event?.data?.order || event?.order || event?.data;
+  const orderData = event?.data?.order || event?.order || event?.data || event?.sale;
 
   if (!eventType || !orderData) {
     return res.status(200).json({ received: true, processed: false, reason: 'Event non traité' });
   }
 
   // Traiter uniquement les paiements réussis
-  if (eventType !== 'order.paid' && eventType !== 'payment.success' && eventType !== 'order.completed') {
+  if (eventType !== 'order.paid' && eventType !== 'payment.success' && eventType !== 'order.completed' && eventType !== 'successful.sale') {
     return res.status(200).json({ received: true, processed: false, reason: `Event ${eventType} ignoré` });
   }
 
-  const productId = orderData.product_id || orderData.item_id || '';
-  const userEmail = orderData.customer_email || orderData.email || '';
+  const productId = orderData.product_id || orderData.item_id || orderData.product?.id || '';
+  const userEmail = orderData.customer_email || orderData.email || orderData.customer?.email || '';
   const chariowOrderId = orderData.id || orderData.order_id || '';
 
   if (!userEmail) {
-    console.error('[Webhook Chariow] Email client manquant dans le payload');
+    console.error('[Webhook Chariow] Email client manquant dans le payload', JSON.stringify(orderData).slice(0, 200));
     return res.status(200).json({ received: true, processed: false, reason: 'Email manquant' });
   }
 
