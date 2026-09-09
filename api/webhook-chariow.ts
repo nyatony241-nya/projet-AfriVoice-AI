@@ -105,18 +105,22 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ received: true, processed: false, reason: `Event ${eventType} ignoré` });
   }
 
-  const productId = orderData.product_id || orderData.item_id || orderData.product?.id || '';
-  const userEmail = orderData.customer_email || orderData.email || orderData.customer?.email || '';
+  // Recherche agressive du product_id
+  const productId = orderData.product_id || orderData.item_id || orderData.product?.id || event?.product?.id || event?.data?.product?.id || '';
+  
+  // Recherche agressive de l'email
+  const userEmail = orderData.customer_email || orderData.email || orderData.customer?.email || event?.customer?.email || event?.data?.customer?.email || '';
+  
   const chariowOrderId = orderData.id || orderData.order_id || '';
 
   if (!userEmail) {
-    console.error('[Webhook Chariow] Email client manquant dans le payload', JSON.stringify(orderData).slice(0, 200));
+    console.error('[Webhook Chariow] Email client manquant. Payload complet:', JSON.stringify(event));
     return res.status(200).json({ received: true, processed: false, reason: 'Email manquant' });
   }
 
   const planId = CHARIOW_PRODUCT_TO_PLAN[productId];
   if (!planId) {
-    console.warn(`[Webhook Chariow] Produit inconnu : ${productId}`);
+    console.warn(`[Webhook Chariow] Produit inconnu : ${productId}. Payload complet:`, JSON.stringify(event));
     return res.status(200).json({ received: true, processed: false, reason: `Produit ${productId} non mappé` });
   }
 
