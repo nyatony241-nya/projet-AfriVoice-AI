@@ -22,10 +22,15 @@ export default async function handler(req: any, res: any) {
   // Valider le token auth
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return res.status(503).json({ error: 'Service indisponible' });
+  }
+
+  if (!serviceRoleKey) {
+    console.error('[verify-payment] SUPABASE_SERVICE_ROLE_KEY manquante — opération admin refusée');
+    return res.status(500).json({ error: 'Configuration serveur incorrecte' });
   }
 
   const authHeader = req.headers.authorization;

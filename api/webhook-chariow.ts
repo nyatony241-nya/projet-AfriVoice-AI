@@ -51,9 +51,18 @@ async function getRawBody(req: any): Promise<string> {
 }
 
 export default async function handler(req: any, res: any) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  // ── CORS restrictif ──
+  const ALLOWED_ORIGINS = [
+    'https://afrivoice.site',
+    'https://www.afrivoice.site',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ];
+  const requestOrigin = req.headers?.origin || '';
+  if (ALLOWED_ORIGINS.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Chariow-Signature');
 
   if (req.method === 'OPTIONS') {
@@ -125,10 +134,10 @@ export default async function handler(req: any, res: any) {
 
   // Connexion Supabase avec la service_role key pour bypass RLS
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
   if (!supabaseUrl || !serviceRoleKey) {
-    console.error('[Webhook Chariow] Variables Supabase manquantes');
+    console.error('[Webhook Chariow] SUPABASE_SERVICE_ROLE_KEY manquante — opération admin refusée');
     return res.status(500).json({ error: 'Configuration serveur incorrecte' });
   }
 

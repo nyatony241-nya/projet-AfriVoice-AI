@@ -71,10 +71,20 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
 }
 
 export default async function handler(req: any, res: any) {
+  // ── CORS restrictif — uniquement le domaine de production et localhost ──
+  const ALLOWED_ORIGINS = [
+    'https://afrivoice.site',
+    'https://www.afrivoice.site',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ];
+  const requestOrigin = req.headers?.origin || '';
+  if (ALLOWED_ORIGINS.includes(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+  }
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -99,22 +109,21 @@ export default async function handler(req: any, res: any) {
       return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
     }
 
+    // ── Authentification obligatoire ─────────────────────────────────────
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-    if (supabaseUrl && supabaseAnonKey) {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
-        const authHeader = req.headers?.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-          const token = authHeader.split(' ')[1];
-          const { data: authData, error: authError } = await supabase.auth.getUser(token);
-          if (authError) {
-            console.warn('[AfriVoice] Supabase auth check failed (non-blocking):', authError?.message);
-          }
-        }
-      } catch (sbErr: any) {
-        console.warn('[AfriVoice] Supabase client init failed (non-blocking):', sbErr?.message);
-      }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return res.status(503).json({ error: "Service d'authentification indisponible." });
+    }
+    const authHeader = req.headers?.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: "Token d'authentification manquant." });
+    }
+    const token = authHeader.split(' ')[1];
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authData?.user) {
+      return res.status(401).json({ error: "Token d'authentification invalide ou expiré." });
     }
 
     // 1. Humanisation Phonétique du script si demandée
