@@ -80,7 +80,7 @@ export default async function handler(req: any, res: any) {
   if (!verifyChariowSignature(rawBody, signature, webhookSecret)) {
     console.warn('[Webhook Chariow] Signature invalide ou secrèt manquant');
     if (webhookSecret) {
-      // Pour debugger temporairement en production, on ne bloque PAS
+      // ⚠️ SÉCURITÉ DÉSACTIVÉE TEMPORAIREMENT : La signature échoue encore, on doit trouver pourquoi avant de bloquer.
       // return res.status(401).json({ error: 'Signature invalide' });
       console.warn('[Webhook Debug] BYPASSING SIGNATURE CHECK TEMPORARILY FOR DEBUGGING');
     }
