@@ -13,6 +13,7 @@ interface HeaderProps {
   onToggleLanguage?: () => void;
   onOpenAuditModal?: () => void;
   onOpenMobileSidebar?: () => void;
+  onOpenInstallModal?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -26,6 +27,7 @@ const Header: React.FC<HeaderProps> = ({
   onToggleLanguage,
   onOpenAuditModal,
   onOpenMobileSidebar,
+  onOpenInstallModal,
 }) => {
   const isDark = theme === 'dark';
 
@@ -202,6 +204,23 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           );
         })}
+      </div>
+
+      {/* Mobile Install App Banner (Visible only on mobile below lg) */}
+      <div className={`lg:hidden px-3 py-2 border-t ${isDark ? 'border-white/5 bg-[#0A0D14]' : 'border-[#E4E4E7] bg-white'}`}>
+        <button
+          onClick={onOpenInstallModal}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 ${
+            isDark
+              ? 'bg-zinc-800 text-white hover:bg-zinc-700 border border-white/10'
+              : 'bg-zinc-900 text-white hover:bg-zinc-800 border border-zinc-800'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          {language === 'en' ? 'Install App (Home Screen)' : 'Installer l\'App (Écran d\'accueil)'}
+        </button>
       </div>
     </header>
   );
