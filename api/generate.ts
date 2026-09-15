@@ -195,7 +195,12 @@ export default async function handler(req: any, res: any) {
       });
 
       // 4. Appel de l'API Gemini TTS native REST avec chunking
-      const MAX_CHARS_PER_CHUNK = 2000;
+      // ── Stratégie anti-cassure vocale ──────────────────────────────
+      // Gemini TTS supporte ~5000-6000 chars de transcript par appel.
+      // On monte le seuil à 4500 pour qu'un texte de 3min (~3000 chars)
+      // passe en UN SEUL appel → zéro changement de voix.
+      // Le chunking ne se déclenche que pour les textes très longs (5+ min).
+      const MAX_CHARS_PER_CHUNK = 4500;
       const scriptText = finalScript || script;
       const needsChunking = scriptText.length > MAX_CHARS_PER_CHUNK;
       const requestNonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -219,12 +224,20 @@ export default async function handler(req: any, res: any) {
         }
         if (currentChunk.trim()) chunks.push(currentChunk.trim());
 
+        // ── Instruction de continuité vocale pour les chunks ──
+        // Force Gemini à garder exactement le même ton/rythme/timbre
+        const continuityNote = `CRITICAL: Maintain the EXACT same voice tone, pitch, rhythm, speed, accent intensity and emotional energy throughout. Do not vary your delivery style at all.`;
+
         const audioChunks: string[] = [];
         for (let i = 0; i < chunks.length; i++) {
+          const chunkContinuity = i > 0 
+            ? `\n${continuityNote} This is a continuation of the same speech — continue seamlessly as if you never stopped.`
+            : `\n${continuityNote}`;
+          
           const chunkPrompt = fullPrompt.replace(
             /<transcript>[\s\S]*<\/transcript>/,
             `<transcript>\n${chunks[i]}\n</transcript>`
-          ) + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
+          ) + chunkContinuity + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
 
           const chunkResult = await callGeminiTtsRest(apiKey, chunkPrompt, actualVoiceId);
           audioChunks.push(chunkResult.audioData);
