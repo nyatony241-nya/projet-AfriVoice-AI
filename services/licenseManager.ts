@@ -32,7 +32,7 @@ export const getQuotaForPlan = (planId: 'free' | 'creator' | 'pro' | string) => 
     case 'creator':
       return { maxSeconds: 1800, maxCharsPerScript: 1500, label: 'CREATOR — 30 min/mois' };
     case 'pro':
-      return { maxSeconds: 3600, maxCharsPerScript: 3000, label: 'PRO STUDIO HD — 60 min/mois' };
+      return { maxSeconds: 3600, maxCharsPerScript: 10000, label: 'PRO STUDIO HD — 60 min/mois' };
     default:
       return { maxSeconds: 600, maxCharsPerScript: 500, label: 'STARTER — 10 min/mois' };
   }

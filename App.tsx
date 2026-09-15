@@ -311,7 +311,7 @@ const App: React.FC = () => {
       maxChars = 1500;
     } else if (currentPlan.id === 'pro') {
       baseMaxSeconds = 3600; // Pro: 60 min
-      maxChars = 3000;
+      maxChars = 10000;
     }
 
     return {

@@ -44,7 +44,7 @@ export const getQuotaForPlan = (planId) => {
   const quotas = {
     free:    { maxSeconds: 600,  maxCharsPerScript: 500,  label: 'STARTER — 10 min/mois' },
     creator: { maxSeconds: 1800, maxCharsPerScript: 1500, label: 'CREATOR — 30 min/mois' },
-    pro:     { maxSeconds: 3600, maxCharsPerScript: 3000, label: 'PRO STUDIO HD — 60 min/mois' }
+    pro:     { maxSeconds: 3600, maxCharsPerScript: 10000, label: 'PRO STUDIO HD — 60 min/mois' }
   };
   
   return quotas[normalizedPlanId] || quotas.free;
