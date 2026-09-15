@@ -270,7 +270,21 @@ GRANT SELECT, INSERT, UPDATE ON public.profiles    TO authenticated;
 GRANT SELECT ON public.user_plans                  TO authenticated;
 GRANT SELECT ON public.user_quotas                 TO authenticated;
 GRANT SELECT, INSERT ON public.generations         TO authenticated;
-GRANT EXECUTE ON FUNCTION public.update_quota_for_plan TO service_role;
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- SÉCURITÉ CRITIQUE — CWE-285 : Verrouillage des fonctions SECURITY DEFINER
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Par défaut PostgreSQL accorde le droit EXECUTE sur toute fonction au rôle
+-- PUBLIC. Les fonctions SECURITY DEFINER s'exécutent avec les droits admin.
+-- Un attaquant pourrait donc appeler update_quota_for_plan() depuis le client
+-- Supabase pour se donner le plan Pro gratuitement.
+-- La séquence correcte est : REVOKE d'abord, puis GRANT sélectif.
+REVOKE EXECUTE ON FUNCTION public.update_quota_for_plan(TEXT, TEXT) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.update_quota_for_plan(TEXT, TEXT) TO service_role;
+
+-- Les fonctions de trigger ne doivent pas non plus être appelables directement.
+REVOKE EXECUTE ON FUNCTION public.handle_new_user()  FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.handle_updated_at() FROM PUBLIC;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- ✅ Schéma AfriVoice créé avec succès !
