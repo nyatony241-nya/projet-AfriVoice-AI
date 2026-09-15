@@ -131,9 +131,11 @@ export const generateVoiceOver = async (
     token = undefined;
   }
 
-  // Timeout de 65 secondes (légèrement au-dessus du maxDuration Vercel 60s)
+  // Timeout de 180 secondes — aligné sur Vercel Pro (maxDuration 300s)
+  // Les textes longs sont découpés en chunks séquentiels côté serveur,
+  // chaque chunk prenant ~15-30s → un texte de 3000 chars peut prendre 60-90s.
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 65_000);
+  const timeoutId = setTimeout(() => controller.abort(), 180_000);
 
   let response: Response;
   try {
