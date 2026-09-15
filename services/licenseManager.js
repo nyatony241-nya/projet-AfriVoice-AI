@@ -42,8 +42,8 @@ export const validateUserLicense = async (licenseKey) => {
 export const getQuotaForPlan = (planId) => {
   const normalizedPlanId = planId === 'starter' ? 'free' : planId;
   const quotas = {
-    free:    { maxSeconds: 600,  maxCharsPerScript: 500,  label: 'STARTER — 10 min/mois' },
-    creator: { maxSeconds: 1800, maxCharsPerScript: 1500, label: 'CREATOR — 30 min/mois' },
+    free:    { maxSeconds: 600,  maxCharsPerScript: 1000,  label: 'STARTER — 10 min/mois' },
+    creator: { maxSeconds: 1800, maxCharsPerScript: 5000, label: 'CREATOR — 30 min/mois' },
     pro:     { maxSeconds: 3600, maxCharsPerScript: 10000, label: 'PRO STUDIO HD — 60 min/mois' }
   };
   

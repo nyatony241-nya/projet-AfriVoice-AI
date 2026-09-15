@@ -305,10 +305,10 @@ const App: React.FC = () => {
 
     if (currentPlan.id === 'starter' || currentPlan.id === 'free') {
       baseMaxSeconds = 600; // Starter: 10 min
-      maxChars = 500;
+      maxChars = 1000;
     } else if (currentPlan.id === 'creator') {
       baseMaxSeconds = 1800; // Creator: 30 min
-      maxChars = 1500;
+      maxChars = 5000;
     } else if (currentPlan.id === 'pro') {
       baseMaxSeconds = 3600; // Pro: 60 min
       maxChars = 10000;
