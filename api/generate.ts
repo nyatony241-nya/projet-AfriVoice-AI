@@ -195,12 +195,19 @@ export default async function handler(req: any, res: any) {
       });
 
       // 4. Appel de l'API Gemini TTS native REST avec chunking
-      // ── Stratégie anti-cassure vocale ──────────────────────────────
-      // Gemini TTS supporte ~5000-6000 chars de transcript par appel.
-      // On monte le seuil à 4500 pour qu'un texte de 3min (~3000 chars)
-      // passe en UN SEUL appel → zéro changement de voix.
-      // Le chunking ne se déclenche que pour les textes très longs (5+ min).
-      const MAX_CHARS_PER_CHUNK = 4500;
+      // ══════════════════════════════════════════════════════════════
+      // STRATÉGIE ANTI-CASSURE VOCALE (3 couches)
+      // ──────────────────────────────────────────────────────────────
+      // Couche 1 : Maximiser la taille du chunk → 5500 chars (~6 min)
+      //            pour éviter tout découpage dans 95% des cas.
+      // Couche 2 : Ancrage vocal contextuel → les 2 dernières phrases
+      //            du chunk précédent sont passées comme "contexte déjà
+      //            prononcé" (non lu à voix haute) pour que Gemini
+      //            cale son timbre sur la continuité.
+      // Couche 3 : Micro-fondu PCM de 30ms aux jointures pour
+      //            éliminer les clics/pops entre les morceaux.
+      // ══════════════════════════════════════════════════════════════
+      const MAX_CHARS_PER_CHUNK = 5500;
       const scriptText = finalScript || script;
       const needsChunking = scriptText.length > MAX_CHARS_PER_CHUNK;
       const requestNonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -211,6 +218,7 @@ export default async function handler(req: any, res: any) {
         audioData = result.audioData;
         mimeType = result.mimeType;
       } else {
+        // ── Découpage intelligent par phrases ──
         const sentences = scriptText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [scriptText];
         const chunks: string[] = [];
         let currentChunk = '';
@@ -224,28 +232,74 @@ export default async function handler(req: any, res: any) {
         }
         if (currentChunk.trim()) chunks.push(currentChunk.trim());
 
-        // ── Instruction de continuité vocale pour les chunks ──
-        // Force Gemini à garder exactement le même ton/rythme/timbre
-        const continuityNote = `CRITICAL: Maintain the EXACT same voice tone, pitch, rhythm, speed, accent intensity and emotional energy throughout. Do not vary your delivery style at all.`;
+        console.log(`[AfriVoice] Texte long (${scriptText.length} chars) découpé en ${chunks.length} chunks.`);
 
-        const audioChunks: string[] = [];
+        // ── Extraction des phrases d'ancrage vocal ──
+        // Pour chaque chunk après le premier, on extrait les 2 dernières phrases
+        // du chunk précédent pour servir de "voix de référence"
+        const extractLastSentences = (text: string, count: number = 2): string => {
+          const s = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [];
+          return s.slice(-count).join(' ').trim();
+        };
+
+        const audioBuffers: Buffer[] = [];
         for (let i = 0; i < chunks.length; i++) {
-          const chunkContinuity = i > 0 
-            ? `\n${continuityNote} This is a continuation of the same speech — continue seamlessly as if you never stopped.`
-            : `\n${continuityNote}`;
-          
+          // ── Couche 2 : Ancrage vocal contextuel ──
+          let voiceAnchor = '';
+          if (i > 0) {
+            const previousContext = extractLastSentences(chunks[i - 1]);
+            voiceAnchor = `\n<voice_reference_context>\nYou have ALREADY spoken the following text with your voice. DO NOT read this aloud. Use it ONLY to maintain the exact same voice tone, pitch, rhythm, speed and accent for what follows:\n"${previousContext}"\n</voice_reference_context>\nCRITICAL: Continue with the EXACT SAME voice — same pitch, same pace, same energy, same accent intensity. This is a seamless continuation of the same recording session.`;
+          }
+
           const chunkPrompt = fullPrompt.replace(
             /<transcript>[\s\S]*<\/transcript>/,
             `<transcript>\n${chunks[i]}\n</transcript>`
-          ) + chunkContinuity + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
+          ) + voiceAnchor + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
 
           const chunkResult = await callGeminiTtsRest(apiKey, chunkPrompt, actualVoiceId);
-          audioChunks.push(chunkResult.audioData);
+          audioBuffers.push(Buffer.from(chunkResult.audioData, 'base64'));
+          console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} généré (${audioBuffers[i].length} bytes).`);
         }
 
-        const combinedBuffer = Buffer.concat(audioChunks.map(b64 => Buffer.from(b64, 'base64')));
+        // ── Couche 3 : Micro-fondu PCM aux jointures ──
+        // L16 = 16-bit signed LE, mono, 24kHz
+        // 30ms = 720 samples = 1440 bytes — assez court pour ne pas affecter
+        // la parole, assez long pour éliminer les clics/pops
+        const FADE_SAMPLES = 720; // 30ms at 24kHz
+        const BYTES_PER_SAMPLE = 2;
+        const FADE_BYTES = FADE_SAMPLES * BYTES_PER_SAMPLE;
+
+        for (let i = 0; i < audioBuffers.length; i++) {
+          const buf = audioBuffers[i];
+          const totalSamples = buf.length / BYTES_PER_SAMPLE;
+          if (totalSamples < FADE_SAMPLES * 2) continue; // trop court
+
+          // Fade-in sur le premier chunk n'est pas nécessaire (début du texte)
+          // Fade-in sur les chunks suivants pour lisser la jointure
+          if (i > 0) {
+            for (let s = 0; s < FADE_SAMPLES; s++) {
+              const gain = s / FADE_SAMPLES;
+              const offset = s * BYTES_PER_SAMPLE;
+              const sample = buf.readInt16LE(offset);
+              buf.writeInt16LE(Math.round(sample * gain), offset);
+            }
+          }
+
+          // Fade-out sur tous les chunks sauf le dernier (fin du texte)
+          if (i < audioBuffers.length - 1) {
+            for (let s = 0; s < FADE_SAMPLES; s++) {
+              const gain = 1 - (s / FADE_SAMPLES);
+              const offset = (totalSamples - FADE_SAMPLES + s) * BYTES_PER_SAMPLE;
+              const sample = buf.readInt16LE(offset);
+              buf.writeInt16LE(Math.round(sample * gain), offset);
+            }
+          }
+        }
+
+        const combinedBuffer = Buffer.concat(audioBuffers);
         audioData = combinedBuffer.toString('base64');
         mimeType = 'audio/L16;rate=24000';
+        console.log(`[AfriVoice] ${chunks.length} chunks assemblés avec ancrage vocal + fondu PCM. Total: ${combinedBuffer.length} bytes.`);
       }
     }
 

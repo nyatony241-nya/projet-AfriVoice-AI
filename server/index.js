@@ -186,7 +186,13 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
       const ai = global.aiClientCache.get(apiKey);
 
       // ── Smart Chunking for Long Texts ──
-      const MAX_CHARS_PER_CHUNK = 2000;
+      // ══════════════════════════════════════════════════════════════
+      // STRATÉGIE ANTI-CASSURE VOCALE (3 couches)
+      // Couche 1 : chunk 5500 chars (~6 min) pour minimiser le découpage
+      // Couche 2 : ancrage vocal contextuel (dernières phrases du chunk précédent)
+      // Couche 3 : micro-fondu PCM 30ms aux jointures
+      // ══════════════════════════════════════════════════════════════
+      const MAX_CHARS_PER_CHUNK = 5500;
       const scriptText = finalScript || script;
       const needsChunking = scriptText.length > MAX_CHARS_PER_CHUNK;
 
@@ -234,7 +240,7 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
         mimeType = part?.inlineData?.mimeType || 'audio/L16;rate=24000';
       } else {
         // Chunked generation for long texts
-        console.log(`[AfriVoice] Long text detected (${scriptText.length} chars). Splitting into chunks of ~${MAX_CHARS_PER_CHUNK} chars.`);
+        console.log(`[AfriVoice] Texte long (${scriptText.length} chars). Découpage en chunks de ~${MAX_CHARS_PER_CHUNK} chars.`);
         
         // Split at sentence boundaries
         const sentences = scriptText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [scriptText];
@@ -250,15 +256,27 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
         }
         if (currentChunk.trim()) chunks.push(currentChunk.trim());
 
-        console.log(`[AfriVoice] Split into ${chunks.length} chunks.`);
+        console.log(`[AfriVoice] Découpé en ${chunks.length} chunks.`);
+
+        // ── Couche 2 : Ancrage vocal contextuel ──
+        const extractLastSentences = (text, count = 2) => {
+          const s = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [];
+          return s.slice(-count).join(' ').trim();
+        };
         
-        // Generate audio for each chunk with the SAME voice config
-        const audioChunks = [];
+        // Generate audio for each chunk with voice anchoring
+        const audioBuffers = [];
         for (let i = 0; i < chunks.length; i++) {
+          let voiceAnchor = '';
+          if (i > 0) {
+            const previousContext = extractLastSentences(chunks[i - 1]);
+            voiceAnchor = `\n<voice_reference_context>\nYou have ALREADY spoken the following text with your voice. DO NOT read this aloud. Use it ONLY to maintain the exact same voice tone, pitch, rhythm, speed and accent for what follows:\n"${previousContext}"\n</voice_reference_context>\nCRITICAL: Continue with the EXACT SAME voice — same pitch, same pace, same energy, same accent intensity. This is a seamless continuation of the same recording session.`;
+          }
+
           const chunkPrompt = fullPrompt.replace(
             /<transcript>[\s\S]*<\/transcript>/,
             `<transcript>\n${chunks[i]}\n</transcript>`
-          );
+          ) + voiceAnchor;
           
           const genChunkWithRetry = async (attempt = 1) => {
             try {
@@ -286,15 +304,47 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
             console.error(`[AfriVoice] Chunk ${i+1}/${chunks.length} empty. finishReason=${chunkFinishReason}`);
             throw new Error(`Chunk ${i + 1}/${chunks.length} returned no audio (finishReason: ${chunkFinishReason})`);
           }
-          audioChunks.push(chunkAudio);
-          console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} generated successfully.`);
+          audioBuffers.push(Buffer.from(chunkAudio, 'base64'));
+          console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} généré (${audioBuffers[i].length} bytes).`);
         }
 
-        // Concatenate all PCM audio chunks (base64 -> buffer -> concat -> base64)
-        const combinedBuffer = Buffer.concat(audioChunks.map(b64 => Buffer.from(b64, 'base64')));
+        // ── Couche 3 : Micro-fondu PCM aux jointures ──
+        // L16 = 16-bit signed LE, mono, 24kHz
+        // 30ms = 720 samples = 1440 bytes
+        const FADE_SAMPLES = 720;
+        const BYTES_PER_SAMPLE = 2;
+
+        for (let i = 0; i < audioBuffers.length; i++) {
+          const buf = audioBuffers[i];
+          const totalSamples = buf.length / BYTES_PER_SAMPLE;
+          if (totalSamples < FADE_SAMPLES * 2) continue;
+
+          // Fade-in sur les chunks après le premier
+          if (i > 0) {
+            for (let s = 0; s < FADE_SAMPLES; s++) {
+              const gain = s / FADE_SAMPLES;
+              const offset = s * BYTES_PER_SAMPLE;
+              const sample = buf.readInt16LE(offset);
+              buf.writeInt16LE(Math.round(sample * gain), offset);
+            }
+          }
+
+          // Fade-out sur tous les chunks sauf le dernier
+          if (i < audioBuffers.length - 1) {
+            for (let s = 0; s < FADE_SAMPLES; s++) {
+              const gain = 1 - (s / FADE_SAMPLES);
+              const offset = (totalSamples - FADE_SAMPLES + s) * BYTES_PER_SAMPLE;
+              const sample = buf.readInt16LE(offset);
+              buf.writeInt16LE(Math.round(sample * gain), offset);
+            }
+          }
+        }
+
+        // Concatenate all PCM audio chunks
+        const combinedBuffer = Buffer.concat(audioBuffers);
         audioData = combinedBuffer.toString('base64');
         mimeType = 'audio/L16;rate=24000';
-        console.log(`[AfriVoice] All ${chunks.length} chunks concatenated. Total audio size: ${combinedBuffer.length} bytes.`);
+        console.log(`[AfriVoice] ${chunks.length} chunks assemblés avec ancrage vocal + fondu PCM. Total: ${combinedBuffer.length} bytes.`);
       }
     }
 
