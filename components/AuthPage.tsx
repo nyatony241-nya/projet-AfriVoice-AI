@@ -52,6 +52,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess, addToast, isDark, la
       addToast('error', isEn ? 'Invalid Code' : 'Code Invalide', error.message);
     } else {
       addToast('success', isEn ? 'Connected' : 'Connecté', isEn ? 'Welcome to AfriVoice Studio.' : 'Bienvenue sur AfriVoice Studio.');
+      
+      if (typeof window !== 'undefined' && window.fbq) {
+        window.fbq('track', 'CompleteRegistration');
+      }
+
       triggerCelebration();
       onAuthSuccess();
     }

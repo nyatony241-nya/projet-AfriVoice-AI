@@ -1,3 +1,7 @@
+interface Window {
+  fbq: any;
+  _fbq: any;
+}
 
 // ── Voice Identity System (Voice Registry) ───────────────────────
 

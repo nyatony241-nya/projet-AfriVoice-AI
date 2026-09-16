@@ -227,6 +227,14 @@ const App: React.FC = () => {
 
     if (paymentStatus === 'success') {
       window.history.replaceState({}, '', window.location.pathname);
+      
+      if (typeof window !== 'undefined' && window.fbq) {
+        window.fbq('track', 'Purchase', {
+          value: 10000,
+          currency: 'XOF'
+        });
+      }
+
       if (itemId) {
         verifyWithRetry(itemId);
       } else {
@@ -885,6 +893,11 @@ const App: React.FC = () => {
       );
       triggerCelebration();
       setStatus({ isGenerating: false, error: null, audioUrl: url, qualityScore: qScore });
+      
+      if (typeof window !== 'undefined' && window.fbq) {
+        window.fbq('trackCustom', 'first_voice_generated');
+      }
+
       addToast('success', isEn ? 'African voice generated!' : 'Voix africaine générée !', `Production de ${estimatedSeconds}s réussie (${selectedCountry.name} — Score: ${qScore.overall}/100).`);
     } catch (err: any) {
       console.error('Erreur lors de la génération vocale:', err?.message || 'Erreur inconnue');
