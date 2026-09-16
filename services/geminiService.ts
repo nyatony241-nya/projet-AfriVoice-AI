@@ -116,16 +116,15 @@ export const generateVoiceOver = async (
     backendUrl = `http://${hostname}:3005/api/generate`;
   }
 
-  // Toujours rafraîchir la session pour avoir un token frais (évite l'erreur "token expiré")
+  // Récupérer la session existante sans la forcer à se rafraîchir à chaque appel.
+  // refreshSession() est dangereux : il peut déclencher une fausse alerte de "replay attack"
+  // côté Supabase et invalider toute la session de l'utilisateur.
+  // On utilise getSession() qui retourne le token en cache et le rafraîchit automatiquement
+  // si et seulement si il est proche de l'expiration (< 60s restantes).
   let token: string | undefined;
   try {
-    const { data: refreshData } = await supabase.auth.refreshSession();
-    token = refreshData.session?.access_token;
-    if (!token) {
-      // Si pas de session active, essayer de récupérer la session existante
-      const { data: { session } } = await supabase.auth.getSession();
-      token = session?.access_token;
-    }
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token;
   } catch {
     // Aucune session — la génération continuera sans auth (non-bloquant côté serveur)
     token = undefined;
