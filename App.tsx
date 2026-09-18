@@ -1946,6 +1946,47 @@ const App: React.FC = () => {
                   );
                 })}
               </div>
+
+              {/* PAYMENT LOGOS BANNER */}
+              <div className="max-w-4xl mx-auto mt-12 text-center p-8 sm:p-10 rounded-[32px] border border-white/5 bg-white/5 backdrop-blur-md">
+                <p className="text-zinc-400 text-xs sm:text-sm font-black uppercase tracking-[0.1em] mb-6">
+                  Paiement 100% sécurisé par <span className="text-[#D4FF00]">Mobile Money</span> et Carte Bancaire
+                </p>
+                <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 mt-4">
+                  {/* MTN */}
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white rounded-2xl shadow-lg flex items-center justify-center p-2 hover:scale-110 hover:-translate-y-1 transition-all duration-300 cursor-pointer ring-1 ring-white/10">
+                    <img src="https://cdn.brandfetch.io/mtn.com/w/400/h/400" alt="MTN Mobile Money" className="h-full w-full object-contain rounded-xl" />
+                  </div>
+                  {/* Orange */}
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white rounded-2xl shadow-lg flex items-center justify-center p-2 hover:scale-110 hover:-translate-y-1 transition-all duration-300 cursor-pointer ring-1 ring-white/10">
+                    <img src="https://cdn.brandfetch.io/orange.com/w/400/h/400" alt="Orange Money" className="h-full w-full object-contain rounded-xl" />
+                  </div>
+                  {/* Wave */}
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white rounded-2xl shadow-lg flex items-center justify-center p-2 hover:scale-110 hover:-translate-y-1 transition-all duration-300 cursor-pointer ring-1 ring-white/10">
+                    <img src="https://cdn.brandfetch.io/wave.com/w/400/h/400" alt="Wave Mobile Money" className="h-full w-full object-contain rounded-xl" />
+                  </div>
+                  {/* Moov Africa (App Icon Style Fallback) */}
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 bg-[#005C9A] rounded-2xl shadow-lg flex items-center justify-center p-2 hover:scale-110 hover:-translate-y-1 transition-all duration-300 cursor-pointer ring-1 ring-white/10">
+                    <span className="text-[#F47D20] font-bold italic text-sm sm:text-base tracking-tight">Moov</span>
+                  </div>
+                  {/* Airtel */}
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white rounded-2xl shadow-lg flex items-center justify-center p-2 hover:scale-110 hover:-translate-y-1 transition-all duration-300 cursor-pointer ring-1 ring-white/10">
+                    <img src="https://cdn.brandfetch.io/airtel.com/w/400/h/400" alt="Airtel Money" className="h-full w-full object-contain rounded-xl" />
+                  </div>
+                  
+                  <div className="w-[1px] h-10 bg-white/10 mx-1 hidden sm:block"></div>
+                  
+                  {/* Visa */}
+                  <div className="h-12 sm:h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center px-4 py-2 hover:scale-110 hover:-translate-y-1 transition-all duration-300 cursor-pointer ring-1 ring-white/10">
+                    <img src="https://cdn.brandfetch.io/visa.com/w/400/h/400" alt="Visa" className="h-full w-auto object-contain" />
+                  </div>
+                  {/* Mastercard */}
+                  <div className="h-12 sm:h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center px-4 py-2 hover:scale-110 hover:-translate-y-1 transition-all duration-300 cursor-pointer ring-1 ring-white/10">
+                    <img src="https://cdn.brandfetch.io/mastercard.com/w/400/h/400" alt="Mastercard" className="h-full w-auto object-contain" />
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
         </main>

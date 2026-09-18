@@ -261,12 +261,47 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
           })}
         </div>
 
-        {/* Footer Note */}
-        <p className="text-[11px] font-bold text-center text-zinc-500">
-          {isEn
-            ? '🔒 Safe payment via Mobile Money & Cards. Minutes are added immediately to your balance.'
-            : '🔒 Paiement sécurisé par Mobile Money & Cartes. Les minutes s’ajoutent immédiatement à votre solde.'}
-        </p>
+        {/* Footer Note & Logos */}
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <p className="text-[11px] font-bold text-center text-zinc-500">
+            {isEn
+              ? '🔒 Safe payment via Mobile Money & Cards. Minutes are added immediately.'
+              : '🔒 Paiement 100% sécurisé par Mobile Money & Cartes. Les minutes s’ajoutent immédiatement.'}
+          </p>
+          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3 opacity-90 pb-2">
+            {/* MTN */}
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-white rounded-lg shadow-sm flex items-center justify-center p-1 transition-transform hover:scale-110">
+              <img src="https://cdn.brandfetch.io/mtn.com/w/400/h/400" alt="MTN" className="h-full w-full object-contain rounded-md" />
+            </div>
+            {/* Orange */}
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-white rounded-lg shadow-sm flex items-center justify-center p-1 transition-transform hover:scale-110">
+              <img src="https://cdn.brandfetch.io/orange.com/w/400/h/400" alt="Orange" className="h-full w-full object-contain rounded-md" />
+            </div>
+            {/* Wave */}
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-white rounded-lg shadow-sm flex items-center justify-center p-1 transition-transform hover:scale-110">
+              <img src="https://cdn.brandfetch.io/wave.com/w/400/h/400" alt="Wave" className="h-full w-full object-contain rounded-md" />
+            </div>
+            {/* Moov */}
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-[#005C9A] rounded-lg shadow-sm flex items-center justify-center p-1 transition-transform hover:scale-110">
+              <span className="text-[#F47D20] font-bold italic text-[10px] sm:text-xs">Moov</span>
+            </div>
+            {/* Airtel */}
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-white rounded-lg shadow-sm flex items-center justify-center p-1 transition-transform hover:scale-110">
+              <img src="https://cdn.brandfetch.io/airtel.com/w/400/h/400" alt="Airtel" className="h-full w-full object-contain rounded-md" />
+            </div>
+            
+            <div className="w-[1px] h-6 bg-zinc-500/40 mx-1"></div>
+            
+            {/* Visa */}
+            <div className="h-8 sm:h-10 bg-white rounded-lg shadow-sm flex items-center justify-center px-2 py-1 transition-transform hover:scale-110">
+              <img src="https://cdn.brandfetch.io/visa.com/w/400/h/400" alt="Visa" className="h-full w-auto object-contain" />
+            </div>
+            {/* Mastercard */}
+            <div className="h-8 sm:h-10 bg-white rounded-lg shadow-sm flex items-center justify-center px-2 py-1 transition-transform hover:scale-110">
+              <img src="https://cdn.brandfetch.io/mastercard.com/w/400/h/400" alt="Mastercard" className="h-full w-auto object-contain" />
+            </div>
+          </div>
+        </div>
           </>
         )}
       </div>
