@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PricingPlan, Language } from '../types';
 import { supabase } from '../services/supabaseClient';
 import { LogoIcon } from './BrandLogo';
@@ -28,6 +28,43 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenAuditModal,
   onOpenInstallModal,
 }) => {
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    // Check if the app is already installed and running in standalone mode
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setIsStandalone(true);
+    }
+
+    // Listen for the appinstalled event
+    const handleAppInstalled = () => {
+      setIsStandalone(true);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+    
+    // Listen to display-mode changes
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleMediaQueryChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setIsStandalone(true);
+    };
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaQueryChange);
+    } else {
+      // Fallback for older Safari
+      mediaQuery.addListener(handleMediaQueryChange);
+    }
+
+    return () => {
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleMediaQueryChange);
+      } else {
+        mediaQuery.removeListener(handleMediaQueryChange);
+      }
+    };
+  }, []);
+
   const navItemsFr = [
     {
       id: 'studio' as const,
@@ -172,6 +209,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Install App Button */}
+        {!isStandalone && (
         <div className="px-4 mt-6">
           <button
             onClick={onOpenInstallModal}
@@ -187,6 +225,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {language === 'en' ? 'Install App' : 'Installer l\'App'}
           </button>
         </div>
+        )}
 
       {/* Bottom Section: User & Status */}
       <div className="pt-6 border-t border-zinc-200 dark:border-white/10 space-y-3">

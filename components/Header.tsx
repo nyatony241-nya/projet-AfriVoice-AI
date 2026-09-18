@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PricingPlan, Language } from '../types';
 import { LogoIcon } from './BrandLogo';
 
@@ -30,6 +30,42 @@ const Header: React.FC<HeaderProps> = ({
   onOpenInstallModal,
 }) => {
   const isDark = theme === 'dark';
+
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    // Check if the app is already installed and running in standalone mode
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setIsStandalone(true);
+    }
+
+    // Listen for the appinstalled event
+    const handleAppInstalled = () => {
+      setIsStandalone(true);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+    
+    // Listen to display-mode changes
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleMediaQueryChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setIsStandalone(true);
+    };
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaQueryChange);
+    } else {
+      mediaQuery.addListener(handleMediaQueryChange);
+    }
+
+    return () => {
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleMediaQueryChange);
+      } else {
+        mediaQuery.removeListener(handleMediaQueryChange);
+      }
+    };
+  }, []);
 
   const tabNamesFr: Record<string, string> = {
     studio: 'Studio de Synthèse',
@@ -207,6 +243,7 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Mobile Install App Banner (Visible only on mobile below lg) */}
+      {!isStandalone && (
       <div className={`lg:hidden px-3 py-2 border-t ${isDark ? 'border-white/5 bg-[#0A0D14]' : 'border-[#E4E4E7] bg-white'}`}>
         <button
           onClick={onOpenInstallModal}
@@ -222,6 +259,7 @@ const Header: React.FC<HeaderProps> = ({
           {language === 'en' ? 'Install App (Home Screen)' : 'Installer l\'App (Écran d\'accueil)'}
         </button>
       </div>
+      )}
     </header>
   );
 };
