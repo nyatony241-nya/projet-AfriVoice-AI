@@ -7,8 +7,7 @@ dotenv.config();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Email d'expéditeur par défaut (doit être vérifié sur ton compte Resend)
-// Par exemple: 'AfriVoice <contact@afrivoice.site>'
-const FROM_EMAIL = 'AfriVoice <onboarding@resend.dev>'; // Par défaut pour les tests Resend
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'AfriVoice <contact@afrivoice.site>';
 
 /**
  * Envoie l'e-mail de rappel (Email 1) : L'utilisateur s'est inscrit mais n'a pas utilisé son essai.
