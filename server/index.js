@@ -22,18 +22,22 @@ if (fs.existsSync('.env.local')) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3006;
 
 // CORS restreint aux origines légitimes
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
   'http://localhost:5173',
+  'http://localhost:5174',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    // En développement, accepter tous les localhost (port dynamique Vite)
+    if (!origin || ALLOWED_ORIGINS.includes(origin) || /^http:\/\/localhost:\d+$/.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Origine non autorisée par CORS'));
@@ -109,6 +113,38 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
   }
 
   try {
+    // ── Vérification Plan + Trial (Anti-Contournement Serveur) ──
+    try {
+      if (supabase && req.user?.email) {
+        const { data: quotaData, error: quotaError } = await supabase
+          .from('user_quotas')
+          .select('monthly_limit, trial_used')
+          .eq('email', req.user.email)
+          .maybeSingle();
+
+        if (!quotaError && quotaData) {
+          const monthlyLimit = quotaData?.monthly_limit ?? 0;
+          const isPaidPlan = monthlyLimit >= 600; // Starter = 600s minimum
+          const trialUsed = quotaData?.trial_used === true;
+
+          if (!isPaidPlan) {
+            if (trialUsed) {
+              return res.status(403).json({ error: 'Essai gratuit déjà utilisé. Veuillez souscrire à un forfait AfriVoice pour continuer.' });
+            }
+            // Trial disponible : limiter le script
+            if (script && script.length > 220) {
+              return res.status(403).json({ error: "Limite d'essai gratuit : 200 caractères maximum. Abonnez-vous pour lever cette limite." });
+            }
+          }
+        } else if (quotaError) {
+          console.warn('[Trial Check] Erreur (non-bloquante):', quotaError.message);
+        }
+      }
+    } catch (trialErr) {
+      console.warn('[Trial Check] Exception (non-bloquante):', trialErr.message);
+      // Ne pas bloquer la génération si la vérification trial échoue
+    }
+
     // 1. Humanisation Phonétique du script si demandée
     const finalScript = options?.phoneticHumanizer
       ? humanizeScript(script, options.countryId, { contentStyle: options.contentStyle, emotion: options.emotion })
@@ -369,6 +405,25 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
     if (process.env.NODE_ENV !== 'production') {
       console.log(`✅ Audio généré — mimeType: ${mimeType}, taille: ${audioData.length} chars`);
     }
+
+    // ── Marquer le trial comme utilisé côté serveur si non-abonné ──
+    if (supabase && req.user?.email) {
+      const { data: quotaCheck } = await supabase
+        .from('user_quotas')
+        .select('monthly_limit, trial_used')
+        .eq('email', req.user.email)
+        .maybeSingle();
+
+      const isPaidPlan = (quotaCheck?.monthly_limit ?? 0) >= 600;
+      if (!isPaidPlan && !quotaCheck?.trial_used) {
+        await supabase
+          .from('user_quotas')
+          .update({ trial_used: true, trial_used_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('email', req.user.email);
+        console.log(`[AfriVoice Trial] ✅ trial_used marqué pour ${req.user.email}`);
+      }
+    }
+
     return res.json({ base64Audio: audioData, mimeType, metadata });
 
   } catch (error) {

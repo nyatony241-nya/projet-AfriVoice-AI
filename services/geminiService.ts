@@ -113,7 +113,7 @@ export const generateVoiceOver = async (
   let backendUrl = '/api/generate';
   if (isDev && typeof window !== 'undefined') {
     const hostname = window.location.hostname || 'localhost';
-    backendUrl = `http://${hostname}:3005/api/generate`;
+    backendUrl = `http://${hostname}:3006/api/generate`;
   }
 
   // Récupérer la session existante sans la forcer à se rafraîchir à chaque appel.

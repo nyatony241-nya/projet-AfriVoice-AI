@@ -194,8 +194,8 @@ const App: React.FC = () => {
         if (!token) { await applyLocally(itemId); return; }
 
         const isDev = import.meta.env.DEV;
-        const baseUrl = isDev ? 'http://localhost:3005' : '';
-        const resp = await fetch(`${baseUrl}/api/verify-payment`, {
+        const API_URL = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:3006' : '');
+        const resp = await fetch(`${API_URL}/api/verify-payment`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ itemId }),
@@ -293,6 +293,13 @@ const App: React.FC = () => {
   const [bonusSeconds, setBonusSeconds] = useState<number>(0);
   const [lastGenTimestamp, setLastGenTimestamp] = useState<number>(0);
   const [recentGenerationsCount, setRecentGenerationsCount] = useState<number>(0);
+
+  // ── Aha! Moment — Essai Gratuit ─────────────────────────────────
+  const TRIAL_MAX_CHARS = 200;
+  const [trialUsed, setTrialUsed] = useState<boolean>(() => localStorage.getItem('AFRIVOICE_TRIAL_USED') === 'true');
+  const [showTrialConversionModal, setShowTrialConversionModal] = useState(false);
+  const isUnsubscribed = currentPlan.id === 'none';
+  const canUseTrial = isUnsubscribed && !trialUsed;
 
 
 
@@ -505,6 +512,12 @@ const App: React.FC = () => {
         }
         if (quotaResult.data?.bonus_seconds != null) {
           setBonusSeconds(quotaResult.data.bonus_seconds as number);
+        }
+        // ✅ Charger le statut du trial depuis Supabase (source de vérité anti-contournement)
+        const trialUsedDB = (quotaResult.data as any)?.trial_used as boolean | null;
+        if (trialUsedDB === true) {
+          setTrialUsed(true);
+          localStorage.setItem('AFRIVOICE_TRIAL_USED', 'true');
         }
       }
     });
@@ -723,21 +736,40 @@ const App: React.FC = () => {
       return;
     }
 
-    // 🔒 PAYWALL: Vérifier que l'utilisateur a un forfait payé
-    if (currentPlan.id === 'none' || quota.maxSeconds <= 0) {
-      setActiveTab('pricing');
-      addToast(
-        'warning',
-        isEn ? 'Subscription Required' : 'Forfait requis',
-        isEn
-          ? 'Please subscribe to a plan to generate voices.'
-          : 'Veuillez souscrire à un forfait pour générer des voix.'
-      );
-      return;
+    // 🔒 PAYWALL: Vérifier que l'utilisateur a un forfait payé OU un trial disponible
+    if (currentPlan.id === 'none') {
+      if (trialUsed) {
+        // Trial déjà consommé → redirect vers pricing
+        setActiveTab('pricing');
+        addToast(
+          'warning',
+          isEn ? 'Subscribe to continue' : 'Abonnement requis',
+          isEn
+            ? 'Your free trial has been used. Choose a plan to keep creating.'
+            : 'Votre essai gratuit a été utilisé. Choisissez un forfait pour continuer.'
+        );
+        return;
+      }
+      // ── Trial disponible : vérifier la limite de caractères ──
+      if (script.length > TRIAL_MAX_CHARS) {
+        setStatus((prev) => ({
+          ...prev,
+          error: isEn
+            ? `Free trial limited to ${TRIAL_MAX_CHARS} characters. Subscribe to remove this limit.`
+            : `L'essai gratuit est limité à ${TRIAL_MAX_CHARS} caractères. Abonnez-vous pour supprimer cette limite.`,
+        }));
+        addToast(
+          'warning',
+          isEn ? 'Free Trial Limit' : 'Limite d\'essai',
+          isEn ? `Reduce to ${TRIAL_MAX_CHARS} characters for your free trial.` : `Réduisez à ${TRIAL_MAX_CHARS} caractères pour votre essai gratuit.`
+        );
+        return;
+      }
+      // ── Trial OK → laisser passer, on marquera après génération ──
     }
 
-    // Safety Rail #1: Hard Quota Check
-    if (usedSeconds >= quota.maxSeconds) {
+    // Safety Rail #1: Hard Quota Check (exempté si trial disponible)
+    if (!canUseTrial && usedSeconds >= quota.maxSeconds) {
       setStatus((prev) => ({
         ...prev,
         error: isEn
@@ -750,13 +782,19 @@ const App: React.FC = () => {
     }
 
 
-    // Safety Rail #3: Max Character Limit check
-    if (script.length > quota.maxCharsPerScript) {
+    // Safety Rail #3: Max Character Limit check (utilise la limite trial si essai gratuit)
+    const effectiveMaxChars = canUseTrial ? TRIAL_MAX_CHARS : quota.maxCharsPerScript;
+    if (script.length > effectiveMaxChars) {
       setStatus((prev) => ({
         ...prev,
-        error: `Limite de caractères dépassée (${script.length} / ${quota.maxCharsPerScript} max pour le Plan ${currentPlan.name}).`,
+        error: canUseTrial
+          ? `Limite d'essai : ${TRIAL_MAX_CHARS} caractères maximum.`
+          : `Limite de caractères dépassée (${script.length} / ${quota.maxCharsPerScript} max pour le Plan ${currentPlan.name}).`,
       }));
-      addToast('error', 'Texte trop long', `Veuillez réduire votre script sous les ${quota.maxCharsPerScript} caractères pour éviter la surcharge.`);
+      addToast('error', 'Texte trop long', canUseTrial
+        ? `Réduisez à ${TRIAL_MAX_CHARS} caractères pour votre essai gratuit.`
+        : `Veuillez réduire votre script sous les ${quota.maxCharsPerScript} caractères pour éviter la surcharge.`
+      );
       return;
     }
 
@@ -893,12 +931,32 @@ const App: React.FC = () => {
       );
       triggerCelebration();
       setStatus({ isGenerating: false, error: null, audioUrl: url, qualityScore: qScore });
+
+      // ── Aha! Moment: Marquer le trial comme utilisé si non-abonné ──
+      if (currentPlan.id === 'none' && !trialUsed) {
+        setTrialUsed(true);
+        localStorage.setItem('AFRIVOICE_TRIAL_USED', 'true');
+        // Persister en DB (anti-contournement)
+        if (session?.user?.email) {
+          supabase
+            .from('user_quotas')
+            .update({ trial_used: true, trial_used_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq('email', session.user.email)
+            .then(({ error }) => { if (error) console.warn('[Trial] Erreur update trial_used:', error.message); });
+        }
+        // Afficher la modale de conversion après 3s (laisse l'utilisateur écouter d'abord)
+        setTimeout(() => setShowTrialConversionModal(true), 3000);
+      }
       
       if (typeof window !== 'undefined' && window.fbq) {
         window.fbq('trackCustom', 'first_voice_generated');
       }
 
-      addToast('success', isEn ? 'African voice generated!' : 'Voix africaine générée !', `Production de ${estimatedSeconds}s réussie (${selectedCountry.name} — Score: ${qScore.overall}/100).`);
+      if (currentPlan.id === 'none') {
+        addToast('success', isEn ? '🎉 Your first African voice is ready!' : '🎉 Votre première voix africaine est prête !', isEn ? 'Listen below — subscribe to create unlimited voices.' : 'Écoutez ci-dessous — abonnez-vous pour créer sans limite.');
+      } else {
+        addToast('success', isEn ? 'African voice generated!' : 'Voix africaine générée !', `Production de ${estimatedSeconds}s réussie (${selectedCountry.name} — Score: ${qScore.overall}/100).`);
+      }
     } catch (err: any) {
       console.error('Erreur lors de la génération vocale:', err?.message || 'Erreur inconnue');
       const isQuotaError = err?.message?.includes('429') || err?.message?.includes('quota') || err?.status === 429;
@@ -985,6 +1043,75 @@ const App: React.FC = () => {
         currentPlanId={currentPlan.id}
         onUpgrade={() => setIsPaymentModalOpen(true)}
       />
+
+      {/* ── Aha! Moment — Modale de Conversion Post-Trial ── */}
+      {showTrialConversionModal && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4 sm:p-6"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)' }}
+          onClick={() => setShowTrialConversionModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl border animate-in fade-in slide-in-from-bottom-8 duration-500 ${
+              isDark ? 'bg-[#14151C] border-white/10' : 'bg-white border-zinc-200'
+            }`}
+          >
+            {/* Header gradient */}
+            <div className="relative h-2 w-full" style={{ background: 'linear-gradient(90deg, #D4FF00, #22D3EE, #F472B6)' }} />
+
+            <div className="p-7 sm:p-8 space-y-6">
+              {/* Emoji & Titre */}
+              <div className="text-center space-y-2">
+                <div className="text-5xl mb-3 animate-bounce">🎙️</div>
+                <h2 className="text-2xl font-black tracking-tight">
+                  {isEn ? 'Your voice just came alive.' : 'Votre voix vient de prendre vie.'}
+                </h2>
+                <p className={`text-sm font-medium leading-relaxed ${ isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                  {isEn
+                    ? 'This was your free trial. Imagine creating unlimited voices in 20+ African accents for your videos, ads, and podcasts.'
+                    : "C'était votre essai gratuit. Imaginez créer des voix illimitées en 20+ accents africains pour vos vidéos, pubs et podcasts."}
+                </p>
+              </div>
+
+              {/* Social proof mini */}
+              <div className={`flex items-center gap-3 p-4 rounded-2xl ${ isDark ? 'bg-[#09090B]' : 'bg-zinc-50'}`}>
+                <span className="text-2xl">🌍</span>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#D4FF00' }}>
+                    {isEn ? 'STARTER PLAN' : 'FORFAIT STARTER'}
+                  </p>
+                  <p className={`text-sm font-bold ${ isDark ? 'text-white' : 'text-zinc-900'}`}>
+                    {isEn ? '10 min/month · 5 African accents · from 1,900 FCFA' : '10 min/mois · 5 accents africains · dès 1 900 FCFA'}
+                  </p>
+                </div>
+              </div>
+
+              {/* CTA Principal */}
+              <button
+                onClick={() => {
+                  setShowTrialConversionModal(false);
+                  setActiveTab('pricing');
+                }}
+                className="w-full py-4 rounded-[20px] font-black text-black text-base uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #D4FF00 0%, #B8E600 100%)', boxShadow: '0 8px 30px rgba(212,255,0,0.3)' }}
+              >
+                {isEn ? '⚡ See Plans & Start Creating →' : '⚡ Voir les Forfaits & Créer Sans Limite →'}
+              </button>
+
+              {/* CTA secondaire */}
+              <button
+                onClick={() => setShowTrialConversionModal(false)}
+                className={`w-full py-3 rounded-[20px] text-xs font-bold uppercase tracking-widest transition-colors ${
+                  isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'
+                }`}
+              >
+                {isEn ? 'Maybe later' : 'Peut-être plus tard'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedPlanForPayment && (
         <PaymentModal
@@ -1481,13 +1608,24 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-xs font-mono font-bold ${
-                      script.length > quota.maxCharsPerScript ? 'text-red-500 font-black' :
-                      script.length > quota.maxCharsPerScript * 0.8 ? 'text-amber-400 font-black' :
-                      'text-zinc-400'
-                    }`}>
-                      {script.length} / {quota.maxCharsPerScript} {isEn ? 'char.' : 'car.'} • ~{Math.ceil(script.length / 14)} sec
-                    </span>
+                    {/* Compteur spécial pour le trial */}
+                    {canUseTrial ? (
+                      <span className={`text-xs font-mono font-bold ${
+                        script.length > TRIAL_MAX_CHARS ? 'text-red-500 font-black animate-pulse' :
+                        script.length > TRIAL_MAX_CHARS * 0.8 ? 'text-amber-400 font-black' :
+                        'text-amber-500'
+                      }`}>
+                        ✨ {script.length} / {TRIAL_MAX_CHARS} {isEn ? 'char. (free trial)' : 'car. (essai gratuit)'}
+                      </span>
+                    ) : (
+                      <span className={`text-xs font-mono font-bold ${
+                        script.length > quota.maxCharsPerScript ? 'text-red-500 font-black' :
+                        script.length > quota.maxCharsPerScript * 0.8 ? 'text-amber-400 font-black' :
+                        'text-zinc-400'
+                      }`}>
+                        {script.length} / {quota.maxCharsPerScript} {isEn ? 'char.' : 'car.'} • ~{Math.ceil(script.length / 14)} sec
+                      </span>
+                    )}
                     {script.trim() && (
                       <button
                         onClick={() => setScript('')}
@@ -1502,6 +1640,36 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Bandeau essai gratuit */}
+                {canUseTrial && (
+                  <div className="mb-4 p-3.5 rounded-2xl flex items-center gap-3 border" style={{ background: 'rgba(212,255,0,0.06)', borderColor: 'rgba(212,255,0,0.2)' }}>
+                    <span className="text-xl">✨</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#D4FF00' }}>
+                        {isEn ? 'Free Trial — 1 generation available' : 'Essai Gratuit — 1 génération disponible'}
+                      </p>
+                      <p className={`text-[10px] font-medium mt-0.5 ${ isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                        {isEn ? `Write up to ${TRIAL_MAX_CHARS} characters and listen to your first African voice for free.` : `Écrivez jusqu'à ${TRIAL_MAX_CHARS} caractères et écoutez votre première voix africaine gratuitement.`}
+                      </p>
+                    </div>
+                    {/* Mini barre de progression des chars */}
+                    <div className="w-16 shrink-0">
+                      <div className="h-1.5 rounded-full bg-zinc-700 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, (script.length / TRIAL_MAX_CHARS) * 100)}%`,
+                            background: script.length > TRIAL_MAX_CHARS ? '#EF4444' : '#D4FF00'
+                          }}
+                        />
+                      </div>
+                      <p className="text-[9px] font-mono text-center mt-0.5" style={{ color: script.length > TRIAL_MAX_CHARS ? '#EF4444' : '#D4FF00' }}>
+                        {script.length}/{TRIAL_MAX_CHARS}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="relative mb-6">
                   <textarea
                     value={script}
@@ -1509,27 +1677,38 @@ const App: React.FC = () => {
                     onKeyDown={(e) => {
                       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                         e.preventDefault();
-                        if (script.trim() && !status.isGenerating && script.length <= quota.maxCharsPerScript && usedSeconds < quota.maxSeconds) {
+                        const maxChars = canUseTrial ? TRIAL_MAX_CHARS : quota.maxCharsPerScript;
+                        if (script.trim() && !status.isGenerating && script.length <= maxChars && (canUseTrial || usedSeconds < quota.maxSeconds)) {
                           handleGenerate();
                         }
                       }
                     }}
-                    placeholder={isEn ? `Type or paste your script... (Max ${quota.maxCharsPerScript} characters for ${currentPlan.name} plan)` : `Écris ou colle ton script... (Max ${quota.maxCharsPerScript} caractères pour le forfait ${currentPlan.name})`}
+                    placeholder={
+                      canUseTrial
+                        ? (isEn ? `Write your first script... (Max ${TRIAL_MAX_CHARS} characters for free trial)` : `Écris ton premier script... (Max ${TRIAL_MAX_CHARS} caractères pour l'essai gratuit)`)
+                        : (isEn ? `Type or paste your script... (Max ${quota.maxCharsPerScript} characters for ${currentPlan.name} plan)` : `Écris ou colle ton script... (Max ${quota.maxCharsPerScript} caractères pour le forfait ${currentPlan.name})`)
+                    }
                     className={`w-full min-h-[200px] p-6 sm:p-7 rounded-[28px] border outline-none resize-none text-base sm:text-lg font-medium transition-all custom-scrollbar ${
-                      (status.error && !script.trim()) || script.length > quota.maxCharsPerScript
+                      (status.error && !script.trim()) || (canUseTrial ? script.length > TRIAL_MAX_CHARS : script.length > quota.maxCharsPerScript)
                         ? 'border-red-500 focus:ring-2 focus:ring-red-500/20'
+                        : canUseTrial
+                        ? isDark
+                          ? 'bg-[#09090B] border-[#D4FF00]/20 text-white placeholder-zinc-600 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
+                          : 'bg-zinc-50 border-[#D4FF00]/30 text-zinc-800 placeholder-zinc-400 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
                         : isDark
                         ? 'bg-[#09090B] border-white/10 text-white placeholder-zinc-600 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
                         : 'bg-zinc-50 border-zinc-200 text-zinc-800 placeholder-zinc-400 focus:border-[#D4FF00] focus:ring-4 focus:ring-[#D4FF00]/10'
                     }`}
                   />
-                  {(status.error || script.length > quota.maxCharsPerScript) && (
+                  {(status.error || (canUseTrial ? script.length > TRIAL_MAX_CHARS : script.length > quota.maxCharsPerScript)) && (
                     <p className="text-xs text-red-500 font-bold mt-2.5 flex items-center gap-1.5">
                       <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                       <span>
-                        {script.length > quota.maxCharsPerScript
+                        {canUseTrial && script.length > TRIAL_MAX_CHARS
+                          ? (isEn ? `Free trial limit: max ${TRIAL_MAX_CHARS} characters. Subscribe to remove this limit.` : `Limite d'essai : max ${TRIAL_MAX_CHARS} caractères. Abonnez-vous pour supprimer cette limite.`)
+                          : script.length > quota.maxCharsPerScript
                           ? (isEn ? `Limit: Your text exceeds the ${quota.maxCharsPerScript} character limit per request for ${currentPlan.name} plan.` : `Plafond : Votre texte dépasse la limite de ${quota.maxCharsPerScript} caractères autorisée par requête pour le forfait ${currentPlan.name}.`)
                           : status.error}
                       </span>
@@ -1540,22 +1719,39 @@ const App: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     onClick={handleGenerate}
-                    disabled={status.isGenerating || !script.trim() || script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds}
+                    disabled={
+                      status.isGenerating ||
+                      !script.trim() ||
+                      (canUseTrial ? script.length > TRIAL_MAX_CHARS : (script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds)) ||
+                      (isUnsubscribed && trialUsed)
+                    }
                     className={`flex-1 py-5 rounded-[24px] font-black text-base sm:text-lg uppercase tracking-wider transition-all active:scale-98 shadow-xl ${
-                      status.isGenerating || !script.trim() || script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds
+                      status.isGenerating ||
+                      !script.trim() ||
+                      (canUseTrial ? script.length > TRIAL_MAX_CHARS : (script.length > quota.maxCharsPerScript || usedSeconds >= quota.maxSeconds)) ||
+                      (isUnsubscribed && trialUsed)
                         ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 cursor-not-allowed border-none shadow-none'
+                        : canUseTrial
+                        ? 'text-black hover:scale-[1.01] shadow-[0_8px_30px_rgba(212,255,0,0.35)]'
                         : isDark
                         ? 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/20 hover:scale-[1.01]'
                         : 'bg-[#D4FF00] text-black hover:bg-[#E2FF3B] shadow-[#D4FF00]/25 hover:scale-[1.01]'
                     }`}
+                    style={
+                      canUseTrial && !status.isGenerating && script.trim() && script.length <= TRIAL_MAX_CHARS
+                        ? { background: 'linear-gradient(135deg, #D4FF00 0%, #22D3EE 100%)' }
+                        : {}
+                    }
                   >
                     {status.isGenerating ? (
                       <div className="flex items-center justify-center gap-3">
                         <div className="w-5 h-5 border-[3px] border-black border-t-transparent dark:border-t-transparent rounded-full animate-spin" />
                         <span>{isEn ? 'SYNTHESIS IN PROGRESS...' : 'SYNTHÈSE EN COURS...'}</span>
                       </div>
-                    ) : currentPlan.id === 'none' ? (
-                      isEn ? '🔒 SUBSCRIPTION REQUIRED • CHOOSE A PLAN' : '🔒 ABONNEMENT REQUIS • CHOISIR UN FORFAIT'
+                    ) : canUseTrial ? (
+                      isEn ? '✨ GENERATE MY FREE VOICE' : '✨ GÉNÉRER MA VOIX GRATUITE'
+                    ) : isUnsubscribed && trialUsed ? (
+                      isEn ? '🔒 TRIAL USED • SUBSCRIBE TO CONTINUE' : '🔒 ESSAI UTILISÉ • ABONNEZ-VOUS'
                     ) : usedSeconds >= quota.maxSeconds ? (
                       isEn ? '🛑 QUOTA REACHED • TOP-UP REQUIRED' : '🛑 PLAFOND ATTEINT • RECHARGE REQUISE'
                     ) : (
