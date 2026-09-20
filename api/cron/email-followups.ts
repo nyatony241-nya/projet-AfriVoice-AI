@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { sendReminderEmail, sendConversionEmail } from '../services/emailService.js';
+import { sendReminderEmail, sendConversionEmail } from '../../services/emailService.js';
 
 export const config = {
   maxDuration: 300,
