@@ -204,7 +204,7 @@ const Header: React.FC<HeaderProps> = ({
           },
           {
             id: 'pricing' as const,
-            label: language === 'en' ? 'Forfaits' : 'Forfaits',
+            label: language === 'en' ? 'Packs' : 'Packs',
             badge: currentPlan.name.toUpperCase(),
             icon: (
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -16,7 +16,6 @@ import { mixAudioBuffers, audioBufferToWav, fetchAndDecodeAudio } from './servic
 import { supabase } from './services/supabaseClient';
 import AuthPage from './components/AuthPage';
 import InstallAppModal from './components/InstallAppModal';
-import RechargeModal, { QuotaPack, QUOTA_PACKS } from './components/RechargeModal';
 import { triggerCelebration } from './components/ConfettiHelper';
 import PaymentModal from './components/PaymentModal';
 import { redirectToChariowCheckout } from './services/chariowService';
@@ -135,7 +134,7 @@ const App: React.FC = () => {
           }
 
           triggerCelebration();
-          addToast('success', 'Forfait Activé !', `Forfait ${foundPlan.name} actif (10 min/mois).`);
+          addToast('success', 'Pack Activé !', `Pack ${foundPlan.name} actif.`);
           return;
         }
       }
@@ -283,7 +282,6 @@ const App: React.FC = () => {
     return found || UNSUBSCRIBED_PLAN;
   });
   const [showQuotaError, setShowQuotaError] = useState(false);
-  const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   // Date d'expiration de l'abonnement (null = gratuit ou inconnu)
   const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
@@ -638,23 +636,11 @@ const App: React.FC = () => {
       addToast(
         'info',
         isEn ? 'Subscription Required' : 'Abonnement Requis',
-        isEn ? 'Please choose a plan to start generating voices.' : 'Veuillez choisir un forfait pour commencer à générer des voix.'
+        isEn ? 'Please choose a plan to start generating voices.' : 'Veuillez choisir un pack pour commencer à générer des voix.'
       );
       return;
     }
-    setShowRechargeModal(true);
-  };
-
-  const handleSelectQuotaPack = (pack: QuotaPack) => {
-    setShowRechargeModal(false);
-    addToast(
-      'info',
-      isEn ? 'Redirecting to Chariow...' : 'Redirection vers Chariow...',
-      isEn ? 'Opening secure checkout for mobile money & card payment...' : 'Ouverture du paiement sécurisé par Mobile Money & Carte...'
-    );
-    setTimeout(() => {
-      redirectToChariowCheckout(pack.id, session?.user?.email || '');
-    }, 400);
+    setActiveTab('pricing');
   };
 
   const toggleLanguage = () => {
@@ -669,11 +655,10 @@ const App: React.FC = () => {
     if (!script.trim() || status.isGenerating || isGeneratingVariants) return;
     if (currentPlan.id === 'none' || quota.maxSeconds <= 0 || usedSeconds >= quota.maxSeconds) {
       setActiveTab('pricing');
-      setShowRechargeModal(usedSeconds >= quota.maxSeconds && currentPlan.id !== 'none');
       addToast(
         'warning',
-        isEn ? 'Subscription Required' : 'Forfait requis',
-        isEn ? 'Please subscribe to a plan to generate voices.' : 'Veuillez souscrire à un forfait pour générer des voix.'
+        isEn ? 'Subscription Required' : 'Pack requis',
+        isEn ? 'Please subscribe to a plan to generate voices.' : 'Veuillez souscrire à un pack pour générer des voix.'
       );
       return;
     }
@@ -736,7 +721,7 @@ const App: React.FC = () => {
       return;
     }
 
-    // 🔒 PAYWALL: Vérifier que l'utilisateur a un forfait payé OU un trial disponible
+    // 🔒 PAYWALL: Vérifier que l'utilisateur a un pack payé OU un trial disponible
     if (currentPlan.id === 'none') {
       if (trialUsed) {
         // Trial déjà consommé → redirect vers pricing
@@ -746,7 +731,7 @@ const App: React.FC = () => {
           isEn ? 'Subscribe to continue' : 'Abonnement requis',
           isEn
             ? 'Your free trial has been used. Choose a plan to keep creating.'
-            : 'Votre essai gratuit a été utilisé. Choisissez un forfait pour continuer.'
+            : 'Votre essai gratuit a été utilisé. Choisissez un pack pour continuer.'
         );
         return;
       }
@@ -774,9 +759,9 @@ const App: React.FC = () => {
         ...prev,
         error: isEn
           ? `Quota for ${currentPlan.name} exhausted. Please recharge or upgrade.`
-          : `Plafond ${currentPlan.name} atteint. Veuillez recharger ou passer au forfait supérieur.`,
+          : `Plafond ${currentPlan.name} atteint. Veuillez recharger ou passer au pack supérieur.`,
       }));
-      setShowRechargeModal(true);
+      setActiveTab('pricing');
       addToast('warning', isEn ? 'Quota Exhausted' : 'Plafond de Synthèse Atteint', isEn ? 'Please recharge your account to continue.' : 'Votre quota est épuisé. Veuillez recharger pour continuer.');
       return;
     }
@@ -1000,7 +985,7 @@ const App: React.FC = () => {
         setSelectedPlanForPayment(plan);
         setIsPaymentModalOpen(true);
       } else {
-        addToast('info', isEn ? 'Already Active' : 'Déjà Actif', isEn ? 'You are already subscribed to this plan.' : 'Vous êtes déjà abonné à ce forfait.');
+        addToast('info', isEn ? 'Already Active' : 'Déjà Actif', isEn ? 'You are already subscribed to this plan.' : 'Vous êtes déjà abonné à ce pack.');
       }
       return;
     }
@@ -1031,17 +1016,6 @@ const App: React.FC = () => {
         isDark={isDark}
         language={language}
         onInstallPWA={deferredInstallPrompt ? handleTriggerPWAInstall : undefined}
-      />
-
-      {/* Recharge Modal with 3 Quota Categories */}
-      <RechargeModal
-        isOpen={showRechargeModal}
-        onClose={() => setShowRechargeModal(false)}
-        isDark={isDark}
-        language={language}
-        onSelectPack={handleSelectQuotaPack}
-        currentPlanId={currentPlan.id}
-        onUpgrade={() => setIsPaymentModalOpen(true)}
       />
 
       {/* ── Aha! Moment — Modale de Conversion Post-Trial ── */}
@@ -1079,10 +1053,10 @@ const App: React.FC = () => {
                 <span className="text-2xl">🌍</span>
                 <div>
                   <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#D4FF00' }}>
-                    {isEn ? 'STARTER PLAN' : 'FORFAIT STARTER'}
+                    {isEn ? 'STARTER PLAN' : 'PACK STARTER'}
                   </p>
                   <p className={`text-sm font-bold ${ isDark ? 'text-white' : 'text-zinc-900'}`}>
-                    {isEn ? '10 min/month · 5 African accents · from 1,900 FCFA' : '10 min/mois · 5 accents africains · dès 1 900 FCFA'}
+                    {isEn ? '10 min credits · 5 African accents · from 1,900 FCFA' : '10 min de crédits · 5 accents africains · dès 1 900 FCFA'}
                   </p>
                 </div>
               </div>
@@ -1096,7 +1070,7 @@ const App: React.FC = () => {
                 className="w-full py-4 rounded-[20px] font-black text-black text-base uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
                 style={{ background: 'linear-gradient(135deg, #D4FF00 0%, #B8E600 100%)', boxShadow: '0 8px 30px rgba(212,255,0,0.3)' }}
               >
-                {isEn ? '⚡ See Plans & Start Creating →' : '⚡ Voir les Forfaits & Créer Sans Limite →'}
+                {isEn ? '⚡ See Plans & Start Creating →' : '⚡ Voir les Packs & Créer Sans Limite →'}
               </button>
 
               {/* CTA secondaire */}
@@ -1128,7 +1102,7 @@ const App: React.FC = () => {
             setUsedSeconds(0);
             setIsPaymentModalOpen(false);
             setSelectedPlanForPayment(null);
-            addToast('success', isEn ? 'Payment Successful!' : 'Paiement Réussi !', isEn ? `Your ${newPlan.name} plan is now active.` : `Votre forfait ${newPlan.name} est maintenant actif.`);
+            addToast('success', isEn ? 'Payment Successful!' : 'Paiement Réussi !', isEn ? `Your ${newPlan.name} plan is now active.` : `Votre pack ${newPlan.name} est maintenant actif.`);
           }}
         />
       )}
@@ -1263,7 +1237,7 @@ const App: React.FC = () => {
                   }}
                   className="w-full md:w-auto px-8 py-4 bg-[#D4FF00] text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-lg shrink-0"
                 >
-                  ⚡ Changer de Forfait
+                  ⚡ Changer de Pack
                 </button>
               </div>
             </div>
@@ -1487,14 +1461,14 @@ const App: React.FC = () => {
                               addToast(
                                 'warning',
                                 isEn ? '🔒 Subscription Required' : '🔒 Abonnement Requis',
-                                isEn ? 'Please subscribe to a plan to select and generate voices.' : 'Veuillez souscrire à un forfait pour sélectionner et générer des voix.'
+                                isEn ? 'Please subscribe to a plan to select and generate voices.' : 'Veuillez souscrire à un pack pour sélectionner et générer des voix.'
                               );
                             } else {
                               const neededPlan = voice.tier === 'premium' ? 'PRO' : 'CREATOR';
                               addToast(
                                 'warning',
-                                isEn ? `🔒 ${neededPlan} Plan Required` : `🔒 Forfait ${neededPlan} Requis`,
-                                isEn ? `Upgrade to ${neededPlan} to unlock ${voice.persona}.` : `Passez au forfait ${neededPlan} pour débloquer ${voice.persona}.`
+                                isEn ? `🔒 ${neededPlan} Plan Required` : `🔒 Pack ${neededPlan} Requis`,
+                                isEn ? `Upgrade to ${neededPlan} to unlock ${voice.persona}.` : `Passez au pack ${neededPlan} pour débloquer ${voice.persona}.`
                               );
                             }
                             setActiveTab('pricing');
@@ -1519,7 +1493,7 @@ const App: React.FC = () => {
                   <div
                     onClick={() => {
                       if (currentPlan.id === 'free') {
-                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au forfait Creator ou Pro.');
+                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Pack Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au pack Creator ou Pro.');
                         return;
                       }
                       setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions });
@@ -1553,7 +1527,7 @@ const App: React.FC = () => {
                   <div
                     onClick={() => {
                       if (currentPlan.id === 'free') {
-                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Forfait Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au forfait Creator ou Pro.');
+                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Pack Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au pack Creator ou Pro.');
                         return;
                       }
                       setSettings({ ...settings, phoneticHumanizer: !settings.phoneticHumanizer });
@@ -1686,7 +1660,7 @@ const App: React.FC = () => {
                     placeholder={
                       canUseTrial
                         ? (isEn ? `Write your first script... (Max ${TRIAL_MAX_CHARS} characters for free trial)` : `Écris ton premier script... (Max ${TRIAL_MAX_CHARS} caractères pour l'essai gratuit)`)
-                        : (isEn ? `Type or paste your script... (Max ${quota.maxCharsPerScript} characters for ${currentPlan.name} plan)` : `Écris ou colle ton script... (Max ${quota.maxCharsPerScript} caractères pour le forfait ${currentPlan.name})`)
+                        : (isEn ? `Type or paste your script... (Max ${quota.maxCharsPerScript} characters for ${currentPlan.name} plan)` : `Écris ou colle ton script... (Max ${quota.maxCharsPerScript} caractères pour le pack ${currentPlan.name})`)
                     }
                     className={`w-full min-h-[200px] p-6 sm:p-7 rounded-[28px] border outline-none resize-none text-base sm:text-lg font-medium transition-all custom-scrollbar ${
                       (status.error && !script.trim()) || (canUseTrial ? script.length > TRIAL_MAX_CHARS : script.length > quota.maxCharsPerScript)
@@ -1709,7 +1683,7 @@ const App: React.FC = () => {
                         {canUseTrial && script.length > TRIAL_MAX_CHARS
                           ? (isEn ? `Free trial limit: max ${TRIAL_MAX_CHARS} characters. Subscribe to remove this limit.` : `Limite d'essai : max ${TRIAL_MAX_CHARS} caractères. Abonnez-vous pour supprimer cette limite.`)
                           : script.length > quota.maxCharsPerScript
-                          ? (isEn ? `Limit: Your text exceeds the ${quota.maxCharsPerScript} character limit per request for ${currentPlan.name} plan.` : `Plafond : Votre texte dépasse la limite de ${quota.maxCharsPerScript} caractères autorisée par requête pour le forfait ${currentPlan.name}.`)
+                          ? (isEn ? `Limit: Your text exceeds the ${quota.maxCharsPerScript} character limit per request for ${currentPlan.name} plan.` : `Plafond : Votre texte dépasse la limite de ${quota.maxCharsPerScript} caractères autorisée par requête pour le pack ${currentPlan.name}.`)
                           : status.error}
                       </span>
                     </p>
@@ -2032,18 +2006,18 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: FORFAITS & ABONNEMENT (PRICING_PLANS exact rates preserved) */}
+          {/* TAB 4: PACKS & ABONNEMENT (PRICING_PLANS exact rates preserved) */}
           {activeTab === 'pricing' && (
             <div className="animate-in fade-in duration-300 space-y-12 py-6">
               <div className="text-center max-w-3xl mx-auto space-y-4">
                 <span className={`text-xs font-black uppercase tracking-[0.25em] px-4 py-1.5 rounded-full ${isDark ? 'text-[#D4FF00] bg-[#D4FF00]/10' : 'text-zinc-900 bg-[#D4FF00] shadow-sm'}`}>
-                  {isEn ? 'Pricing Grid & HD Voice Plans' : 'Grille Tarifaire & Forfaits Vocaux HD'}
+                  {isEn ? 'Pricing Grid & HD Voice Plans' : 'Grille Tarifaire & Packs Vocaux HD'}
                 </span>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight">
                   {isEn ? 'Your Success Starts Here' : 'Votre Succès Démarre Ici'}
                 </h2>
                 <p className="text-sm sm:text-base text-zinc-500 font-medium leading-relaxed">
-                  {isEn ? 'Each plan includes a monthly minute quota and exclusive features tailored to your production pace.' : 'Chaque forfait inclut un quota mensuel de minutes et des fonctionnalités exclusives adaptées à votre cadence de production.'}
+                  {isEn ? 'Each pack includes permanent minutes and exclusive features tailored to your production pace.' : 'Chaque pack inclut un volume permanent de minutes et des fonctionnalités exclusives adaptées à votre cadence de production.'}
                 </p>
               </div>
 
@@ -2135,8 +2109,8 @@ const App: React.FC = () => {
                         {isActivePlan
                           ? usedSeconds >= quota.maxSeconds
                             ? (isEn ? 'RENEW PLAN' : 'SE RÉABONNER')
-                            : (isEn ? 'ACTIVE PLAN' : 'FORFAIT ACTIF')
-                          : (isEn ? 'Select This Plan' : 'Sélectionner ce Forfait')}
+                            : (isEn ? 'ACTIVE PLAN' : 'PACK ACTIF')
+                          : (isEn ? 'Select This Plan' : 'Sélectionner ce Pack')}
                       </button>
                     </div>
                   );

@@ -123,7 +123,7 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
               : 'bg-gradient-to-r from-[#D4FF00] to-[#E2FF3B] text-black'
           }`}
         >
-          {isUnsubscribed ? (isEn ? '⚡ Buy Credits' : '⚡ Acheter Crédits') : (isEn ? '+ Top Up' : '+ Recharge')}
+          {isEn ? '⚡ Buy Credits' : '⚡ Acheter Crédits'}
         </button>
       </div>
 

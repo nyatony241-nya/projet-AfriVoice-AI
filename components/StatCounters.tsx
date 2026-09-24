@@ -89,7 +89,7 @@ const StatCounters: React.FC<StatCountersProps> = ({
     },
     {
       id: 'quota',
-      label: isEn ? 'Current Plan Status' : 'Statut Forfait Actuel',
+      label: isEn ? 'Current Plan Status' : 'Statut Pack Actuel',
       value: currentPlan.id.toUpperCase(),
       sub: `${currentPlan.name.split(' – ')[0]} • ${currentPlan.price}`,
       icon: (

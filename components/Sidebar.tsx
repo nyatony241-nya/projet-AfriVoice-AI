@@ -88,7 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'pricing' as const,
-      label: 'Forfaits & Tarifs',
+      label: 'Packs & Tarifs',
       badge: currentPlan.name.toUpperCase(),
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
