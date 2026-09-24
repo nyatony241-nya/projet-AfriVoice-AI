@@ -247,6 +247,5 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
     </div>
   );
 };
-};
 
 export default RechargeModal;
