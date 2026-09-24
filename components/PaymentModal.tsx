@@ -68,12 +68,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
                 🔒 {isEn ? 'Chariow Secure Checkout' : 'Paiement Sécurisé Chariow'}
               </span>
               <h2 className="text-2xl font-black tracking-tight mb-1">
-                {isEn ? 'Confirm Plan' : 'Confirmer le Forfait'}
+                {isEn ? 'Confirm Credit Pack' : 'Confirmer le Pack de Crédits'}
               </h2>
               <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
                 {isEn 
-                  ? 'Pay securely via Mobile Money or Bank Card on Chariow' 
-                  : 'Payez en toute sécurité par Mobile Money ou Carte bancaire sur Chariow'}
+                  ? 'Credits are permanent — they never expire. Pay via Mobile Money or Card on Chariow.' 
+                  : 'Les crédits sont permanents — ils n’expirent jamais. Payez par Mobile Money ou Carte.'}
               </p>
             </div>
 
@@ -83,7 +83,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             }`}>
               <div>
                 <div className="text-[10px] font-black uppercase text-zinc-500 mb-1">
-                  {isEn ? 'Selected Subscription' : 'Abonnement Sélectionné'}
+                  {isEn ? 'Credit Pack' : 'Pack de Crédits'}
                 </div>
                 <div className="font-black text-xl">{plan.name}</div>
                 <div className={`text-xs mt-0.5 ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>

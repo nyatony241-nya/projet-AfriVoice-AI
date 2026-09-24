@@ -81,7 +81,7 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
           <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider truncate">
-                {isEn ? 'Quota:' : 'Quota :'} {isUnsubscribed ? (isEn ? 'No Active Plan' : 'Sans Abonnement') : currentPlan.name}
+                {isEn ? 'Credits:' : 'Crédits Studio :'} {isUnsubscribed ? (isEn ? 'No Credits' : 'Aucun Crédit') : currentPlan.name}
               </span>
               <span
                 className={`text-[7px] font-black uppercase px-1.5 py-0.2 rounded-full shrink-0 ${
@@ -95,22 +95,22 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
                 }`}
               >
                 {isUnsubscribed
-                  ? (isEn ? 'INACTIVE' : 'NON ABONNÉ')
+                  ? (isEn ? 'INACTIVE' : 'AUCUN CRÉDIT')
                   : isExhausted
                   ? (isEn ? '0% • EXHAUSTED' : '0% • ÉPUISÉ')
                   : `${remainingPercentage}% ${isEn ? 'REMAINING' : 'DISPONIBLE'}`}
               </span>
             </div>
             <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700 font-bold">•</span>
-            <p className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium truncate">
-              {isUnsubscribed
-                ? isEn
-                  ? '0 min available • Choose a plan to unlock voice generation'
-                  : '0 min disponible • Choisissez un forfait pour débloquer les voix'
-                : isEn
-                ? `Remaining: ${remainingMinutes}m out of ${maxMinutesFormatted}m`
-                : `Reste : ${remainingMinutes}m sur ${maxMinutesFormatted}m`}
-            </p>
+              <p className="text-[9px] sm:text-[10px] text-zinc-500 dark:text-zinc-400 font-medium truncate">
+                {isUnsubscribed
+                  ? isEn
+                    ? '0 min available • Buy a credit pack to unlock voice generation'
+                    : '0 min disponible • Achetez un pack pour débloquer les voix'
+                  : isEn
+                  ? `Remaining: ${remainingMinutes}m out of ${maxMinutesFormatted}m`
+                  : `Reste : ${remainingMinutes}m sur ${maxMinutesFormatted}m`}
+              </p>
           </div>
         </div>
 
@@ -123,7 +123,7 @@ const QuotaBar: React.FC<QuotaBarProps> = ({
               : 'bg-gradient-to-r from-[#D4FF00] to-[#E2FF3B] text-black'
           }`}
         >
-          {isUnsubscribed ? (isEn ? '⚡ Subscribe' : '⚡ S\'abonner') : (isEn ? '+ Top Up' : '+ Recharge')}
+          {isUnsubscribed ? (isEn ? '⚡ Buy Credits' : '⚡ Acheter Crédits') : (isEn ? '+ Top Up' : '+ Recharge')}
         </button>
       </div>
 

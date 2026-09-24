@@ -7,19 +7,25 @@ import crypto from 'crypto';
 // ══════════════════════════════════════════════════════════════
 
 const CHARIOW_PRODUCT_TO_PLAN: Record<string, string> = {
-  'prd_n6d89d8s': 'starter', // STARTER 1 900 FCFA
-  'prd_f639rpw2': 'creator', // CREATOR 4 900 FCFA
-  'prd_pq817d6j': 'pro',     // PRO STUDIO HD 8 900 FCFA
-  // Boosters de recharge
+  'prd_n6d89d8s': 'starter', // STARTER 1 900 FCFA → 10 min
+  'prd_f639rpw2': 'creator', // CREATOR 4 900 FCFA → 30 min
+  'prd_pq817d6j': 'pro',     // PRO STUDIO HD 8 900 FCFA → 60 min
+  // Boosters de recharge supplémentaires
   'prd_221tec74': 'starter_booster',
   'prd_9zvjwbz5': 'creator_booster',
   'prd_78vr0y1w': 'pro_booster',
 };
 
-const BOOSTER_SECONDS: Record<string, number> = {
-  'starter_booster': 900,  // +15 min
-  'creator_booster': 1800, // +30 min
-  'pro_booster':     3600, // +60 min
+// Crédits en secondes ajoutés au wallet pour chaque produit acheté
+// MODÈLE CRÉDITS PERMANENTS — les achats s'accumulent, ne se remplacent pas
+const PACK_CREDITS_SECONDS: Record<string, number> = {
+  'starter':         600,   // Starter  — 10 min = 600s
+  'free':            600,   // Starter fallback
+  'creator':        1800,   // Creator  — 30 min = 1 800s
+  'pro':            3600,   // Pro      — 60 min = 3 600s
+  'starter_booster': 900,   // Booster +15 min
+  'creator_booster':1800,   // Booster +30 min
+  'pro_booster':    3600,   // Booster +60 min
 };
 
 function verifyChariowSignature(body: string, signature: string | undefined, secret: string): boolean {
@@ -144,79 +150,72 @@ export default async function handler(req: any, res: any) {
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   try {
-    const isBooster = planId.includes('_booster');
-    const bonusSeconds = BOOSTER_SECONDS[planId];
+    const creditsToAdd = PACK_CREDITS_SECONDS[planId];
+    if (!creditsToAdd) {
+      console.warn(`[Webhook Chariow] Pas de crédits définis pour le plan : ${planId}`);
+      return res.status(200).json({ received: true, processed: false, reason: `Pas de crédits pour ${planId}` });
+    }
 
-    if (isBooster && bonusSeconds) {
-      // Lire les bonus existants avant d'incrémenter (évite l'écrasement)
-      const { data: existing } = await supabase
-        .from('user_quotas')
-        .select('bonus_seconds')
-        .eq('email', userEmail)
-        .maybeSingle();
+    // ───────────────────────────────────────────────────────────
+    // 1. LIRE le quota existant (bonus_seconds = wallet de crédits)
+    // ───────────────────────────────────────────────────────────
+    const { data: existing } = await supabase
+      .from('user_quotas')
+      .select('bonus_seconds, monthly_limit, seconds_used')
+      .eq('email', userEmail)
+      .maybeSingle();
 
-      const currentBonus = (existing?.bonus_seconds as number) || 0;
-      const newBonus = currentBonus + bonusSeconds;
+    const currentBonus = (existing?.bonus_seconds as number) || 0;
+    const currentLimit = (existing?.monthly_limit as number) || 0;
+    const currentUsed  = (existing?.seconds_used  as number) || 0;
 
-      const { error } = await supabase
-        .from('user_quotas')
-        .upsert(
-          { email: userEmail, bonus_seconds: newBonus, chariow_order_id: chariowOrderId, updated_at: new Date().toISOString() },
-          { onConflict: 'email', ignoreDuplicates: false }
-        );
-      if (error) {
-        console.error('[Webhook Chariow] Erreur upsert bonus:', error);
-      }
-    } else {
-      // Activer / upgrader le plan
-      // expires_at = aujourd'hui + 30 jours (renouvellement mensuel)
-      const activatedAt = new Date();
-      const expiresAt = new Date(activatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    // ───────────────────────────────────────────────────────────
+    // 2. CUMULER les crédits (jamais de reset, jamais de remplacement)
+    //    bonus_seconds sert de "wallet" global — s'accumule à l'infini
+    // ───────────────────────────────────────────────────────────
+    const newBonus = currentBonus + creditsToAdd;
+    const activatedAt = new Date();
 
-      const { error } = await supabase
-        .from('user_plans')
-        .upsert(
-          {
-            email: userEmail,
-            plan_id: planId,
-            chariow_order_id: chariowOrderId,
-            activated_at: activatedAt.toISOString(),
-            expires_at: expiresAt.toISOString(),
-            is_active: true,
-            updated_at: activatedAt.toISOString(),
-          },
-          { onConflict: 'email', ignoreDuplicates: false }
-        );
-      if (error) {
-        console.error('[Webhook Chariow] Erreur upsert plan:', error);
-      }
+    const { error: quotaError } = await supabase
+      .from('user_quotas')
+      .upsert(
+        {
+          email: userEmail,
+          bonus_seconds:  newBonus,       // Wallet cumulé
+          monthly_limit:  currentLimit,   // Inchangé
+          seconds_used:   currentUsed,    // Inchangé (pas de reset !)
+          chariow_order_id: chariowOrderId,
+          updated_at: activatedAt.toISOString(),
+        },
+        { onConflict: 'email', ignoreDuplicates: false }
+      );
 
-      // ✅ Mettre à jour monthly_limit selon le plan activé
-      // free = Starter (10 min = 600s), creator = 30 min (1800s), pro = 60 min (3600s)
-      const PLAN_LIMITS: Record<string, number> = {
-        'starter': 600,   // Starter — 10 min
-        'free':    600,   // Starter fallback — 10 min
-        'creator': 1800,  // Creator — 30 min
-        'pro':     3600,  // Pro — 60 min
-      };
-      const newLimit = PLAN_LIMITS[planId];
-      if (newLimit) {
-        const { error: quotaError } = await supabase
-          .from('user_quotas')
-          .upsert(
-            {
-              email: userEmail,
-              monthly_limit: newLimit,
-              seconds_used: 0,        // Reset à 0 lors de l'activation
-              reset_date: new Date().toISOString().slice(0, 10).slice(0, 8) + '01', // 1er du mois
-              updated_at: activatedAt.toISOString(),
-            },
-            { onConflict: 'email', ignoreDuplicates: false }
-          );
-        if (quotaError) {
-          console.error('[Webhook Chariow] Erreur mise à jour quota:', quotaError);
-        }
-      }
+    if (quotaError) {
+      console.error('[Webhook Chariow] Erreur upsert crédits wallet:', quotaError);
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // 3. ENREGISTRER le pack acheté dans user_plans (historique)
+    //    Pas d'expiration — expires_at null
+    // ───────────────────────────────────────────────────────────
+    const basePlanId = planId.replace('_booster', '') || planId;
+    const { error: planError } = await supabase
+      .from('user_plans')
+      .upsert(
+        {
+          email: userEmail,
+          plan_id: basePlanId,            // Dernier pack acheté (sans _booster)
+          chariow_order_id: chariowOrderId,
+          activated_at: activatedAt.toISOString(),
+          expires_at: null,               // ⚠️ Pas d'expiration — crédits permanents
+          is_active: true,
+          updated_at: activatedAt.toISOString(),
+        },
+        { onConflict: 'email', ignoreDuplicates: false }
+      );
+
+    if (planError) {
+      console.error('[Webhook Chariow] Erreur upsert user_plans:', planError);
     }
 
     console.log(`✅ [Webhook Chariow] ${eventType} traité : ${userEmail} → ${planId} (commande ${chariowOrderId})`);

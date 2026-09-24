@@ -70,13 +70,13 @@ const Header: React.FC<HeaderProps> = ({
   const tabNamesFr: Record<string, string> = {
     studio: 'Studio de Synthèse',
     history: 'Bibliothèque & Historique',
-    pricing: 'Forfaits & Abonnement',
+    pricing: 'Packs de Crédits',
   };
 
   const tabNamesEn: Record<string, string> = {
     studio: 'AI Synthesis Studio',
     history: 'Audio Library & History',
-    pricing: 'Plans & Subscription',
+    pricing: 'Credit Packs',
   };
 
   const currentTabName = language === 'en' ? tabNamesEn[activeTab] : tabNamesFr[activeTab];
@@ -130,7 +130,7 @@ const Header: React.FC<HeaderProps> = ({
                   : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-zinc-200 dark:border-white/10 font-bold'
               }`}
             >
-              Forfait : {currentPlan.name}
+              🪙 {currentPlan.name}
             </span>
           </div>
         </div>

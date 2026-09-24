@@ -74,12 +74,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
   isDark,
   language = 'fr',
   onSelectPack,
-  currentPlanId = 'free',
-  onUpgrade,
 }) => {
   if (!isOpen) return null;
   const isEn = language === 'en';
-  const isFree = !currentPlanId || currentPlanId === 'free';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
@@ -167,15 +164,15 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         {/* Header Section */}
         <div className="text-center mb-8">
           <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#ccff00]/15 text-black dark:text-[#ccff00] mb-3">
-            {isEn ? '⚡ Voice Quota Recharge' : '⚡ Recharge de Quota Vocale'}
+            {isEn ? '⚡ Studio Credit Pack' : '⚡ Pack de Crédits Studio'}
           </span>
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">
-            {isEn ? 'Choose Your Quota Category' : 'Choisissez Votre Catégorie de Quota'}
+            {isEn ? 'Choose Your Credit Pack' : 'Choisissez Votre Pack de Crédits'}
           </h2>
           <p className={`text-xs sm:text-sm max-w-lg mx-auto ${isDark ? 'text-zinc-400' : 'text-zinc-600'}`}>
             {isEn
-              ? 'Select the exact amount of additional voice synthesis minutes you need to continue your creations.'
-              : 'Sélectionnez le volume exact de minutes de synthèse vocale supplémentaire dont vous avez besoin.'}
+              ? 'Credits are permanent and never expire. They accumulate with each purchase.'
+              : 'Les crédits sont permanents et n’expirent jamais. Ils s’accumulent à chaque achat.'}
           </p>
         </div>
 
@@ -265,8 +262,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
         <div className="flex flex-col items-center justify-center space-y-4">
           <p className="text-[11px] font-bold text-center text-zinc-500">
             {isEn
-              ? '🔒 Safe payment via Mobile Money & Cards. Minutes are added immediately.'
-              : '🔒 Paiement 100% sécurisé par Mobile Money & Cartes. Les minutes s’ajoutent immédiatement.'}
+              ? '🔒 Safe payment via Mobile Money & Cards. Credits are added immediately and never expire.'
+              : '🔒 Paiement 100% sécurisé par Mobile Money & Cartes. Les crédits s’ajoutent immédiatement et n’expirent jamais.'}
           </p>
           <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3 opacity-90 pb-2">
             {/* MTN */}
@@ -302,11 +299,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({
             </div>
           </div>
         </div>
-          </>
-        )}
       </div>
     </div>
   );
+};
 };
 
 export default RechargeModal;

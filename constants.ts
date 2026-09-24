@@ -57,10 +57,10 @@ export const PRICING_PLANS: PricingPlan[] = [
     id: 'starter',
     name: 'STARTER',
     price: '1 900 FCFA',
-    description: 'Pour démarrer la voix off africaine',
+    description: 'Pack d’entrée — crédits permanents, sans expiration',
     color: 'stone',
     features: [
-      '10 minutes / mois sécurisées',
+      '⏱ 10 minutes de crédits (permanents)',
       '5 pays d’Afrique débloqués',
       '5 voix Naturelles',
       'Qualité audio standard MP3',
@@ -76,7 +76,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     color: 'amber',
     isPopular: true,
     features: [
-      '30 minutes / mois sécurisées',
+      '⏱ 30 minutes de crédits (permanents)',
       '10 pays & 20 voix débloquées',
       'Voix Naturelles + Dynamiques',
       'Expressions Locales Africaines incluses',
@@ -92,7 +92,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     description: 'Studios, Entreprises & Publicités HD',
     color: 'indigo',
     features: [
-      '60 minutes / mois sécurisées',
+      '⏱ 60 minutes de crédits (permanents)',
       '⚡ 20 pays & 60 voix — Bibliothèque complète',
       'Voix Naturelles + Dynamiques + Premium',
       'Qualité Studio HD 24kHz PCM',
@@ -107,10 +107,10 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     id: 'starter',
     name: 'STARTER',
     price: '1,900 FCFA ($3.00)',
-    description: 'To start with African voice-over',
+    description: 'Entry pack — permanent credits, never expire',
     color: 'stone',
     features: [
-      '10 minutes / month secured',
+      '⏱ 10 minutes of credits (permanent)',
       '5 unlocked African countries',
       '5 Natural voices',
       'Standard MP3 audio quality',
@@ -126,7 +126,7 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     color: 'amber',
     isPopular: true,
     features: [
-      '30 minutes / month secured',
+      '⏱ 30 minutes of credits (permanent)',
       '10 countries & 20 voices unlocked',
       'Natural + Dynamic voices',
       'Local African Expressions included',
@@ -142,7 +142,7 @@ export const PRICING_PLANS_EN: PricingPlan[] = [
     description: 'Studios, Business & HD Advertisements',
     color: 'indigo',
     features: [
-      '60 minutes / month secured',
+      '⏱ 60 minutes of credits (permanent)',
       '⚡ 20 countries & 60 voices — Full library',
       'Natural + Dynamic + Premium voices',
       'HD Studio Quality 24kHz PCM',
