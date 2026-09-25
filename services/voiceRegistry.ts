@@ -1091,19 +1091,16 @@ export function getAccessibleVoices(planId: string): VoiceIdentity[] {
   if (accessibleCountries.length === 0) return [];
   return getAllVoices().filter((v) => {
     if (!accessibleCountries.includes(v.countryId)) return false;
-    if (planId === 'starter' || planId === 'free') return v.tier === 'natural';
-    if (planId === 'creator') return v.tier === 'natural' || v.tier === 'dynamic';
-    if (planId === 'pro') return true;
-    return false;
+    // Les utilisateurs sans pack (none) ou sur l'ancien free voient la liste avec cadenas (lock géré dans l'UI)
+    // Mais pour la sélection on garde tout pour tout le monde (la restriction réelle se fait à la génération et l'UI)
+    return true;
   });
 }
 
 /** Get accessible countries for a plan */
 export function getAccessibleCountryIds(planId: string): string[] {
-  if (planId === 'starter' || planId === 'free') return STARTER_COUNTRIES;
-  if (planId === 'creator') return CREATOR_COUNTRIES;
-  if (planId === 'pro') return PRO_COUNTRIES;
-  return [];
+  // Tout le monde voit les 20 pays (cadenassés ou non selon le statut de l'UI)
+  return PRO_COUNTRIES;
 }
 
 /** Migrate an old history item to the closest voice_id */

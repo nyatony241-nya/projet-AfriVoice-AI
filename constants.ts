@@ -55,49 +55,48 @@ export const UNSUBSCRIBED_PLAN: PricingPlan = {
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'starter',
-    name: 'STARTER',
+    name: 'PACK 10 MIN',
     price: '1 900 FCFA',
-    description: 'Pack d’entrée — crédits permanents, sans expiration',
+    description: 'Recharge d\'entrée — crédits permanents',
     color: 'stone',
     features: [
       '⏱ 10 minutes de crédits (permanents)',
-      '5 pays d’Afrique débloqués',
-      '5 voix Naturelles',
-      'Qualité audio standard MP3',
-      'Utilisation personnelle uniquement',
-      '❌ Pas d’Expressions Locales ni d’Humanisation IA',
+      '🌍 20 pays & 60 voix débloqués',
+      '✨ Expressions Locales & Humanisation IA',
+      '🎙 Qualité audio Studio HD (WAV/MP3)',
+      '💼 Utilisation commerciale autorisée',
+      '🚀 Toutes les fonctionnalités premium'
     ]
   },
   {
     id: 'creator',
-    name: 'CREATOR',
+    name: 'PACK 30 MIN',
     price: '4 900 FCFA',
     description: 'Créateurs de contenu & Réseaux Sociaux',
     color: 'amber',
     isPopular: true,
     features: [
       '⏱ 30 minutes de crédits (permanents)',
-      '10 pays & 20 voix débloquées',
-      'Voix Naturelles + Dynamiques',
-      'Expressions Locales Africaines incluses',
-      '✨ Humanisation Phonétique IA incluse',
-      'Qualité audio Haute Définition MP3 + WAV',
-      'Utilisation commerciale autorisée'
+      '🌍 20 pays & 60 voix débloqués',
+      '✨ Expressions Locales & Humanisation IA',
+      '🎙 Qualité audio Studio HD (WAV/MP3)',
+      '💼 Utilisation commerciale autorisée',
+      '🚀 Toutes les fonctionnalités premium'
     ]
   },
   {
     id: 'pro',
-    name: 'PRO – STUDIO HD',
+    name: 'PACK 60 MIN',
     price: '8 900 FCFA',
     description: 'Studios, Entreprises & Publicités HD',
     color: 'indigo',
     features: [
       '⏱ 60 minutes de crédits (permanents)',
-      '⚡ 20 pays & 60 voix — Bibliothèque complète',
-      'Voix Naturelles + Dynamiques + Premium',
-      'Qualité Studio HD 24kHz PCM',
-      'Expressions locales & Humanisation IA',
-      'Support prioritaire par e-mail 24/7'
+      '🌍 20 pays & 60 voix débloqués',
+      '✨ Expressions Locales & Humanisation IA',
+      '🎙 Qualité audio Studio HD (WAV/MP3)',
+      '💼 Utilisation commerciale autorisée',
+      '🚀 Toutes les fonctionnalités premium'
     ]
   }
 ];
@@ -105,49 +104,48 @@ export const PRICING_PLANS: PricingPlan[] = [
 export const PRICING_PLANS_EN: PricingPlan[] = [
   {
     id: 'starter',
-    name: 'STARTER',
+    name: 'PACK 10 MIN',
     price: '1,900 FCFA ($3.00)',
-    description: 'Entry pack — permanent credits, never expire',
+    description: 'Entry recharge — permanent credits',
     color: 'stone',
     features: [
       '⏱ 10 minutes of credits (permanent)',
-      '5 unlocked African countries',
-      '5 Natural voices',
-      'Standard MP3 audio quality',
-      'Personal use only',
-      '❌ No Local Expressions or AI Humanization',
+      '🌍 All countries & voices unlocked',
+      '✨ Local Expressions & AI Humanization',
+      '🎙 HD Studio Audio Quality (WAV/MP3)',
+      '💼 Commercial use authorized',
+      '🚀 All premium features included'
     ]
   },
   {
     id: 'creator',
-    name: 'CREATOR',
+    name: 'PACK 30 MIN',
     price: '4,900 FCFA ($8.00)',
     description: 'Content Creators & Social Media',
     color: 'amber',
     isPopular: true,
     features: [
       '⏱ 30 minutes of credits (permanent)',
-      '10 countries & 20 voices unlocked',
-      'Natural + Dynamic voices',
-      'Local African Expressions included',
-      '✨ AI Phonetic Humanization included',
-      'High Definition MP3 + WAV exports',
-      'Commercial use authorized'
+      '🌍 All countries & voices unlocked',
+      '✨ Local Expressions & AI Humanization',
+      '🎙 HD Studio Audio Quality (WAV/MP3)',
+      '💼 Commercial use authorized',
+      '🚀 All premium features included'
     ]
   },
   {
     id: 'pro',
-    name: 'PRO – STUDIO HD',
+    name: 'PACK 60 MIN',
     price: '8,900 FCFA ($14.50)',
     description: 'Studios, Business & HD Advertisements',
     color: 'indigo',
     features: [
       '⏱ 60 minutes of credits (permanent)',
-      '⚡ 20 countries & 60 voices — Full library',
-      'Natural + Dynamic + Premium voices',
-      'HD Studio Quality 24kHz PCM',
-      'Local expressions & AI Humanization',
-      'Priority email support 24/7'
+      '🌍 All countries & voices unlocked',
+      '✨ Local Expressions & AI Humanization',
+      '🎙 HD Studio Audio Quality (WAV/MP3)',
+      '💼 Commercial use authorized',
+      '🚀 All premium features included'
     ]
   }
 ];

@@ -283,7 +283,7 @@ const App: React.FC = () => {
   });
   const [showQuotaError, setShowQuotaError] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  // Date d'expiration de l'abonnement (null = gratuit ou inconnu)
+  // Date d'expiration (inutilisé) (null = gratuit ou inconnu)
   const [planExpiresAt, setPlanExpiresAt] = useState<string | null>(null);
 
   // Safety Rails: Quota & Rate Limit state
@@ -313,7 +313,7 @@ const App: React.FC = () => {
 
   // Dynamic Quota limits by plan (Safety Rail #1 & #3) + Recharge bonus
   const quota = useMemo<QuotaUsage>(() => {
-    let baseMaxSeconds = 0; // Sans abonnement: 0 min
+    let baseMaxSeconds = 0; // Sans pack: 0 min
     let maxChars = 500;
 
     if (currentPlan.id === 'starter' || currentPlan.id === 'free') {
@@ -367,13 +367,9 @@ const App: React.FC = () => {
     }
     // Auto-select first available voice for the selected country
     const voices = getVoicesForCountry(selectedCountry.id);
-    const accessible = voices.filter(v => {
-      if (currentPlan.id === 'free') return v.tier === 'natural';
-      if (currentPlan.id === 'creator') return v.tier === 'natural' || v.tier === 'dynamic';
-      return true;
-    });
-    return accessible[0];
-  }, [settings.selectedVoiceId, selectedCountry.id, currentPlan.id]);
+    // Tous les utilisateurs payants ont accès à toutes les voix
+    return voices[0];
+  }, [settings.selectedVoiceId, selectedCountry.id]);
 
   // Available voices for the currently selected country (filtered by plan)
   const availableVoicesForCountry = useMemo(() => {
@@ -420,7 +416,8 @@ const App: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const isPremiumFeature = currentPlan.id === 'pro';
+  // Toutes les fonctionnalités sont disponibles dès qu'on a un pack payant
+  const isPremiumFeature = currentPlan.id !== 'none';
   const isDark = theme === 'dark';
 
   // Toast Helpers
@@ -597,11 +594,7 @@ const App: React.FC = () => {
     }
   }, [isPremiumFeature]);
 
-  useEffect(() => {
-    if (currentPlan.id === 'free') {
-      setSettings((prev) => ({ ...prev, useLocalExpressions: false, phoneticHumanizer: false }));
-    }
-  }, [currentPlan]);
+  // Plus de désactivation forcée des fonctionnalités IA pour les plans payants
 
   // Synchronize dark/light class with HTML tag & background
   useEffect(() => {
@@ -635,7 +628,7 @@ const App: React.FC = () => {
       setActiveTab('pricing');
       addToast(
         'info',
-        isEn ? 'Subscription Required' : 'Abonnement Requis',
+        isEn ? 'Pack Required' : 'Pack Requis',
         isEn ? 'Please choose a plan to start generating voices.' : 'Veuillez choisir un pack pour commencer à générer des voix.'
       );
       return;
@@ -690,8 +683,8 @@ const App: React.FC = () => {
           age: settings.age,
           emotion: variant.emotion,
           style: settings.style,
-          useLocalExpressions: currentPlan.id === 'free' ? false : settings.useLocalExpressions,
-          phoneticHumanizer: currentPlan.id === 'free' ? false : settings.phoneticHumanizer,
+          useLocalExpressions: settings.useLocalExpressions,
+          phoneticHumanizer: settings.phoneticHumanizer,
           speed: settings.speed,
           pitch: settings.pitch,
           accentLevel: settings.accentLevel,
@@ -728,7 +721,7 @@ const App: React.FC = () => {
         setActiveTab('pricing');
         addToast(
           'warning',
-          isEn ? 'Subscribe to continue' : 'Abonnement requis',
+          isEn ? 'Buy a pack to continue' : 'Pack requis',
           isEn
             ? 'Your free trial has been used. Choose a plan to keep creating.'
             : 'Votre essai gratuit a été utilisé. Choisissez un pack pour continuer.'
@@ -821,8 +814,8 @@ const App: React.FC = () => {
         age: settings.age,
         emotion: settings.emotion,
         style: settings.style,
-        useLocalExpressions: currentPlan.id === 'free' ? false : settings.useLocalExpressions,
-        phoneticHumanizer: currentPlan.id === 'free' ? false : settings.phoneticHumanizer,
+        useLocalExpressions: settings.useLocalExpressions,
+        phoneticHumanizer: settings.phoneticHumanizer,
         speed: settings.speed,
         pitch: settings.pitch,
         accentLevel: settings.accentLevel,
@@ -1352,7 +1345,7 @@ const App: React.FC = () => {
                         {isEn ? 'Country / Accent' : 'Pays / Accent'}
                       </label>
                       <span className="text-[10px] font-mono text-zinc-400 font-bold">
-                        {currentPlan.id === 'none' ? '0/20 🔒' : (currentPlan.id === 'starter' || currentPlan.id === 'free') ? '5/20 🔒' : currentPlan.id === 'creator' ? '10/20 🔒' : '20/20'}
+                        {currentPlan.id === 'none' ? '0/20 🔒' : '20/20 ✓'}
                       </span>
                     </div>
                     <select
@@ -1364,12 +1357,7 @@ const App: React.FC = () => {
                           setSelectedCountry(country);
                           // Auto-select first available voice for new country
                           const voices = getVoicesForCountry(targetId);
-                          const first = voices.find(v => {
-                            if (currentPlan.id === 'starter' || currentPlan.id === 'free') return v.tier === 'natural';
-                            if (currentPlan.id === 'creator') return v.tier === 'natural' || v.tier === 'dynamic';
-                            if (currentPlan.id === 'pro') return true;
-                            return false;
-                          });
+                          const first = voices[0]; // Tous les payants ont accès à toutes les voix
                           if (first) setSettings(s => ({ ...s, selectedVoiceId: first.voiceId, gender: first.gender }));
                           else if (voices.length > 0) setSettings(s => ({ ...s, selectedVoiceId: voices[0].voiceId, gender: voices[0].gender }));
                         }
@@ -1433,13 +1421,8 @@ const App: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {availableVoicesForCountry.map((voice) => {
-                      const isVoiceLocked = (() => {
-                        if (currentPlan.id === 'none') return true; // Sans abonnement => toutes les voix sont verrouillées pour sélection
-                        if (currentPlan.id === 'pro') return false;
-                        if (currentPlan.id === 'creator') return voice.tier === 'premium';
-                        if (currentPlan.id === 'starter' || currentPlan.id === 'free') return voice.tier !== 'natural';
-                        return true;
-                      })();
+                      // Seuls les utilisateurs sans pack (none) voient les voix verrouillées
+                      const isVoiceLocked = currentPlan.id === 'none';
                       return (
                         <VoiceCard
                           key={voice.voiceId}
@@ -1460,7 +1443,7 @@ const App: React.FC = () => {
                             if (currentPlan.id === 'none') {
                               addToast(
                                 'warning',
-                                isEn ? '🔒 Subscription Required' : '🔒 Abonnement Requis',
+                                isEn ? '🔒 Pack Required' : '🔒 Pack Requis',
                                 isEn ? 'Please subscribe to a plan to select and generate voices.' : 'Veuillez souscrire à un pack pour sélectionner et générer des voix.'
                               );
                             } else {
@@ -1492,16 +1475,15 @@ const App: React.FC = () => {
                   {/* Expressions Locales */}
                   <div
                     onClick={() => {
-                      if (currentPlan.id === 'free') {
-                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Pack Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au pack Creator ou Pro.');
+                      if (currentPlan.id === 'none') {
+                        setActiveTab('pricing');
+                        addToast('warning', isEn ? 'Pack Required 🔒' : 'Pack Requis 🔒', isEn ? 'Buy a pack to unlock this feature.' : 'Achetez un pack pour débloquer cette fonctionnalité.');
                         return;
                       }
                       setSettings({ ...settings, useLocalExpressions: !settings.useLocalExpressions });
                     }}
                     className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
-                      currentPlan.id === 'free'
-                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5'
-                        : settings.useLocalExpressions
+                      settings.useLocalExpressions
                         ? isDark ? 'bg-[#D4FF00]/10 border-[#D4FF00]/30' : 'bg-[#D4FF00]/10 border-[#D4FF00]/40'
                         : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
                     }`}
@@ -1526,16 +1508,15 @@ const App: React.FC = () => {
                   {/* Humanisation Phonétique */}
                   <div
                     onClick={() => {
-                      if (currentPlan.id === 'free') {
-                        addToast('warning', isEn ? 'Creator Plan Feature 🔒' : 'Pack Creator Requis 🔒', isEn ? 'Please upgrade to Creator or Pro plan.' : 'Veuillez passer au pack Creator ou Pro.');
+                      if (currentPlan.id === 'none') {
+                        setActiveTab('pricing');
+                        addToast('warning', isEn ? 'Pack Required 🔒' : 'Pack Requis 🔒', isEn ? 'Buy a pack to unlock this feature.' : 'Achetez un pack pour débloquer cette fonctionnalité.');
                         return;
                       }
                       setSettings({ ...settings, phoneticHumanizer: !settings.phoneticHumanizer });
                     }}
                     className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none ${
-                      currentPlan.id === 'free'
-                        ? 'opacity-40 cursor-not-allowed border-zinc-200 dark:border-white/5'
-                        : settings.phoneticHumanizer
+                      settings.phoneticHumanizer
                         ? isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-500/10 border-amber-500/40'
                         : isDark ? 'bg-[#09090B] border-white/5' : 'bg-zinc-50 border-zinc-200'
                     }`}
@@ -2070,7 +2051,7 @@ const App: React.FC = () => {
                             FCFA
                           </span>
                         )}
-                        <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">{isEn ? '/ month' : '/ mois'}</span>
+                        
                       </div>
                       <p className="text-xs font-bold text-zinc-500 mb-10 uppercase tracking-wider min-h-[32px]">{plan.description}</p>
 
@@ -2108,7 +2089,7 @@ const App: React.FC = () => {
                       >
                         {isActivePlan
                           ? usedSeconds >= quota.maxSeconds
-                            ? (isEn ? 'RENEW PLAN' : 'SE RÉABONNER')
+                            ? (isEn ? 'RENEW PLAN' : 'ACHETER À NOUVEAU')
                             : (isEn ? 'ACTIVE PLAN' : 'PACK ACTIF')
                           : (isEn ? 'Select This Plan' : 'Sélectionner ce Pack')}
                       </button>
