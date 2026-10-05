@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { GoogleAuth } from "google-auth-library";
 import { humanizeScript } from "./_lib/phonetic-humanizer/index.js";
 // @ts-ignore
 import { buildDirectorPrompt } from "./_lib/promptBuilder.js";
@@ -6,6 +7,41 @@ import { buildDirectorPrompt } from "./_lib/promptBuilder.js";
 import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "./_lib/voiceProfiles.js";
 // @ts-ignore
 import { synthesizeWithGoogleVoiceClone } from "./_lib/googleTtsService.js";
+
+// --- VERTEX AI AUTHENTICATION ---
+let vertexAuthClient: GoogleAuth | null = null;
+let cachedVertexToken: string | null = null;
+let tokenExpiry = 0;
+
+async function getVertexToken(): Promise<string> {
+  const now = Date.now();
+  if (cachedVertexToken && now < tokenExpiry) {
+    return cachedVertexToken;
+  }
+  
+  if (!vertexAuthClient) {
+    const credsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    if (!credsJson) {
+      throw new Error("Missing GOOGLE_APPLICATION_CREDENTIALS_JSON for Vertex AI");
+    }
+    const credentials = JSON.parse(credsJson);
+    vertexAuthClient = new GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    });
+  }
+  
+  const client = await vertexAuthClient.getClient();
+  const tokenResponse = await client.getAccessToken();
+  cachedVertexToken = tokenResponse.token as string;
+  tokenExpiry = now + 50 * 60 * 1000; // cache for 50 min
+  return cachedVertexToken;
+}
+
+export type AuthMethod = 
+  | { type: 'api_key', key: string }
+  | { type: 'vertex', projectId: string, region: string };
+
 
 class GeminiQuotaError extends Error {
   scope: 'minute' | 'day' | 'unknown';
@@ -54,7 +90,7 @@ const TTS_MODELS: string[] = envModels.length > 0
 // gaspiller une requête à chaque génération.
 const modelBlockedUntil = new Map<string, number>();
 
-async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
+async function callGeminiTtsRest(authMethod: AuthMethod, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
   let lastQuotaError: GeminiQuotaError | undefined;
   const now = Date.now();
   // Si tous les modèles sont marqués épuisés, on les retente quand même (la mémoire peut être périmée).
@@ -63,7 +99,7 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
 
   for (const model of candidates) {
     try {
-      const result = await callGeminiTtsModel(model, apiKey, promptText, voiceName);
+      const result = await callGeminiTtsModel(model, authMethod, promptText, voiceName);
       console.log(`[AfriVoice] Audio généré avec le modèle ${model}.`);
       return result;
     } catch (err: any) {
@@ -86,8 +122,18 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
   throw new Error('Aucun modèle de synthèse vocale disponible.');
 }
 
-async function callGeminiTtsModel(model: string, apiKey: string, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+async function callGeminiTtsModel(model: string, authMethod: AuthMethod, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
+  let url = '';
+  let headers: any = { "Content-Type": "application/json" };
+  
+  if (authMethod.type === 'vertex') {
+    const token = await getVertexToken();
+    url = `https://${authMethod.region}-aiplatform.googleapis.com/v1/projects/${authMethod.projectId}/locations/${authMethod.region}/publishers/google/models/${model}:generateContent`;
+    headers["Authorization"] = `Bearer ${token}`;
+  } else {
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${authMethod.key}`;
+  }
+
   const MAX_ATTEMPTS = 3;
   let lastError: any;
 
@@ -95,7 +141,7 @@ async function callGeminiTtsModel(model: string, apiKey: string, promptText: str
     try {
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: promptText }] }],
           generationConfig: {
@@ -184,15 +230,21 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Le paramètre 'script' est requis." });
     }
 
-    const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
-      ? customApiKey.trim() 
-      : (process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '');
-
-    if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
-      return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
+    let authMethod: AuthMethod;
+    const hasCustomKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY');
+    
+    if (hasCustomKey) {
+      authMethod = { type: 'api_key', key: customApiKey.trim() };
+      console.log(`[AfriVoice] Source Gemini : BROWSER_API_KEY (...${authMethod.key.slice(-4)})`);
+    } else if (process.env.VERTEX_PROJECT_ID && process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+      authMethod = { type: 'vertex', projectId: process.env.VERTEX_PROJECT_ID, region: process.env.VERTEX_REGION || 'us-central1' };
+      console.log(`[AfriVoice] Source Gemini : VERTEX_AI (${authMethod.projectId} / ${authMethod.region})`);
+    } else if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== 'ta_cle_gemini_ici') {
+      authMethod = { type: 'api_key', key: process.env.GEMINI_API_KEY.trim() };
+      console.log(`[AfriVoice] Source Gemini : SERVER_API_KEY (...${authMethod.key.slice(-4)})`);
+    } else {
+      return res.status(401).json({ error: "Aucune configuration Gemini ou Vertex AI disponible." });
     }
-    const keySource: 'browser' | 'server' = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') ? 'browser' : 'server';
-    console.log(`[AfriVoice] Clé Gemini utilisée : source=${keySource}, se termine par ...${apiKey.slice(-4)}`);
 
     // ── Authentification obligatoire ─────────────────────────────────────
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -299,7 +351,7 @@ export default async function handler(req: any, res: any) {
       const promptWithNonce = fullPrompt + `\n<!-- req:${requestNonce} -->`;
 
       if (!needsChunking) {
-        const result = await callGeminiTtsRest(apiKey, promptWithNonce, actualVoiceId);
+        const result = await callGeminiTtsRest(authMethod, promptWithNonce, actualVoiceId);
         audioData = result.audioData;
         mimeType = result.mimeType;
       } else {
@@ -341,7 +393,7 @@ export default async function handler(req: any, res: any) {
             `<transcript>\n${chunks[i]}\n</transcript>`
           ) + voiceAnchor + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
 
-          const chunkResult = await callGeminiTtsRest(apiKey, chunkPrompt, actualVoiceId);
+          const chunkResult = await callGeminiTtsRest(authMethod, chunkPrompt, actualVoiceId);
           audioBuffers.push(Buffer.from(chunkResult.audioData, 'base64'));
           console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} généré (${audioBuffers[i].length} bytes).`);
         }
