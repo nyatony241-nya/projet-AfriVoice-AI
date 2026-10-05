@@ -81,10 +81,13 @@ function parseGeminiQuota(errText: string, headerRetryAfter?: string | null): Ge
 // qui acceptent le prompt "directeur" en texte libre (pas la série 3.8, qui lirait
 // le brief à voix haute car elle traite l'entrée comme une transcription stricte).
 // Surchargeable : GEMINI_TTS_MODELS="modelA,modelB,modelC"
+// IMPORTANT : chaque modèle TTS a un timbre/ton différent (les modèles 3.1 et Pro rendent des voix
+// nettement plus tranchantes/agressives). Par défaut on reste donc sur le modèle d'origine, celui
+// qui a toujours produit le rendu validé d'AfriVoice. Le fallback multi-modèles est opt-in via l'env.
 const envModels = (process.env.GEMINI_TTS_MODELS || '').split(',').map(m => m.trim()).filter(Boolean);
 const TTS_MODELS: string[] = envModels.length > 0
   ? envModels
-  : ['gemini-2.5-flash-preview-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-pro-preview-tts'];
+  : ['gemini-2.5-flash-preview-tts'];
 
 // Mémoire (par instance serverless) des modèles dont le quota est épuisé, pour ne pas
 // gaspiller une requête à chaque génération.
