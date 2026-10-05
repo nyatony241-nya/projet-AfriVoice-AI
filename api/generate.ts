@@ -131,7 +131,7 @@ async function callGeminiTtsModel(model: string, authMethod: AuthMethod, promptT
   
   if (authMethod.type === 'vertex') {
     const token = await getVertexToken();
-    url = `https://${authMethod.region}-aiplatform.googleapis.com/v1/projects/${authMethod.projectId}/locations/${authMethod.region}/publishers/google/models/${model}:generateContent`;
+    url = `https://${authMethod.region}-aiplatform.googleapis.com/v1beta1/projects/${authMethod.projectId}/locations/${authMethod.region}/publishers/google/models/${model}:generateContent`;
     headers["Authorization"] = `Bearer ${token}`;
   } else {
     url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${authMethod.key}`;
