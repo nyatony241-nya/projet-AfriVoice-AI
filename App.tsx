@@ -940,9 +940,17 @@ const App: React.FC = () => {
       const isQuotaError = err?.message?.includes('429') || err?.message?.includes('quota') || err?.status === 429;
 
       if (isQuotaError) {
+        const scope = err?.quotaScope as 'minute' | 'day' | 'unknown' | undefined;
+        const wait = err?.retryAfterSec ? Math.ceil(err.retryAfterSec) : 0;
+        const detail =
+          scope === 'day'
+            ? `Le quota journalier du moteur vocal est atteint. Il se renouvelle dans ${wait >= 3600 ? `${Math.floor(wait / 3600)}h${String(Math.floor((wait % 3600) / 60)).padStart(2, '0')}` : 'quelques heures'}.`
+            : scope === 'minute'
+              ? `Trop de générations à la minute. Réessayez dans ${wait > 0 ? wait : 60} secondes.`
+              : 'Le moteur vocal est saturé (limite de quota Google). Réessayez dans une minute ; si cela persiste, le quota est probablement épuisé.';
         setShowQuotaError(true);
-        setStatus({ isGenerating: false, error: 'Cadence de génération élevée.', audioUrl: null });
-        addToast('warning', 'Cadence de génération élevée', 'Veuillez patienter quelques secondes avant de relancer une nouvelle génération.');
+        setStatus({ isGenerating: false, error: 'Quota du moteur vocal atteint.', audioUrl: null });
+        addToast('warning', scope === 'day' ? 'Quota journalier atteint' : 'Moteur vocal saturé', detail);
       } else {
         setStatus({
           isGenerating: false,

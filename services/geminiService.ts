@@ -170,6 +170,13 @@ export const generateVoiceOver = async (
   }
 
   if (!response.ok) {
+    if (response.status === 429) {
+      const quotaErr: any = new Error('QUOTA_EXCEEDED');
+      quotaErr.status = 429;
+      quotaErr.quotaScope = data.quotaScope || 'unknown';
+      quotaErr.retryAfterSec = Number(data.retryAfterSec) || 0;
+      throw quotaErr;
+    }
     const rawError = data.error || `Erreur ${response.status}`;
     if (rawError.includes('API_KEY') || rawError.includes('GEMINI_API_KEY') || rawError.includes('Supabase')) {
       throw new Error("Le service de synthèse vocale est momentanément indisponible. Veuillez réessayer dans un instant.");

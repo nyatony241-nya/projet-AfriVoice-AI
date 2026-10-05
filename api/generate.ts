@@ -7,8 +7,87 @@ import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "./_lib/voiceP
 // @ts-ignore
 import { synthesizeWithGoogleVoiceClone } from "./_lib/googleTtsService.js";
 
+class GeminiQuotaError extends Error {
+  scope: 'minute' | 'day' | 'unknown';
+  retryAfterSec: number;
+  constructor(scope: 'minute' | 'day' | 'unknown', retryAfterSec: number, detail: string) {
+    super(`QUOTA_EXCEEDED(${scope}): ${detail}`);
+    this.name = 'GeminiQuotaError';
+    this.scope = scope;
+    this.retryAfterSec = retryAfterSec;
+  }
+}
+
+// Analyse le corps d'une erreur 429 Google pour savoir si c'est un quota par minute ou par jour.
+function parseGeminiQuota(errText: string, headerRetryAfter?: string | null): GeminiQuotaError {
+  let scope: 'minute' | 'day' | 'unknown' = 'unknown';
+  let retryAfterSec = Number(headerRetryAfter) || 0;
+  try {
+    const parsed = JSON.parse(errText);
+    const details: any[] = parsed?.error?.details || [];
+    for (const d of details) {
+      for (const v of d?.violations || []) {
+        const id = String(v?.quotaId || '');
+        if (/PerDay/i.test(id)) scope = 'day';
+        else if (/PerMinute/i.test(id) && scope !== 'day') scope = 'minute';
+      }
+      if (typeof d?.retryDelay === 'string') {
+        retryAfterSec = Math.max(retryAfterSec, parseInt(d.retryDelay, 10) || 0);
+      }
+    }
+  } catch { /* corps non JSON */ }
+  return new GeminiQuotaError(scope, retryAfterSec, errText.slice(0, 300));
+}
+
+// ── Chaîne de secours TTS ───────────────────────────────────────────────
+// Chaque modèle a SON PROPRE quota journalier (ex. 100/jour/modèle en Tier 1).
+// Quand un modèle renvoie 429, on bascule sur le suivant. On n'utilise que des modèles
+// qui acceptent le prompt "directeur" en texte libre (pas la série 3.8, qui lirait
+// le brief à voix haute car elle traite l'entrée comme une transcription stricte).
+// Surchargeable : GEMINI_TTS_MODELS="modelA,modelB,modelC"
+const envModels = (process.env.GEMINI_TTS_MODELS || '').split(',').map(m => m.trim()).filter(Boolean);
+const TTS_MODELS: string[] = envModels.length > 0
+  ? envModels
+  : ['gemini-2.5-flash-preview-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-pro-preview-tts'];
+
+// Mémoire (par instance serverless) des modèles dont le quota est épuisé, pour ne pas
+// gaspiller une requête à chaque génération.
+const modelBlockedUntil = new Map<string, number>();
+
 async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+  let lastQuotaError: GeminiQuotaError | undefined;
+  const now = Date.now();
+  // Si tous les modèles sont marqués épuisés, on les retente quand même (la mémoire peut être périmée).
+  const available = TTS_MODELS.filter(m => (modelBlockedUntil.get(m) || 0) <= now);
+  const candidates = available.length > 0 ? available : TTS_MODELS;
+
+  for (const model of candidates) {
+    try {
+      const result = await callGeminiTtsModel(model, apiKey, promptText, voiceName);
+      console.log(`[AfriVoice] Audio généré avec le modèle ${model}.`);
+      return result;
+    } catch (err: any) {
+      if (err instanceof GeminiQuotaError) {
+        const waitMs = (err.scope === 'day' ? Math.max(err.retryAfterSec, 600) : Math.max(err.retryAfterSec, 30)) * 1000;
+        modelBlockedUntil.set(model, Date.now() + waitMs);
+        console.warn(`[AfriVoice] Quota épuisé (${err.scope}) pour ${model} → bascule sur le modèle suivant.`);
+        lastQuotaError = err;
+        continue;
+      }
+      // Modèle indisponible pour ce projet : on essaie le suivant plutôt que d'échouer.
+      if (typeof err?.message === 'string' && /HTTP 404|Gemini API Error \(404\)|not found/i.test(err.message)) {
+        console.warn(`[AfriVoice] Modèle ${model} indisponible → bascule sur le modèle suivant.`);
+        continue;
+      }
+      throw err;
+    }
+  }
+  if (lastQuotaError) throw lastQuotaError;
+  throw new Error('Aucun modèle de synthèse vocale disponible.');
+}
+
+async function callGeminiTtsModel(model: string, apiKey: string, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const MAX_ATTEMPTS = 3;
   let lastError: any;
 
@@ -38,6 +117,10 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
         if (res.status === 400 || res.status === 401 || res.status === 403) {
           throw new Error(`Gemini API Error (${res.status}): ${errText}`);
         }
+        if (res.status === 429) {
+          // Un retry immédiat sur 429 ne sert à rien et consomme encore du quota.
+          throw parseGeminiQuota(errText, res.headers.get('retry-after'));
+        }
         lastError = new Error(`HTTP ${res.status}: ${errText}`);
       } else {
         const data = await res.json();
@@ -55,7 +138,7 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
         lastError = new Error(`Audio vide (finishReason: ${candidate?.finishReason})`);
       }
     } catch (err: any) {
-      if (err?.message?.includes("Gemini API Error")) {
+      if (err instanceof GeminiQuotaError || err?.message?.includes("Gemini API Error")) {
         throw err;
       }
       console.warn(`[AfriVoice] Gemini REST attempt ${attempt}/${MAX_ATTEMPTS} error: ${err?.message}`);
@@ -108,6 +191,8 @@ export default async function handler(req: any, res: any) {
     if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
       return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
     }
+    const keySource: 'browser' | 'server' = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') ? 'browser' : 'server';
+    console.log(`[AfriVoice] Clé Gemini utilisée : source=${keySource}, se termine par ...${apiKey.slice(-4)}`);
 
     // ── Authentification obligatoire ─────────────────────────────────────
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -325,6 +410,14 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error('[AfriVoice] Handler Error:', error?.message || error);
+    if (error instanceof GeminiQuotaError) {
+      if (error.retryAfterSec > 0) res.setHeader('Retry-After', String(error.retryAfterSec));
+      return res.status(429).json({
+        error: 'QUOTA_EXCEEDED',
+        quotaScope: error.scope,
+        retryAfterSec: error.retryAfterSec,
+      });
+    }
     return res.status(500).json({
       error: error?.message || 'Erreur interne lors de la génération audio.',
       errorType: error?.constructor?.name || 'UnknownError',
