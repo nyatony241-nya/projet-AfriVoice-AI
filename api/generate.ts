@@ -7,7 +7,79 @@ import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "./_lib/voiceP
 // @ts-ignore
 import { synthesizeWithGoogleVoiceClone } from "./_lib/googleTtsService.js";
 
-async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
+// ══════════════════════════════════════════════════════════════════════
+// POOL DE CLÉS GEMINI — dépasser la limite de 100 requêtes/jour (RPD)
+// ──────────────────────────────────────────────────────────────────────
+// Le quota de gemini-2.5-flash-preview-tts est appliqué PAR PROJET Google
+// Cloud. Plusieurs clés issues de projets différents = plusieurs quotas,
+// MAIS le même modèle et les mêmes voix → rendu audio strictement identique.
+//
+// Config (Vercel > Settings > Environment Variables) :
+//   GEMINI_API_KEYS = cle_projet1,cle_projet2,cle_projet3   (virgules/retours ligne)
+//   GEMINI_API_KEY  = clé historique (toujours supportée, ajoutée au pool)
+//
+// Fonctionnement :
+//   1. Round-robin : la charge est répartie sur toutes les clés.
+//   2. Sur 429 : la clé est mise en "cooldown" et on bascule immédiatement
+//      sur la clé suivante — l'utilisateur ne voit rien.
+//   3. Si toutes les clés sont épuisées → erreur 429 propre (quotaScope).
+// ══════════════════════════════════════════════════════════════════════
+class KeyQuotaError extends Error {
+  scope: 'minute' | 'day' | 'unknown';
+  retryAfterSec: number;
+  constructor(scope: 'minute' | 'day' | 'unknown', retryAfterSec: number) {
+    super('QUOTA_EXCEEDED');
+    this.scope = scope;
+    this.retryAfterSec = retryAfterSec;
+  }
+}
+
+class KeyInvalidError extends Error {}
+
+// Cooldown par clé (mémoire de l'instance serverless — suffisant : en cas de
+// cold start, le pire cas est un essai supplémentaire qui renvoie 429).
+const keyCooldowns = new Map<string, number>();
+let rrCursor = 0;
+
+const maskKey = (k: string) => `…${k.slice(-4)}`;
+
+function buildKeyPool(customApiKey?: string): string[] {
+  // Clé personnalisée fournie par l'utilisateur → utilisée seule, jamais mélangée au pool.
+  if (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') {
+    return [customApiKey.trim()];
+  }
+  const raw = [process.env.GEMINI_API_KEYS || '', process.env.GEMINI_API_KEY || ''].join(',');
+  const keys = raw
+    .split(/[\s,;]+/)
+    .map(k => k.trim())
+    .filter(k => k && k !== 'ta_cle_gemini_ici' && k !== 'PLACEHOLDER_API_KEY' && !k.startsWith('COLLE_TA_CLE'));
+  return Array.from(new Set(keys));
+}
+
+/** Clés disponibles en round-robin d'abord, puis celles en cooldown (dernier recours, plus proche expiration en premier). */
+function orderKeys(pool: string[]): string[] {
+  const now = Date.now();
+  const available = pool.filter(k => (keyCooldowns.get(k) || 0) <= now);
+  const cooling = pool
+    .filter(k => (keyCooldowns.get(k) || 0) > now)
+    .sort((a, b) => (keyCooldowns.get(a) || 0) - (keyCooldowns.get(b) || 0));
+  if (available.length > 1) {
+    const start = rrCursor++ % available.length;
+    return [...available.slice(start), ...available.slice(0, start), ...cooling];
+  }
+  return [...available, ...cooling];
+}
+
+function parseQuotaError(errText: string): KeyQuotaError {
+  const isDay = /PerDay|per day|daily/i.test(errText);
+  const retryMatch = errText.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+  const retrySec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 0;
+  if (isDay) return new KeyQuotaError('day', retrySec || 3600);
+  if (/PerMinute|per minute/i.test(errText) || retrySec > 0) return new KeyQuotaError('minute', retrySec || 60);
+  return new KeyQuotaError('unknown', 60);
+}
+
+async function callGeminiTtsWithKey(apiKey: string, promptText: string, voiceName: string, failFastOn429: boolean): Promise<{ audioData: string; mimeType: string }> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
   const MAX_ATTEMPTS = 3;
   let lastError: any;
@@ -34,11 +106,21 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
 
       if (!res.ok) {
         const errText = await res.text().catch(() => '');
-        console.warn(`[AfriVoice] Gemini REST attempt ${attempt}/${MAX_ATTEMPTS} HTTP ${res.status}: ${errText}`);
-        if (res.status === 400 || res.status === 401 || res.status === 403) {
+        console.warn(`[AfriVoice] Gemini REST key ${maskKey(apiKey)} attempt ${attempt}/${MAX_ATTEMPTS} HTTP ${res.status}: ${errText.slice(0, 300)}`);
+
+        if (res.status === 429) {
+          const quotaErr = parseQuotaError(errText);
+          // Quota journalier : inutile de réessayer cette clé. Avec un pool, on bascule tout de suite.
+          if (failFastOn429 || quotaErr.scope === 'day') throw quotaErr;
+          lastError = quotaErr;
+        } else if (res.status === 401 || res.status === 403 || (res.status === 400 && /API key not valid|API_KEY_INVALID|API key expired/i.test(errText))) {
+          // Clé invalide / suspendue / projet sans accès → autre clé du pool possible
+          throw new KeyInvalidError(`Gemini API Error (${res.status}): ${errText}`);
+        } else if (res.status === 400) {
           throw new Error(`Gemini API Error (${res.status}): ${errText}`);
+        } else {
+          lastError = new Error(`HTTP ${res.status}: ${errText}`);
         }
-        lastError = new Error(`HTTP ${res.status}: ${errText}`);
       } else {
         const data = await res.json();
         const candidate = data.candidates?.[0];
@@ -55,7 +137,7 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
         lastError = new Error(`Audio vide (finishReason: ${candidate?.finishReason})`);
       }
     } catch (err: any) {
-      if (err?.message?.includes("Gemini API Error")) {
+      if (err instanceof KeyQuotaError || err instanceof KeyInvalidError || err?.message?.includes("Gemini API Error")) {
         throw err;
       }
       console.warn(`[AfriVoice] Gemini REST attempt ${attempt}/${MAX_ATTEMPTS} error: ${err?.message}`);
@@ -67,7 +149,46 @@ async function callGeminiTtsRest(apiKey: string, promptText: string, voiceName: 
     }
   }
 
+  if (lastError instanceof KeyQuotaError) throw lastError;
   throw lastError || new Error(`Génération Gemini TTS échouée après ${MAX_ATTEMPTS} tentatives.`);
+}
+
+async function callGeminiTtsRest(pool: string[], promptText: string, voiceName: string): Promise<{ audioData: string; mimeType: string }> {
+  const keys = orderKeys(pool);
+  const hasFailover = keys.length > 1;
+  let lastQuotaError: KeyQuotaError | undefined;
+  let lastInvalidError: KeyInvalidError | undefined;
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    try {
+      const result = await callGeminiTtsWithKey(key, promptText, voiceName, hasFailover);
+      keyCooldowns.delete(key);
+      if (i > 0) console.log(`[AfriVoice] ✅ Failover réussi sur la clé ${maskKey(key)} (${i} clé(s) saturée(s) évitée(s)).`);
+      return result;
+    } catch (err: any) {
+      if (err instanceof KeyQuotaError) {
+        // day → on recontrôle dans 30 min (le quota se réinitialise à minuit heure Pacifique)
+        const cooldownMs = err.scope === 'day' ? 30 * 60_000 : Math.max(err.retryAfterSec, 5) * 1000;
+        keyCooldowns.set(key, Date.now() + cooldownMs);
+        lastQuotaError = err;
+        console.warn(`[AfriVoice] ⚠️ Clé ${maskKey(key)} saturée (${err.scope}) → cooldown ${Math.round(cooldownMs / 1000)}s. ${i + 1 < keys.length ? 'Bascule sur la clé suivante…' : 'Plus aucune clé disponible.'}`);
+        continue;
+      }
+      if (err instanceof KeyInvalidError) {
+        keyCooldowns.set(key, Date.now() + 10 * 60_000);
+        lastInvalidError = err;
+        console.error(`[AfriVoice] ❌ Clé ${maskKey(key)} invalide/refusée — ignorée 10 min.`);
+        if (i + 1 < keys.length) continue;
+        break;
+      }
+      throw err; // erreur non liée à la clé (400 prompt, réseau, audio vide…) → on ne change pas de clé
+    }
+  }
+
+  if (lastQuotaError) throw lastQuotaError;
+  if (lastInvalidError) throw lastInvalidError;
+  throw new Error(`Génération Gemini TTS échouée.`);
 }
 
 export default async function handler(req: any, res: any) {
@@ -101,11 +222,10 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Le paramètre 'script' est requis." });
     }
 
-    const apiKey = (customApiKey && customApiKey.trim() !== '' && customApiKey !== 'PLACEHOLDER_API_KEY') 
-      ? customApiKey.trim() 
-      : (process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : '');
+    // Pool de clés (GEMINI_API_KEYS + GEMINI_API_KEY) — ou clé perso utilisateur seule
+    const keyPool = buildKeyPool(customApiKey);
 
-    if (!apiKey || apiKey === 'ta_cle_gemini_ici') {
+    if (keyPool.length === 0) {
       return res.status(401).json({ error: "Aucune clé API Gemini configurée." });
     }
 
@@ -214,7 +334,7 @@ export default async function handler(req: any, res: any) {
       const promptWithNonce = fullPrompt + `\n<!-- req:${requestNonce} -->`;
 
       if (!needsChunking) {
-        const result = await callGeminiTtsRest(apiKey, promptWithNonce, actualVoiceId);
+        const result = await callGeminiTtsRest(keyPool, promptWithNonce, actualVoiceId);
         audioData = result.audioData;
         mimeType = result.mimeType;
       } else {
@@ -256,7 +376,7 @@ export default async function handler(req: any, res: any) {
             `<transcript>\n${chunks[i]}\n</transcript>`
           ) + voiceAnchor + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
 
-          const chunkResult = await callGeminiTtsRest(apiKey, chunkPrompt, actualVoiceId);
+          const chunkResult = await callGeminiTtsRest(keyPool, chunkPrompt, actualVoiceId);
           audioBuffers.push(Buffer.from(chunkResult.audioData, 'base64'));
           console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} généré (${audioBuffers[i].length} bytes).`);
         }
@@ -324,6 +444,16 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ base64Audio: audioData, mimeType, metadata });
 
   } catch (error: any) {
+    // Toutes les clés du pool sont saturées → 429 propre (le frontend affiche le bon message)
+    if (error instanceof KeyQuotaError) {
+      console.error(`[AfriVoice] 🚨 TOUT LE POOL EST SATURÉ (${error.scope}). Ajoutez des clés dans GEMINI_API_KEYS.`);
+      res.setHeader('Retry-After', String(error.retryAfterSec));
+      return res.status(429).json({
+        error: 'QUOTA_EXCEEDED',
+        quotaScope: error.scope,
+        retryAfterSec: error.retryAfterSec,
+      });
+    }
     console.error('[AfriVoice] Handler Error:', error?.message || error);
     return res.status(500).json({
       error: error?.message || 'Erreur interne lors de la génération audio.',

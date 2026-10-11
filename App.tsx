@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { COUNTRIES, VOICE_OPTIONS, PRICING_PLANS, PRICING_PLANS_EN, BG_MUSIC_TRACKS, UNSUBSCRIBED_PLAN } from './constants';
+import { COUNTRIES, VOICE_OPTIONS, PRICING_PLANS, PRICING_PLANS_EN, BG_MUSIC_TRACKS, UNSUBSCRIBED_PLAN, QUOTA_PACKS } from './constants';
 import { Country, VoiceIdentity, GenerationState, VoiceSettings, PricingPlan, MixerSettings, HistoryItem, QuotaUsage, Language, AccentLevel, ContentStyle, VocalPersonality, VocalObjective, QualityScore } from './types';
 import { analyzeQuality } from './services/qualityAnalyzer';
 import CountryCard from './components/CountryCard';
@@ -1054,10 +1054,10 @@ const App: React.FC = () => {
                 <span className="text-2xl">🌍</span>
                 <div>
                   <p className="text-xs font-black uppercase tracking-widest" style={{ color: '#D4FF00' }}>
-                    {isEn ? 'STARTER PLAN' : 'PACK STARTER'}
+                    {isEn ? 'CREATOR PACK' : 'PACK CRÉATEUR'}
                   </p>
                   <p className={`text-sm font-bold ${ isDark ? 'text-white' : 'text-zinc-900'}`}>
-                    {isEn ? '10 min credits · 5 African accents · from 1,900 FCFA' : '10 min de crédits · 5 accents africains · dès 1 900 FCFA'}
+                    {isEn ? '30 min credits · 20 African accents · from 4,900 FCFA' : '30 min de crédits · 20 accents africains · dès 4 900 FCFA'}
                   </p>
                 </div>
               </div>
@@ -1098,7 +1098,7 @@ const App: React.FC = () => {
           userEmail={session?.user?.email || ''}
           userCountryId={selectedCountry?.id || 'CI'}
           onPaymentSuccess={(planId, licenseKey) => {
-            const newPlan = PRICING_PLANS.find(p => p.id === planId) || PRICING_PLANS[0];
+            const newPlan = PRICING_PLANS.find(p => p.id === planId) || PRICING_PLANS.find(p => p.id === 'creator') || PRICING_PLANS[0];
             setCurrentPlan(newPlan);
             setUsedSeconds(0);
             setIsPaymentModalOpen(false);
@@ -2010,8 +2010,8 @@ const App: React.FC = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
-                {(isEn ? PRICING_PLANS_EN : PRICING_PLANS).map((plan) => {
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+                {(isEn ? PRICING_PLANS_EN : PRICING_PLANS).filter((plan) => !plan.hidden).map((plan) => {
                   const isActivePlan = currentPlan.id === plan.id || (currentPlan.id === 'free' && plan.id === 'starter');
                   return (
                     <div

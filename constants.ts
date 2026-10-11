@@ -1,4 +1,4 @@
-import { Country, VoiceOption, PricingPlan, BackgroundMusic } from './types';
+import { Country, VoiceOption, PricingPlan, BackgroundMusic, QuotaPack } from './types';
 
 export const COUNTRIES: Country[] = [
   { id: 'NG', name: 'Nigeria', flag: '🇳🇬', primaryLanguage: 'English', accentDescription: 'Naija English accent. Very rhythmic, confident, heavy emphasis on syllables, distinct Nigerian Pidgin musicality. Do not sound American or British.', geminiVoiceMale: 'Puck', geminiVoiceFemale: 'Aoede' },
@@ -52,9 +52,17 @@ export const UNSUBSCRIBED_PLAN: PricingPlan = {
   ]
 };
 
+// Packs de recharge — doivent rester alignés avec BOOSTER_SECONDS dans api/webhook-chariow.ts
+export const QUOTA_PACKS: QuotaPack[] = [
+  { id: 'starter_booster', minutes: 15, seconds: 900 },   // héritage (clients existants)
+  { id: 'creator_booster', minutes: 30, seconds: 1800 },
+  { id: 'pro_booster', minutes: 60, seconds: 3600 },
+];
+
 export const PRICING_PLANS: PricingPlan[] = [
   {
     id: 'starter',
+    hidden: true, // Retiré de la vente (conservé uniquement pour reconnaître les clients existants)
     name: 'PACK 10 MIN',
     price: '1 900 FCFA',
     description: 'Recharge d\'entrée — crédits permanents',
@@ -104,6 +112,7 @@ export const PRICING_PLANS: PricingPlan[] = [
 export const PRICING_PLANS_EN: PricingPlan[] = [
   {
     id: 'starter',
+    hidden: true, // Retired from sale (kept only to recognise existing customers)
     name: 'PACK 10 MIN',
     price: '1,900 FCFA ($3.00)',
     description: 'Entry recharge — permanent credits',

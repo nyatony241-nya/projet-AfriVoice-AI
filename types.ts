@@ -162,13 +162,29 @@ export interface VoiceOption {
 export type Language = 'fr' | 'en';
 
 export interface PricingPlan {
-  id: 'free' | 'creator' | 'pro';
+  id: 'none' | 'free' | 'starter' | 'creator' | 'pro';
   name: string;
   price: string;
   description: string;
   features: string[];
   color: string;
   isPopular?: boolean;
+  /** Plan retiré de la vente : non affiché, mais reconnu pour les clients existants */
+  hidden?: boolean;
+}
+
+/** Pack de recharge (booster) — crédits ajoutés au quota via bonus_seconds */
+export interface QuotaPack {
+  id: string;
+  minutes: number;
+  seconds: number;
+}
+
+// Meta Pixel injecté par index.html
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+  }
 }
 
 export interface HistoryItem {
