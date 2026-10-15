@@ -1671,6 +1671,60 @@ const App: React.FC = () => {
                   )}
                 </div>
 
+                {/* ─── BANNIÈRE QUOTA ÉPUISÉ ─── */}
+                {!canUseTrial && usedSeconds >= quota.maxSeconds && currentPlan.id !== 'none' && (
+                  <div className="rounded-2xl overflow-hidden border border-red-500/30 bg-red-500/10 animate-pulse-once">
+                    <div className="px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">🛑</span>
+                        <div>
+                          <p className="font-black text-red-400 text-sm uppercase tracking-wide">
+                            {isEn ? 'Your minutes are exhausted' : 'Vos minutes sont épuisées'}
+                          </p>
+                          <p className="text-xs text-zinc-400 mt-0.5">
+                            {isEn
+                              ? 'You have used all your credits. Buy a new pack to keep generating voices.'
+                              : 'Vous avez consommé tous vos crédits. Achetez un nouveau pack pour continuer à générer des voix.'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('pricing')}
+                        className="shrink-0 px-5 py-2.5 rounded-xl bg-[#D4FF00] text-black font-black text-xs uppercase tracking-wider hover:bg-[#E2FF3B] hover:scale-105 transition-all shadow-lg shadow-[#D4FF00]/20 whitespace-nowrap"
+                      >
+                        {isEn ? '⚡ Buy a Pack' : '⚡ Acheter un Pack'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── BANNIÈRE TRIAL ÉPUISÉ (non abonné) ─── */}
+                {isUnsubscribed && trialUsed && (
+                  <div className="rounded-2xl overflow-hidden border border-amber-500/30 bg-amber-500/10">
+                    <div className="px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">🔒</span>
+                        <div>
+                          <p className="font-black text-amber-400 text-sm uppercase tracking-wide">
+                            {isEn ? 'Free trial used' : 'Essai gratuit utilisé'}
+                          </p>
+                          <p className="text-xs text-zinc-400 mt-0.5">
+                            {isEn
+                              ? 'Your free trial has been used. Buy a pack (30 min or 60 min) to continue.'
+                              : 'Votre essai gratuit a été utilisé. Achetez un pack (30 min ou 60 min) pour continuer.'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('pricing')}
+                        className="shrink-0 px-5 py-2.5 rounded-xl bg-[#D4FF00] text-black font-black text-xs uppercase tracking-wider hover:bg-[#E2FF3B] hover:scale-105 transition-all shadow-lg shadow-[#D4FF00]/20 whitespace-nowrap"
+                      >
+                        {isEn ? '⚡ Buy a Pack' : '⚡ Acheter un Pack'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     onClick={handleGenerate}
