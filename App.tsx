@@ -311,25 +311,17 @@ const App: React.FC = () => {
     return COUNTRIES.filter(c => accessibleIds.includes(c.id));
   }, [currentPlan]);
 
-  // Dynamic Quota limits by plan (Safety Rail #1 & #3) + Recharge bonus
+  // ✅ NOUVEAU MODÈLE : Crédits permanents — tout est dans bonus_seconds
+  // Le plan (creator/pro) détermine l'accès aux fonctionnalités, pas les secondes
+  // Les secondes disponibles = bonus_seconds accumulés depuis tous les achats
   const quota = useMemo<QuotaUsage>(() => {
-    let baseMaxSeconds = 0; // Sans pack: 0 min
-    let maxChars = 500;
-
-    if (currentPlan.id === 'starter' || currentPlan.id === 'free') {
-      baseMaxSeconds = 600; // Starter: 10 min
-      maxChars = 1000;
-    } else if (currentPlan.id === 'creator') {
-      baseMaxSeconds = 1800; // Creator: 30 min
-      maxChars = 5000;
-    } else if (currentPlan.id === 'pro') {
-      baseMaxSeconds = 3600; // Pro: 60 min
-      maxChars = 10000;
-    }
+    // Tous les packs payants ont les mêmes fonctionnalités — seul le volume diffère
+    const hasPaidPack = currentPlan.id !== 'none';
+    const maxChars = hasPaidPack ? 10000 : 500;
 
     return {
       usedSeconds,
-      maxSeconds: baseMaxSeconds + bonusSeconds,
+      maxSeconds: bonusSeconds,       // 100% dans le wallet bonus_seconds
       maxCharsPerScript: maxChars,
     };
   }, [currentPlan, usedSeconds, bonusSeconds]);

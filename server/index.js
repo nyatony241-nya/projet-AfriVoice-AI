@@ -114,36 +114,54 @@ app.post('/api/generate', generateLimiter, verifyAuthToken, async (req, res) => 
   }
 
   try {
-    // ── Vérification Plan + Trial (Anti-Contournement Serveur) ──
+    // ── Vérification Plan + Quota (Anti-Contournement Serveur) ──
     try {
       if (supabase && req.user?.email) {
         const { data: quotaData, error: quotaError } = await supabase
           .from('user_quotas')
-          .select('monthly_limit, trial_used')
+          .select('monthly_limit, bonus_seconds, seconds_used, trial_used')
           .eq('email', req.user.email)
           .maybeSingle();
 
         if (!quotaError && quotaData) {
-          const monthlyLimit = quotaData?.monthly_limit ?? 0;
-          const isPaidPlan = monthlyLimit >= 600; // Starter = 600s minimum
-          const trialUsed = quotaData?.trial_used === true;
+          const monthlyLimit  = quotaData?.monthly_limit  ?? 0;
+          const bonusSeconds  = quotaData?.bonus_seconds  ?? 0;
+          const secondsUsed   = quotaData?.seconds_used   ?? 0;
+          const trialUsed     = quotaData?.trial_used     === true;
 
-          if (!isPaidPlan) {
+          // ✅ MODÈLE CRÉDITS PERMANENTS
+          // Les crédits = bonus_seconds (wallet cumulé de tous les achats)
+          // monthly_limit est un fallback pour les anciens comptes uniquement
+          const totalCredits = Math.max(bonusSeconds, monthlyLimit);
+          const hasPaidCredits = totalCredits >= 600; // Au moins 1 pack minimum (600s = 10 min)
+
+          if (!hasPaidCredits) {
+            // Aucun crédit payant — vérification trial
             if (trialUsed) {
-              return res.status(403).json({ error: 'Essai gratuit déjà utilisé. Veuillez souscrire à un forfait AfriVoice pour continuer.' });
+              return res.status(403).json({ error: 'Essai gratuit déjà utilisé. Veuillez acheter un pack AfriVoice pour continuer.' });
             }
             // Trial disponible : limiter le script
             if (script && script.length > 220) {
-              return res.status(403).json({ error: "Limite d'essai gratuit : 200 caractères maximum. Abonnez-vous pour lever cette limite." });
+              return res.status(403).json({ error: "Limite d'essai gratuit : 200 caractères maximum. Achetez un pack pour lever cette limite." });
+            }
+          } else {
+            // ✅ L'utilisateur a des crédits — vérifier s'il en reste
+            if (secondsUsed >= totalCredits) {
+              console.warn(`[Quota Serveur] Crédits épuisés pour ${req.user.email} : ${secondsUsed}s utilisées / ${totalCredits}s total`);
+              return res.status(403).json({
+                error: 'Votre quota de minutes est épuisé. Achetez un nouveau pack pour continuer.',
+                code: 'QUOTA_EXHAUSTED',
+                secondsUsed,
+                totalCredits,
+              });
             }
           }
         } else if (quotaError) {
-          console.warn('[Trial Check] Erreur (non-bloquante):', quotaError.message);
+          console.warn('[Quota Check] Erreur (non-bloquante):', quotaError.message);
         }
       }
     } catch (trialErr) {
-      console.warn('[Trial Check] Exception (non-bloquante):', trialErr.message);
-      // Ne pas bloquer la génération si la vérification trial échoue
+      console.warn('[Quota Check] Exception (non-bloquante):', trialErr.message);
     }
 
     // 1. Humanisation Phonétique du script si demandée

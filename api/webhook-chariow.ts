@@ -7,25 +7,25 @@ import crypto from 'crypto';
 // ══════════════════════════════════════════════════════════════
 
 const CHARIOW_PRODUCT_TO_PLAN: Record<string, string> = {
-  'prd_n6d89d8s': 'starter', // STARTER 1 900 FCFA → 10 min
-  'prd_f639rpw2': 'creator', // CREATOR 4 900 FCFA → 30 min
-  'prd_pq817d6j': 'pro',     // PRO STUDIO HD 8 900 FCFA → 60 min
-  // Boosters de recharge supplémentaires
-  'prd_221tec74': 'starter_booster',
-  'prd_9zvjwbz5': 'creator_booster',
-  'prd_78vr0y1w': 'pro_booster',
+  // ✅ 2 packs actifs
+  'prd_f639rpw2': 'creator', // PACK 30 MIN — 4 900 FCFA → 1 800s
+  'prd_pq817d6j': 'pro',     // PACK 60 MIN — 8 900 FCFA → 3 600s
+  // Anciens produits (compatibilité clients existants — ne pas supprimer)
+  'prd_n6d89d8s': 'starter',          // PACK 10 MIN (retiré de la vente) → 600s
+  'prd_221tec74': 'starter_booster',  // héritage
+  'prd_9zvjwbz5': 'creator_booster',  // héritage
+  'prd_78vr0y1w': 'pro_booster',      // héritage
 };
 
-// Crédits en secondes ajoutés au wallet pour chaque produit acheté
-// MODÈLE CRÉDITS PERMANENTS — les achats s'accumulent, ne se remplacent pas
+// ✅ MODÈLE CRÉDITS PERMANENTS
+// Chaque achat ajoute des secondes au wallet (bonus_seconds) — sans expiration
 const PACK_CREDITS_SECONDS: Record<string, number> = {
-  'starter':         600,   // Starter  — 10 min = 600s
-  'free':            600,   // Starter fallback
-  'creator':        1800,   // Creator  — 30 min = 1 800s
-  'pro':            3600,   // Pro      — 60 min = 3 600s
-  'starter_booster': 900,   // Booster +15 min
-  'creator_booster':1800,   // Booster +30 min
-  'pro_booster':    3600,   // Booster +60 min
+  'creator':         1800,  // PACK 30 MIN = 1 800s
+  'pro':             3600,  // PACK 60 MIN = 3 600s
+  'starter':          600,  // PACK 10 MIN (héritage) = 600s
+  'starter_booster':  900,  // héritage +15 min
+  'creator_booster': 1800,  // héritage +30 min
+  'pro_booster':     3600,  // héritage +60 min
 };
 
 function verifyChariowSignature(body: string, signature: string | undefined, secret: string): boolean {
@@ -174,6 +174,9 @@ export default async function handler(req: any, res: any) {
     //    bonus_seconds sert de "wallet" global — s'accumule à l'infini
     // ───────────────────────────────────────────────────────────
     const newBonus = currentBonus + creditsToAdd;
+    // ✅ monthly_limit = crédits du DERNIER pack acheté (permet la vérification isPaidPlan côté serveur)
+    // On prend le max entre l'actuel et le nouveau pack pour ne jamais réduire le niveau
+    const newMonthlyLimit = Math.max(currentLimit, creditsToAdd);
     const activatedAt = new Date();
 
     const { error: quotaError } = await supabase
@@ -181,9 +184,14 @@ export default async function handler(req: any, res: any) {
       .upsert(
         {
           email: userEmail,
-          bonus_seconds:  newBonus,       // Wallet cumulé
-          monthly_limit:  currentLimit,   // Inchangé
-          seconds_used:   currentUsed,    // Inchangé (pas de reset !)
+          bonus_seconds:  newBonus,          // Wallet cumulé
+          monthly_limit:  newMonthlyLimit,   // ✅ Mis à jour avec le dernier pack
+          seconds_used:   currentUsed,       // Inchangé (pas de reset !)
+          chariow_order_id: chariowOrderId,
+          updated_at: activatedAt.toISOString(),
+        },
+        { onConflict: 'email', ignoreDuplicates: false }
+      );
           chariow_order_id: chariowOrderId,
           updated_at: activatedAt.toISOString(),
         },
