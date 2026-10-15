@@ -6,12 +6,6 @@ import { buildDirectorPrompt } from "./_lib/promptBuilder.js";
 import { VOICE_PROFILES, getVoiceProfileByCountryAndGender } from "./_lib/voiceProfiles.js";
 // @ts-ignore
 import { synthesizeWithGoogleVoiceClone } from "./_lib/googleTtsService.js";
-import {
-  getCloudTtsCreds,
-  getCloudTtsToken,
-  callCloudTtsSingle,
-  getLanguageCode,
-} from "./_lib/cloudTtsService.js";
 
 // ══════════════════════════════════════════════════════════════════════
 // POOL DE CLÉS GEMINI — dépasser la limite de 100 requêtes/jour (RPD)
@@ -320,170 +314,112 @@ export default async function handler(req: any, res: any) {
         phoneticScript: finalScript,
       });
 
-      // 4. Génération audio — Stratégie double moteur
-      // ══════════════════════════════════════════════════════════════════════
-      // MOTEUR PRIMAIRE  : Google Cloud TTS (gemini-2.5-flash-tts)
-      //   → 150 RPM vs 100 RPD sur AI Studio = ~90× plus de capacité
-      //   → Auth compte de service, quota indépendant du pool Gemini AI Studio
-      //   → Même modèle, même voix → accents identiques
-      //   → Chunk max 1 500 chars (limite 4 000 bytes UTF-8 par champ)
-      //
-      // MOTEUR FALLBACK : Pool de clés Gemini AI Studio (round-robin + cooldown)
-      //   → Activé automatiquement si Cloud TTS échoue ou non configuré
-      //   → Chunk max 5 500 chars
-      //
-      // ANTI-CASSURE VOCALE (3 couches) :
-      //   1. Ancrage contextuel (2 dernières phrases → voix de référence)
-      //   2. Micro-fondu PCM 30 ms aux jointures
-      //   3. Nonce unique par requête (évite le cache de Gemini)
-      // ══════════════════════════════════════════════════════════════════════
+      // 4. Appel de l'API Gemini TTS native REST avec chunking
+      // ══════════════════════════════════════════════════════════════
+      // STRATÉGIE ANTI-CASSURE VOCALE (3 couches)
+      // ──────────────────────────────────────────────────────────────
+      // Couche 1 : Maximiser la taille du chunk → 5500 chars (~6 min)
+      //            pour éviter tout découpage dans 95% des cas.
+      // Couche 2 : Ancrage vocal contextuel → les 2 dernières phrases
+      //            du chunk précédent sont passées comme "contexte déjà
+      //            prononcé" (non lu à voix haute) pour que Gemini
+      //            cale son timbre sur la continuité.
+      // Couche 3 : Micro-fondu PCM de 30ms aux jointures pour
+      //            éliminer les clics/pops entre les morceaux.
+      // ══════════════════════════════════════════════════════════════
+      const MAX_CHARS_PER_CHUNK = 5500;
+      const scriptText = finalScript || script;
+      const needsChunking = scriptText.length > MAX_CHARS_PER_CHUNK;
+      const requestNonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const promptWithNonce = fullPrompt + `\n<!-- req:${requestNonce} -->`;
 
-      const scriptText    = finalScript || script;
-      const requestNonce  = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const languageCode  = getLanguageCode(options?.countryId);
-      const cloudCreds    = getCloudTtsCreds();
-      const useCloudTts   = !!cloudCreds; // actif si les 3 variables GCP sont présentes
-
-      // ── Extraction du brief directeur sans la balise <transcript> ─────────
-      // Cloud TTS sépare les instructions du texte en deux champs distincts :
-      //   - prompt         : le brief de mise en scène vocale
-      //   - text (input)   : uniquement le texte à prononcer
-      const directorBriefOnly = fullPrompt
-        .replace(/<transcript>[\s\S]*?<\/transcript>/g, '')
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-
-      // ── Fonction de découpage par phrases ────────────────────────────────
-      const extractLastSentences = (text: string, count = 2): string => {
-        const s = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [];
-        return s.slice(-count).join(' ').trim();
-      };
-
-      const buildChunks = (text: string, maxChars: number): string[] => {
-        const sentences = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [text];
+      if (!needsChunking) {
+        const result = await callGeminiTtsRest(keyPool, promptWithNonce, actualVoiceId);
+        audioData = result.audioData;
+        mimeType = result.mimeType;
+      } else {
+        // ── Découpage intelligent par phrases ──
+        const sentences = scriptText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [scriptText];
         const chunks: string[] = [];
-        let current = '';
+        let currentChunk = '';
         for (const sentence of sentences) {
-          if ((current + sentence).length > maxChars && current.length > 0) {
-            chunks.push(current.trim());
-            current = sentence;
+          if ((currentChunk + sentence).length > MAX_CHARS_PER_CHUNK && currentChunk.length > 0) {
+            chunks.push(currentChunk.trim());
+            currentChunk = sentence;
           } else {
-            current += sentence;
+            currentChunk += sentence;
           }
         }
-        if (current.trim()) chunks.push(current.trim());
-        return chunks;
-      };
+        if (currentChunk.trim()) chunks.push(currentChunk.trim());
 
-      // ── Fonction de concaténation PCM avec micro-fondus ───────────────────
-      const concatPcmWithFade = (buffers: Buffer[]): Buffer => {
-        const FADE_SAMPLES   = 720; // 30 ms @ 24 kHz
-        const BYTES_PER_SAMP = 2;
+        console.log(`[AfriVoice] Texte long (${scriptText.length} chars) découpé en ${chunks.length} chunks.`);
 
-        buffers.forEach((buf, i) => {
-          const total = buf.length / BYTES_PER_SAMP;
-          if (total < FADE_SAMPLES * 2) return;
+        // ── Extraction des phrases d'ancrage vocal ──
+        // Pour chaque chunk après le premier, on extrait les 2 dernières phrases
+        // du chunk précédent pour servir de "voix de référence"
+        const extractLastSentences = (text: string, count: number = 2): string => {
+          const s = text.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g) || [];
+          return s.slice(-count).join(' ').trim();
+        };
+
+        const audioBuffers: Buffer[] = [];
+        for (let i = 0; i < chunks.length; i++) {
+          // ── Couche 2 : Ancrage vocal contextuel ──
+          let voiceAnchor = '';
+          if (i > 0) {
+            const previousContext = extractLastSentences(chunks[i - 1]);
+            voiceAnchor = `\n<voice_reference_context>\nYou have ALREADY spoken the following text with your voice. DO NOT read this aloud. Use it ONLY to maintain the exact same voice tone, pitch, rhythm, speed and accent for what follows:\n"${previousContext}"\n</voice_reference_context>\nCRITICAL: Continue with the EXACT SAME voice — same pitch, same pace, same energy, same accent intensity. This is a seamless continuation of the same recording session.`;
+          }
+
+          const chunkPrompt = fullPrompt.replace(
+            /<transcript>[\s\S]*<\/transcript>/,
+            `<transcript>\n${chunks[i]}\n</transcript>`
+          ) + voiceAnchor + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
+
+          const chunkResult = await callGeminiTtsRest(keyPool, chunkPrompt, actualVoiceId);
+          audioBuffers.push(Buffer.from(chunkResult.audioData, 'base64'));
+          console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} généré (${audioBuffers[i].length} bytes).`);
+        }
+
+        // ── Couche 3 : Micro-fondu PCM aux jointures ──
+        // L16 = 16-bit signed LE, mono, 24kHz
+        // 30ms = 720 samples = 1440 bytes — assez court pour ne pas affecter
+        // la parole, assez long pour éliminer les clics/pops
+        const FADE_SAMPLES = 720; // 30ms at 24kHz
+        const BYTES_PER_SAMPLE = 2;
+        const FADE_BYTES = FADE_SAMPLES * BYTES_PER_SAMPLE;
+
+        for (let i = 0; i < audioBuffers.length; i++) {
+          const buf = audioBuffers[i];
+          const totalSamples = buf.length / BYTES_PER_SAMPLE;
+          if (totalSamples < FADE_SAMPLES * 2) continue; // trop court
+
+          // Fade-in sur le premier chunk n'est pas nécessaire (début du texte)
+          // Fade-in sur les chunks suivants pour lisser la jointure
           if (i > 0) {
             for (let s = 0; s < FADE_SAMPLES; s++) {
-              const off  = s * BYTES_PER_SAMP;
-              buf.writeInt16LE(Math.round(buf.readInt16LE(off) * (s / FADE_SAMPLES)), off);
+              const gain = s / FADE_SAMPLES;
+              const offset = s * BYTES_PER_SAMPLE;
+              const sample = buf.readInt16LE(offset);
+              buf.writeInt16LE(Math.round(sample * gain), offset);
             }
           }
-          if (i < buffers.length - 1) {
+
+          // Fade-out sur tous les chunks sauf le dernier (fin du texte)
+          if (i < audioBuffers.length - 1) {
             for (let s = 0; s < FADE_SAMPLES; s++) {
-              const off  = (total - FADE_SAMPLES + s) * BYTES_PER_SAMP;
-              buf.writeInt16LE(Math.round(buf.readInt16LE(off) * (1 - s / FADE_SAMPLES)), off);
+              const gain = 1 - (s / FADE_SAMPLES);
+              const offset = (totalSamples - FADE_SAMPLES + s) * BYTES_PER_SAMPLE;
+              const sample = buf.readInt16LE(offset);
+              buf.writeInt16LE(Math.round(sample * gain), offset);
             }
           }
-        });
-        return Buffer.concat(buffers);
-      };
-
-      // ════════════════════════════════════════════════════════════════════
-      // TENTATIVE MOTEUR PRIMAIRE — Google Cloud TTS
-      // ════════════════════════════════════════════════════════════════════
-      let usedEngine = 'gemini_legacy';
-
-      if (useCloudTts) {
-        try {
-          const cloudToken = await getCloudTtsToken(cloudCreds!);
-          // Cloud TTS : limite 4 000 bytes par champ → max ~1 500 chars (UTF-8 FR)
-          const MAX_CLOUD_CHUNK = 1500;
-          const cloudChunks     = buildChunks(scriptText, MAX_CLOUD_CHUNK);
-          console.log(`[AfriVoice] 🌥️  Cloud TTS actif — ${cloudChunks.length} chunk(s), voix: ${actualVoiceId}, langue: ${languageCode}`);
-
-          const cloudBuffers: Buffer[] = [];
-          for (let i = 0; i < cloudChunks.length; i++) {
-            let prompt = directorBriefOnly;
-            if (i > 0) {
-              const anchor = extractLastSentences(cloudChunks[i - 1]);
-              prompt += `\n\nCRITICAL — seamless continuation. You have ALREADY spoken:\n"${anchor}"\nDO NOT re-read it. Maintain EXACT same voice, pitch, pace, accent.`;
-            }
-            const res = await callCloudTtsSingle(
-              cloudCreds!,
-              cloudToken,
-              cloudChunks[i],
-              prompt,
-              actualVoiceId,
-              languageCode,
-            );
-            cloudBuffers.push(Buffer.from(res.audioData, 'base64'));
-            console.log(`[AfriVoice] ✅ Cloud TTS chunk ${i + 1}/${cloudChunks.length} — ${cloudBuffers[i].length} bytes`);
-          }
-
-          const combined = concatPcmWithFade(cloudBuffers);
-          audioData  = combined.toString('base64');
-          mimeType   = 'audio/L16;rate=24000';
-          usedEngine = 'cloud_tts';
-          console.log(`[AfriVoice] 🎙️  Cloud TTS terminé — ${combined.length} bytes total`);
-
-        } catch (cloudErr: any) {
-          // Cloud TTS a échoué → fallback transparent vers le pool Gemini
-          console.warn(`[AfriVoice] ⚠️  Cloud TTS échoué (${cloudErr?.message?.slice(0, 120)}). Fallback → pool Gemini.`);
-          // audioData reste undefined → bloc Gemini ci-dessous prend le relai
         }
-      }
 
-      // ════════════════════════════════════════════════════════════════════
-      // FALLBACK — Pool de clés Gemini AI Studio (round-robin + cooldown)
-      // Actif si : (a) Cloud TTS non configuré  ou  (b) Cloud TTS a échoué
-      // ════════════════════════════════════════════════════════════════════
-      if (!audioData) {
-        const MAX_CHARS_PER_CHUNK = 5500;
-        const needsChunking       = scriptText.length > MAX_CHARS_PER_CHUNK;
-        const promptWithNonce     = fullPrompt + `\n<!-- req:${requestNonce} -->`;
-
-        if (!needsChunking) {
-          const result = await callGeminiTtsRest(keyPool, promptWithNonce, actualVoiceId);
-          audioData = result.audioData;
-          mimeType  = result.mimeType;
-        } else {
-          const chunks = buildChunks(scriptText, MAX_CHARS_PER_CHUNK);
-          console.log(`[AfriVoice] 🔄 Fallback Gemini — ${chunks.length} chunks, ${scriptText.length} chars`);
-
-          const audioBuffers: Buffer[] = [];
-          for (let i = 0; i < chunks.length; i++) {
-            let voiceAnchor = '';
-            if (i > 0) {
-              const previousContext = extractLastSentences(chunks[i - 1]);
-              voiceAnchor = `\n<voice_reference_context>\nYou have ALREADY spoken the following text with your voice. DO NOT read this aloud. Use it ONLY to maintain the exact same voice tone, pitch, rhythm, speed and accent for what follows:\n"${previousContext}"\n</voice_reference_context>\nCRITICAL: Continue with the EXACT SAME voice — same pitch, same pace, same energy, same accent intensity. This is a seamless continuation of the same recording session.`;
-            }
-
-            const chunkPrompt = fullPrompt.replace(
-              /<transcript>[\s\S]*<\/transcript>/,
-              `<transcript>\n${chunks[i]}\n</transcript>`
-            ) + voiceAnchor + `\n<!-- chunk:${i + 1}/${chunks.length} req:${requestNonce} -->`;
-
-            const chunkResult = await callGeminiTtsRest(keyPool, chunkPrompt, actualVoiceId);
-            audioBuffers.push(Buffer.from(chunkResult.audioData, 'base64'));
-            console.log(`[AfriVoice] Chunk ${i + 1}/${chunks.length} généré (${audioBuffers[i].length} bytes).`);
-          }
-
-          const combined = concatPcmWithFade(audioBuffers);
-          audioData = combined.toString('base64');
-          mimeType  = 'audio/L16;rate=24000';
-          console.log(`[AfriVoice] ${chunks.length} chunks Gemini assemblés. Total: ${combined.length} bytes.`);
-        }
+        const combinedBuffer = Buffer.concat(audioBuffers);
+        audioData = combinedBuffer.toString('base64');
+        mimeType = 'audio/L16;rate=24000';
+        console.log(`[AfriVoice] ${chunks.length} chunks assemblés avec ancrage vocal + fondu PCM. Total: ${combinedBuffer.length} bytes.`);
       }
     }
 
@@ -496,12 +432,8 @@ export default async function handler(req: any, res: any) {
       generationId,
       voiceProfileId: profileData.voiceProfileId,
       voiceProfileVersion: profileData.version,
-      provider: replicationStatus === 'VOICE_REPLICATION_SUCCESS'
-        ? 'google_replication'
-        : (usedEngine === 'cloud_tts' ? 'google_cloud_tts' : 'gemini_legacy'),
-      model: replicationStatus === 'VOICE_REPLICATION_SUCCESS'
-        ? 'chirp-3'
-        : (usedEngine === 'cloud_tts' ? 'gemini-2.5-flash-tts' : 'gemini-2.5-flash-preview-tts'),
+      provider: replicationStatus === 'VOICE_REPLICATION_SUCCESS' ? 'google_replication' : 'gemini_legacy',
+      model: replicationStatus === 'VOICE_REPLICATION_SUCCESS' ? 'chirp-3' : 'gemini-2.5-flash',
       language: profileData.language,
       country: profileData.country,
       pace: profileData.basePace,
