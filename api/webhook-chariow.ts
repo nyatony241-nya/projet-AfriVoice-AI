@@ -192,11 +192,6 @@ export default async function handler(req: any, res: any) {
         },
         { onConflict: 'email', ignoreDuplicates: false }
       );
-          chariow_order_id: chariowOrderId,
-          updated_at: activatedAt.toISOString(),
-        },
-        { onConflict: 'email', ignoreDuplicates: false }
-      );
 
     if (quotaError) {
       console.error('[Webhook Chariow] Erreur upsert crédits wallet:', quotaError);
